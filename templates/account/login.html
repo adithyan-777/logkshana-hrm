@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% load allauth %}
+
+{% block content %}
+<h1>Sign In</h1>
+<form method="post" action="{% url 'account_login' %}">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Sign In</button>
+</form>
+{% endblock %}

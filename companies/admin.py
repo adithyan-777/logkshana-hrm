@@ -6,6 +6,7 @@ from django_tenants.admin import TenantAdminMixin
 
 from companies.models import Company
 
+
 @admin.register(Company)
 class CompanyAdmin(TenantAdminMixin, admin.ModelAdmin):
-        list_display = ('name', 'paid_until')
+    list_display = ("name", "paid_until")

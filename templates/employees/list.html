@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Employees{% endblock %}
+
+{% block content %}
+<nav class="page-nav">
+    <a href="{% url 'employee_list' %}">Employees</a>
+    <a href="{% url 'employee_add' %}">Add Employee</a>
+</nav>
+
+<h1>Employees</h1>
+
+<label for="employee-search">Search</label>
+<input
+    id="employee-search"
+    type="search"
+    name="q"
+    value="{{ search }}"
+    placeholder="Name, code, or email..."
+    hx-get="{% url 'employee_list' %}"
+    hx-target="#employee-list"
+    hx-trigger="keyup changed delay:300ms, search"
+    hx-push-url="true"
+>
+
+<div
+    id="employee-list"
+    hx-get="{% url 'employee_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+    hx-trigger="employeeCreated from:body"
+    hx-swap="innerHTML"
+>
+    {% include "employees/partials/employee_table.html" %}
+</div>
+{% endblock %}

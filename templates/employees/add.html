@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Add Employee{% endblock %}
+
+{% block content %}
+<nav class="page-nav">
+    <a href="{% url 'employee_list' %}">Employees</a>
+    <a href="{% url 'employee_add' %}">Add Employee</a>
+</nav>
+
+<h1>Add Employee</h1>
+<div id="employee-form-container">
+    {% include "employees/partials/employee_form.html" %}
+</div>
+{% endblock %}

@@ -1,0 +1,12 @@
+[project]
+name = "pattika"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "django>=6.1",
+    "django-tenants>=3.14.0",
+    "psycopg[binary]>=3.2",
+    "python-dotenv>=1.2.2",
+]

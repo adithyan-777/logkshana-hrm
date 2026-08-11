@@ -1,0 +1,42 @@
+{% if timetables %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Work type</th>
+            <th>Check in</th>
+            <th>Check out</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for timetable in timetables %}
+        <tr>
+            <td>{{ timetable.code }}</td>
+            <td>{{ timetable.name }}</td>
+            <td>{{ timetable.get_type_display }}</td>
+            <td>{{ timetable.get_work_type_display }}</td>
+            <td>{{ timetable.check_in|default:"—" }}</td>
+            <td>{{ timetable.check_out|default:"—" }}</td>
+            <td>
+                {% if timetable.is_active %}
+                <span class="badge active">Active</span>
+                {% else %}
+                <span class="badge inactive">Inactive</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="empty-state">
+    {% if search %}
+    No timetables match "{{ search }}".
+    {% else %}
+    No timetables yet. <a href="{% url 'timetable_add' %}">Add the first timetable</a>.
+    {% endif %}
+</p>
+{% endif %}

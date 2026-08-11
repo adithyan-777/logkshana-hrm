@@ -1,0 +1,40 @@
+{% if shifts %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Cycle</th>
+            <th>Days</th>
+            <th>Auto shift</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for shift in shifts %}
+        <tr>
+            <td>{{ shift.code }}</td>
+            <td>{{ shift.name }}</td>
+            <td>{{ shift.cycle_count }} {{ shift.get_cycle_unit_display|lower }}{% if shift.cycle_count != 1 %}s{% endif %}</td>
+            <td>{{ shift.days.count }}</td>
+            <td>{% if shift.auto_shift %}Yes{% else %}No{% endif %}</td>
+            <td>
+                {% if shift.is_active %}
+                <span class="badge active">Active</span>
+                {% else %}
+                <span class="badge inactive">Inactive</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="empty-state">
+    {% if search %}
+    No shifts match "{{ search }}".
+    {% else %}
+    No shifts yet. <a href="{% url 'shift_add' %}">Add the first shift</a>.
+    {% endif %}
+</p>
+{% endif %}

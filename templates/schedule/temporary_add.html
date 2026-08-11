@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Add Temporary Schedule{% endblock %}
+
+{% block content %}
+{% include "schedule/partials/nav.html" %}
+
+<h1>Add Temporary Schedule</h1>
+<div id="temporary-form-container">
+    {% include "schedule/partials/temporary_form.html" %}
+</div>
+{% endblock %}

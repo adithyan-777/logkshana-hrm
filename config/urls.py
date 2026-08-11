@@ -25,4 +25,5 @@ urlpatterns = [
     path("accounts/profile/", views.account_profile, name="account_profile"),
     path("accounts/", include("allauth.urls")),
     path("employees/", include("employees.urls")),
+    path("schedule/", include("schedule.urls")),
 ]

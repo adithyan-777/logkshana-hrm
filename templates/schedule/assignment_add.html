@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Add Schedule Assignment{% endblock %}
+
+{% block content %}
+{% include "schedule/partials/nav.html" %}
+
+<h1>Add Schedule Assignment</h1>
+<div id="assignment-form-container">
+    {% include "schedule/partials/assignment_form.html" %}
+</div>
+{% endblock %}

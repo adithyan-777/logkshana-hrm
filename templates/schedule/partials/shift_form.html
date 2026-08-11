@@ -1,0 +1,98 @@
+{% if success_message %}
+<div id="form-messages" class="message success">
+    {{ success_message }}
+    <a href="{% url 'shift_list' %}">View all shifts</a>
+</div>
+{% else %}
+<div id="form-messages"></div>
+{% endif %}
+
+<form
+    id="shift-form"
+    hx-post="{% url 'shift_add' %}"
+    hx-target="#shift-form-container"
+    hx-swap="innerHTML"
+>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="message error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <fieldset class="form-section">
+        <legend>Shift details</legend>
+
+        <div class="field">
+            <label for="{{ form.name.id_for_label }}">Name *</label>
+            {{ form.name }}
+            {% if form.name.errors %}<span class="error">{{ form.name.errors }}</span>{% endif %}
+        </div>
+
+        <div class="field">
+            <label for="{{ form.code.id_for_label }}">Code *</label>
+            {{ form.code }}
+            {% if form.code.errors %}<span class="error">{{ form.code.errors }}</span>{% endif %}
+        </div>
+
+        <div class="field-row">
+            <div class="field">
+                <label for="{{ form.cycle_unit.id_for_label }}">Cycle unit</label>
+                {{ form.cycle_unit }}
+            </div>
+            <div class="field">
+                <label for="{{ form.cycle_count.id_for_label }}">Cycle count</label>
+                {{ form.cycle_count }}
+            </div>
+        </div>
+
+        <div class="field checkbox">
+            {{ form.auto_shift }}
+            <label for="{{ form.auto_shift.id_for_label }}">Auto shift</label>
+        </div>
+
+        <div class="field checkbox">
+            {{ form.is_active }}
+            <label for="{{ form.is_active.id_for_label }}">Active</label>
+        </div>
+    </fieldset>
+
+    <fieldset class="form-section">
+        <legend>Cycle days</legend>
+        <p class="help-text">Assign a timetable to each day in the cycle. Leave blank rows empty.</p>
+
+        {{ formset.management_form }}
+
+        {% if formset.non_form_errors %}
+        <div class="message error">{{ formset.non_form_errors }}</div>
+        {% endif %}
+
+        <table class="formset-table">
+            <thead>
+                <tr>
+                    <th>Day #</th>
+                    <th>Timetable</th>
+                    <th>Remove</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for day_form in formset %}
+                <tr>
+                    <td>
+                        {{ day_form.day_number }}
+                        {% if day_form.day_number.errors %}<span class="error">{{ day_form.day_number.errors }}</span>{% endif %}
+                    </td>
+                    <td>
+                        {{ day_form.timetable }}
+                        {% if day_form.timetable.errors %}<span class="error">{{ day_form.timetable.errors }}</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if day_form.DELETE %}{{ day_form.DELETE }}{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </fieldset>
+
+    <button type="submit">Add Shift</button>
+</form>

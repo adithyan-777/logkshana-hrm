@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Shifts{% endblock %}
+
+{% block content %}
+{% include "schedule/partials/nav.html" %}
+
+<h1>Shifts</h1>
+
+<label for="shift-search">Search</label>
+<input
+    id="shift-search"
+    class="search-input"
+    type="search"
+    name="q"
+    value="{{ search }}"
+    placeholder="Name or code..."
+    hx-get="{% url 'shift_list' %}"
+    hx-target="#shift-list"
+    hx-trigger="keyup changed delay:300ms, search"
+    hx-push-url="true"
+>
+
+<div
+    id="shift-list"
+    hx-get="{% url 'shift_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+    hx-trigger="shiftCreated from:body"
+    hx-swap="innerHTML"
+>
+    {% include "schedule/partials/shift_table.html" %}
+</div>
+
+<p><a href="{% url 'shift_add' %}">Add shift</a></p>
+{% endblock %}

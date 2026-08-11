@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Temporary Schedules{% endblock %}
+
+{% block content %}
+{% include "schedule/partials/nav.html" %}
+
+<h1>Temporary Schedules</h1>
+
+<label for="temporary-search">Search</label>
+<input
+    id="temporary-search"
+    class="search-input"
+    type="search"
+    name="q"
+    value="{{ search }}"
+    placeholder="Employee, timetable, or reason..."
+    hx-get="{% url 'temporary_list' %}"
+    hx-target="#temporary-list"
+    hx-trigger="keyup changed delay:300ms, search"
+    hx-push-url="true"
+>
+
+<div
+    id="temporary-list"
+    hx-get="{% url 'temporary_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+    hx-trigger="temporaryCreated from:body"
+    hx-swap="innerHTML"
+>
+    {% include "schedule/partials/temporary_table.html" %}
+</div>
+
+<p><a href="{% url 'temporary_add' %}">Add temporary schedule</a></p>
+{% endblock %}

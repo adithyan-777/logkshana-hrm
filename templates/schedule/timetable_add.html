@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Add Timetable{% endblock %}
+
+{% block content %}
+{% include "schedule/partials/nav.html" %}
+
+<h1>Add Timetable</h1>
+<div id="timetable-form-container">
+    {% include "schedule/partials/timetable_form.html" %}
+</div>
+{% endblock %}

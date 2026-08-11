@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Schedule Assignments{% endblock %}
+
+{% block content %}
+{% include "schedule/partials/nav.html" %}
+
+<h1>Schedule Assignments</h1>
+
+<label for="assignment-search">Search</label>
+<input
+    id="assignment-search"
+    class="search-input"
+    type="search"
+    name="q"
+    value="{{ search }}"
+    placeholder="Shift, employee, or department..."
+    hx-get="{% url 'assignment_list' %}"
+    hx-target="#assignment-list"
+    hx-trigger="keyup changed delay:300ms, search"
+    hx-push-url="true"
+>
+
+<div
+    id="assignment-list"
+    hx-get="{% url 'assignment_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+    hx-trigger="assignmentCreated from:body"
+    hx-swap="innerHTML"
+>
+    {% include "schedule/partials/assignment_table.html" %}
+</div>
+
+<p><a href="{% url 'assignment_add' %}">Add assignment</a></p>
+{% endblock %}

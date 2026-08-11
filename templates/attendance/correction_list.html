@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Attendance Corrections{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+
+<h1>Attendance Corrections</h1>
+
+<label for="correction-search">Search</label>
+<input
+    id="correction-search"
+    class="search-input"
+    type="search"
+    name="q"
+    value="{{ search }}"
+    placeholder="Employee, reason, or status..."
+    hx-get="{% url 'attendance_correction_list' %}"
+    hx-target="#correction-list"
+    hx-trigger="keyup changed delay:300ms, search"
+    hx-push-url="true"
+>
+
+<div
+    id="correction-list"
+    hx-get="{% url 'attendance_correction_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+    hx-trigger="attendanceCorrectionCreated from:body"
+    hx-swap="innerHTML"
+>
+    {% include "attendance/partials/correction_table.html" %}
+</div>
+
+<p><a href="{% url 'attendance_correction_add' %}">Submit correction</a></p>
+{% endblock %}

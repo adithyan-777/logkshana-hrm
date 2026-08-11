@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Daily Attendance{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+
+<h1>Daily Attendance</h1>
+
+<label for="daily-search">Search</label>
+<input
+    id="daily-search"
+    class="search-input"
+    type="search"
+    name="q"
+    value="{{ search }}"
+    placeholder="Employee or status..."
+    hx-get="{% url 'daily_attendance_list' %}"
+    hx-target="#daily-list"
+    hx-trigger="keyup changed delay:300ms, search"
+    hx-push-url="true"
+>
+
+<div
+    id="daily-list"
+    hx-get="{% url 'daily_attendance_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+    hx-trigger="dailyAttendanceCreated from:body"
+    hx-swap="innerHTML"
+>
+    {% include "attendance/partials/daily_table.html" %}
+</div>
+
+<p><a href="{% url 'daily_attendance_add' %}">Add daily record</a></p>
+{% endblock %}

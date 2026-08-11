@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Attendance Rules{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+
+<h1>Attendance Rules</h1>
+
+<label for="rule-search">Search</label>
+<input
+    id="rule-search"
+    class="search-input"
+    type="search"
+    name="q"
+    value="{{ search }}"
+    placeholder="Rule name..."
+    hx-get="{% url 'attendance_rule_list' %}"
+    hx-target="#rule-list"
+    hx-trigger="keyup changed delay:300ms, search"
+    hx-push-url="true"
+>
+
+<div
+    id="rule-list"
+    hx-get="{% url 'attendance_rule_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+    hx-trigger="attendanceRuleCreated from:body"
+    hx-swap="innerHTML"
+>
+    {% include "attendance/partials/rule_table.html" %}
+</div>
+
+<p><a href="{% url 'attendance_rule_add' %}">Add rule</a></p>
+{% endblock %}

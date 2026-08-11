@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Add Daily Attendance{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+
+<h1>Add Daily Attendance</h1>
+<div id="daily-form-container">
+    {% include "attendance/partials/daily_form.html" %}
+</div>
+{% endblock %}

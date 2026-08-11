@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Add Attendance Rule{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+
+<h1>Add Attendance Rule</h1>
+<div id="rule-form-container">
+    {% include "attendance/partials/rule_form.html" %}
+</div>
+{% endblock %}

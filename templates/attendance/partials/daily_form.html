@@ -1,0 +1,93 @@
+{% if success_message %}
+<div id="form-messages" class="message success">
+    {{ success_message }}
+    <a href="{% url 'daily_attendance_list' %}">View all daily records</a>
+</div>
+{% else %}
+<div id="form-messages"></div>
+{% endif %}
+
+<form
+    id="daily-form"
+    hx-post="{% url 'daily_attendance_add' %}"
+    hx-target="#daily-form-container"
+    hx-swap="innerHTML"
+>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="message error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="field-row">
+        <div class="field">
+            <label for="{{ form.employee.id_for_label }}">Employee *</label>
+            {{ form.employee }}
+            {% if form.employee.errors %}<span class="error">{{ form.employee.errors }}</span>{% endif %}
+        </div>
+        <div class="field">
+            <label for="{{ form.date.id_for_label }}">Date *</label>
+            {{ form.date }}
+            {% if form.date.errors %}<span class="error">{{ form.date.errors }}</span>{% endif %}
+        </div>
+        <div class="field">
+            <label for="{{ form.status.id_for_label }}">Status</label>
+            {{ form.status }}
+        </div>
+    </div>
+
+    <div class="field-row">
+        <div class="field">
+            <label for="{{ form.shift.id_for_label }}">Shift</label>
+            {{ form.shift }}
+        </div>
+        <div class="field">
+            <label for="{{ form.timetable.id_for_label }}">Timetable</label>
+            {{ form.timetable }}
+        </div>
+    </div>
+
+    <div class="field-row">
+        <div class="field">
+            <label for="{{ form.scheduled_minutes.id_for_label }}">Scheduled minutes</label>
+            {{ form.scheduled_minutes }}
+        </div>
+        <div class="field">
+            <label for="{{ form.worked_minutes.id_for_label }}">Worked minutes</label>
+            {{ form.worked_minutes }}
+        </div>
+        <div class="field">
+            <label for="{{ form.late_minutes.id_for_label }}">Late minutes</label>
+            {{ form.late_minutes }}
+        </div>
+    </div>
+
+    <div class="field-row">
+        <div class="field">
+            <label for="{{ form.early_leave_minutes.id_for_label }}">Early leave minutes</label>
+            {{ form.early_leave_minutes }}
+        </div>
+        <div class="field">
+            <label for="{{ form.overtime_minutes.id_for_label }}">Overtime minutes</label>
+            {{ form.overtime_minutes }}
+        </div>
+    </div>
+
+    <div class="field-row">
+        <div class="field checkbox">
+            {{ form.has_check_in }}
+            <label for="{{ form.has_check_in.id_for_label }}">Has check in</label>
+        </div>
+        <div class="field checkbox">
+            {{ form.has_check_out }}
+            <label for="{{ form.has_check_out.id_for_label }}">Has check out</label>
+        </div>
+    </div>
+
+    <div class="field">
+        <label for="{{ form.notes.id_for_label }}">Notes</label>
+        {{ form.notes }}
+    </div>
+
+    <button type="submit">Add Daily Record</button>
+</form>

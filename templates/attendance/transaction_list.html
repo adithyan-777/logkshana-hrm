@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Attendance Punches{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+
+<h1>Attendance Punches</h1>
+
+<label for="transaction-search">Search</label>
+<input
+    id="transaction-search"
+    class="search-input"
+    type="search"
+    name="q"
+    value="{{ search }}"
+    placeholder="Employee or external ID..."
+    hx-get="{% url 'attendance_transaction_list' %}"
+    hx-target="#transaction-list"
+    hx-trigger="keyup changed delay:300ms, search"
+    hx-push-url="true"
+>
+
+<div
+    id="transaction-list"
+    hx-get="{% url 'attendance_transaction_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+    hx-trigger="attendanceTransactionCreated from:body"
+    hx-swap="innerHTML"
+>
+    {% include "attendance/partials/transaction_table.html" %}
+</div>
+
+<p><a href="{% url 'attendance_transaction_add' %}">Record punch</a></p>
+{% endblock %}

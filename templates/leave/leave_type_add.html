@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Add Leave Type{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+
+<h1>Add Leave Type</h1>
+<div id="leave-type-form-container">
+    {% include "leave/partials/leave_type_form.html" %}
+</div>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Add Holiday{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+
+<h1>Add Holiday</h1>
+<div id="holiday-form-container">
+    {% include "leave/partials/holiday_form.html" %}
+</div>
+{% endblock %}

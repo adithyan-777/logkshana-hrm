@@ -55,3 +55,71 @@ def employee_factory(*, first_name="Jane", last_name="Doe", emp_code="E001", **k
 
 def assignment_dates():
     return date(2026, 1, 1), date(2026, 12, 31)
+
+
+def leave_type_factory(*, name="Annual Leave", code="ANNUAL", **kwargs):
+    from leave.models import LeaveType
+    from leave.services import leave_type_create
+
+    defaults = {
+        "paid": True,
+        "requires_approval": True,
+    }
+    defaults.update(kwargs)
+    return leave_type_create(name=name, code=code, **defaults)
+
+
+def leave_policy_factory(*, name="Standard Annual", leave_type=None, **kwargs):
+    from leave.models import LeavePolicy
+    from leave.services import leave_policy_create
+
+    if leave_type is None:
+        leave_type = leave_type_factory(name="Policy Leave", code=f"PL-{name[:4].upper()}")
+
+    defaults = {
+        "entitlement_days": 30,
+        "accrual_type": LeavePolicy.AccrualType.YEARLY,
+    }
+    defaults.update(kwargs)
+    return leave_policy_create(leave_type=leave_type, name=name, **defaults)
+
+
+def leave_request_factory(*, employee=None, leave_type=None, **kwargs):
+    from uuid import uuid4
+
+    from leave.models import LeaveRequest
+    from leave.services import leave_request_create
+
+    if employee is None:
+        employee = employee_factory(first_name="Leave", emp_code="LR001")
+    if leave_type is None:
+        leave_type = leave_type_factory(
+            name="Sick Leave",
+            code=f"SICK-{uuid4().hex[:6]}",
+        )
+
+    defaults = {
+        "start_date": date(2026, 3, 1),
+        "end_date": date(2026, 3, 3),
+        "duration_type": LeaveRequest.DurationType.FULL_DAY,
+        "days": 3,
+        "status": LeaveRequest.Status.PENDING,
+    }
+    defaults.update(kwargs)
+    return leave_request_create(
+        employee=employee,
+        leave_type=leave_type,
+        **defaults,
+    )
+
+
+def holiday_factory(*, name="New Year", **kwargs):
+    from leave.models import Holiday
+    from leave.services import holiday_create
+
+    defaults = {
+        "date": date(2026, 1, 1),
+        "holiday_type": Holiday.HolidayType.PUBLIC,
+    }
+    defaults.update(kwargs)
+    return holiday_create(name=name, **defaults)

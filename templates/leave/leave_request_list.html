@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Leave Requests{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+
+<h1>Leave Requests</h1>
+
+<label for="leave-request-search">Search</label>
+<input
+    id="leave-request-search"
+    class="search-input"
+    type="search"
+    name="q"
+    value="{{ search }}"
+    placeholder="Employee, leave type, or status..."
+    hx-get="{% url 'leave_request_list' %}"
+    hx-target="#leave-request-list"
+    hx-trigger="keyup changed delay:300ms, search"
+    hx-push-url="true"
+>
+
+<div
+    id="leave-request-list"
+    hx-get="{% url 'leave_request_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+    hx-trigger="leaveRequestCreated from:body"
+    hx-swap="innerHTML"
+>
+    {% include "leave/partials/leave_request_table.html" %}
+</div>
+
+<p><a href="{% url 'leave_request_add' %}">Add leave request</a></p>
+{% endblock %}

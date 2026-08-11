@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Leave Policies{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+
+<h1>Leave Policies</h1>
+
+<label for="leave-policy-search">Search</label>
+<input
+    id="leave-policy-search"
+    class="search-input"
+    type="search"
+    name="q"
+    value="{{ search }}"
+    placeholder="Policy or leave type..."
+    hx-get="{% url 'leave_policy_list' %}"
+    hx-target="#leave-policy-list"
+    hx-trigger="keyup changed delay:300ms, search"
+    hx-push-url="true"
+>
+
+<div
+    id="leave-policy-list"
+    hx-get="{% url 'leave_policy_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+    hx-trigger="leavePolicyCreated from:body"
+    hx-swap="innerHTML"
+>
+    {% include "leave/partials/leave_policy_table.html" %}
+</div>
+
+<p><a href="{% url 'leave_policy_add' %}">Add leave policy</a></p>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Holidays{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+
+<h1>Holidays</h1>
+
+<label for="holiday-search">Search</label>
+<input
+    id="holiday-search"
+    class="search-input"
+    type="search"
+    name="q"
+    value="{{ search }}"
+    placeholder="Name or description..."
+    hx-get="{% url 'holiday_list' %}"
+    hx-target="#holiday-list"
+    hx-trigger="keyup changed delay:300ms, search"
+    hx-push-url="true"
+>
+
+<div
+    id="holiday-list"
+    hx-get="{% url 'holiday_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+    hx-trigger="holidayCreated from:body"
+    hx-swap="innerHTML"
+>
+    {% include "leave/partials/holiday_table.html" %}
+</div>
+
+<p><a href="{% url 'holiday_add' %}">Add holiday</a></p>
+{% endblock %}

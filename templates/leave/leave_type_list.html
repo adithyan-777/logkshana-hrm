@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Leave Types{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+
+<h1>Leave Types</h1>
+
+<label for="leave-type-search">Search</label>
+<input
+    id="leave-type-search"
+    class="search-input"
+    type="search"
+    name="q"
+    value="{{ search }}"
+    placeholder="Name or code..."
+    hx-get="{% url 'leave_type_list' %}"
+    hx-target="#leave-type-list"
+    hx-trigger="keyup changed delay:300ms, search"
+    hx-push-url="true"
+>
+
+<div
+    id="leave-type-list"
+    hx-get="{% url 'leave_type_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+    hx-trigger="leaveTypeCreated from:body"
+    hx-swap="innerHTML"
+>
+    {% include "leave/partials/leave_type_table.html" %}
+</div>
+
+<p><a href="{% url 'leave_type_add' %}">Add leave type</a></p>
+{% endblock %}

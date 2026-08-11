@@ -1,0 +1,36 @@
+{% if leave_requests %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Employee</th>
+            <th>Leave type</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Days</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for request in leave_requests %}
+        <tr>
+            <td>{{ request.employee.full_name }}</td>
+            <td>{{ request.leave_type.name }}</td>
+            <td>{{ request.start_date }}</td>
+            <td>{{ request.end_date }}</td>
+            <td>{{ request.days }}</td>
+            <td>
+                <span class="badge status-{{ request.status }}">{{ request.get_status_display }}</span>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="empty-state">
+    {% if search %}
+    No leave requests match "{{ search }}".
+    {% else %}
+    No leave requests yet. <a href="{% url 'leave_request_add' %}">Add the first request</a>.
+    {% endif %}
+</p>
+{% endif %}

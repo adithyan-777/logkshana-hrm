@@ -1,6 +1,6 @@
 from datetime import date, time
 
-from employees.models import Department
+from employees.models import Department, Position
 from employees.services import employee_create
 from schedule.models import Timetable
 from schedule.services import shift_create, timetable_create
@@ -35,6 +35,13 @@ def department_factory(*, name="Engineering", code="ENG") -> Department:
     department.full_clean()
     department.save()
     return department
+
+
+def position_factory(*, title="Developer", code="DEV") -> Position:
+    position = Position(title=title, code=code)
+    position.full_clean()
+    position.save()
+    return position
 
 
 def employee_factory(*, first_name="Jane", last_name="Doe", emp_code="E001", **kwargs):

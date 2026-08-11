@@ -80,9 +80,7 @@ class Employee(BaseModel):
     mobile = models.CharField(max_length=30, blank=True)
 
     hire_date = models.DateField(null=True, blank=True)
-    is_active = models.BooleanField(
-        default=True
-    )
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         ordering = ["-id"]

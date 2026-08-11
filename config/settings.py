@@ -50,7 +50,7 @@ SHARED_APPS = [
     "allauth.socialaccount",
 ]
 
-TENANT_APPS = ("employees",)
+TENANT_APPS = ("employees", "schedule")
 
 INSTALLED_APPS = list(SHARED_APPS) + [
     app for app in TENANT_APPS if app not in SHARED_APPS

@@ -8,6 +8,7 @@ class TimeStampedModel(models.Model):
     Adds created/updated timestamps to any model that inherits from it.
     Use this as a base for almost everything.
     """
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -22,11 +23,8 @@ class UUIDModel(models.Model):
     IDs leaking record counts or being guessable.
     Optional — skip this if you're fine with default integer PKs.
     """
-    id = models.UUIDField(
-        primary_key=True,
-        default=uuid.uuid4,
-        editable=False
-    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     class Meta:
         abstract = True
@@ -54,25 +52,27 @@ class SoftDeleteModel(models.Model):
     mark them deleted and filter them out by default.
     Employees, schedules etc. should almost never be hard-deleted.
     """
+
     deleted_at = models.DateTimeField(null=True, blank=True)
 
-    objects = SoftDeleteManager()          # default manager — excludes deleted
-    all_objects = models.Manager()          # explicit access to everything
+    objects = SoftDeleteManager()  # default manager — excludes deleted
+    all_objects = models.Manager()  # explicit access to everything
 
     class Meta:
         abstract = True
 
     def delete(self, using=None, keep_parents=False):
         from django.utils import timezone
+
         self.deleted_at = timezone.now()
-        self.save(update_fields=['deleted_at'])
+        self.save(update_fields=["deleted_at"])
 
     def hard_delete(self, using=None, keep_parents=False):
         super().delete(using=using, keep_parents=keep_parents)
 
     def restore(self):
         self.deleted_at = None
-        self.save(update_fields=['deleted_at'])
+        self.save(update_fields=["deleted_at"])
 
     @property
     def is_deleted(self):
@@ -84,18 +84,19 @@ class AuditModel(TimeStampedModel):
     Tracks who created/modified a record — useful for attendance
     corrections, schedule changes, etc. where you need accountability.
     """
+
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
         blank=True,
-        related_name='%(class)s_created',
+        related_name="%(class)s_created",
         on_delete=models.SET_NULL,
     )
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
         blank=True,
-        related_name='%(class)s_updated',
+        related_name="%(class)s_updated",
         on_delete=models.SET_NULL,
     )
 
@@ -109,5 +110,6 @@ class BaseModel(TimeStampedModel, SoftDeleteModel):
     timestamps + soft delete. Use AuditModel instead (or in addition)
     for models where you need to know WHO made a change.
     """
+
     class Meta:
         abstract = True

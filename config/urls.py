@@ -18,8 +18,11 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
+from config import views
+
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("accounts/profile/", views.account_profile, name="account_profile"),
     path("accounts/", include("allauth.urls")),
     path("employees/", include("employees.urls")),
 ]

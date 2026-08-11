@@ -78,9 +78,7 @@ ShiftDayFormSet = inlineformset_factory(
 
 def build_shift_day_formset(*args, **kwargs) -> ShiftDayFormSet:
     formset = ShiftDayFormSet(*args, **kwargs)
-    timetable_queryset = Timetable.objects.filter(
-        is_active=True
-    ).order_by("name")
+    timetable_queryset = Timetable.objects.filter(is_active=True).order_by("name")
     for form in formset.forms:
         form.fields["timetable"].queryset = timetable_queryset
     return formset
@@ -105,9 +103,9 @@ class ScheduleAssignmentForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["shift"].queryset = Shift.objects.filter(
-            is_active=True
-        ).order_by("name")
+        self.fields["shift"].queryset = Shift.objects.filter(is_active=True).order_by(
+            "name"
+        )
         self.fields["employee"].queryset = Employee.objects.filter(
             is_active=True
         ).order_by("first_name", "last_name")
@@ -124,7 +122,10 @@ class ScheduleAssignmentForm(forms.ModelForm):
         if start_date and end_date and end_date < start_date:
             self.add_error("end_date", "End date must be on or after start date.")
 
-        if assignment_type == ScheduleAssignment.AssignmentType.EMPLOYEE and not employee:
+        if (
+            assignment_type == ScheduleAssignment.AssignmentType.EMPLOYEE
+            and not employee
+        ):
             self.add_error("employee", "Required for employee assignments.")
         elif (
             assignment_type == ScheduleAssignment.AssignmentType.DEPARTMENT

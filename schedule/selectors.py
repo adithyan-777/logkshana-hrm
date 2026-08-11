@@ -20,10 +20,7 @@ def timetable_list(*, search: str = "") -> QuerySet[Timetable]:
 
 
 def shift_list(*, search: str = "") -> QuerySet[Shift]:
-    queryset = (
-        Shift.objects.prefetch_related("days")
-        .order_by("name")
-    )
+    queryset = Shift.objects.prefetch_related("days").order_by("name")
 
     if search:
         queryset = queryset.filter(
@@ -34,10 +31,9 @@ def shift_list(*, search: str = "") -> QuerySet[Shift]:
 
 
 def schedule_assignment_list(*, search: str = "") -> QuerySet[ScheduleAssignment]:
-    queryset = (
-        ScheduleAssignment.objects.select_related("shift", "employee", "department")
-        .order_by("-start_date")
-    )
+    queryset = ScheduleAssignment.objects.select_related(
+        "shift", "employee", "department"
+    ).order_by("-start_date")
 
     if search:
         queryset = queryset.filter(
@@ -52,10 +48,9 @@ def schedule_assignment_list(*, search: str = "") -> QuerySet[ScheduleAssignment
 
 
 def temporary_schedule_list(*, search: str = "") -> QuerySet[TemporarySchedule]:
-    queryset = (
-        TemporarySchedule.objects.select_related("employee", "timetable")
-        .order_by("-date")
-    )
+    queryset = TemporarySchedule.objects.select_related(
+        "employee", "timetable"
+    ).order_by("-date")
 
     if search:
         queryset = queryset.filter(

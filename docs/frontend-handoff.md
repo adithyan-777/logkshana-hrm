@@ -6,7 +6,797 @@ Reference for styling the Django server-rendered UI.
 **Stack:** Django templates, HTMX 2.0.4, **jQuery DataTables**, vanilla JS, `static/css/app.css`  
 **Auth:** django-allauth
 
-**Quick jump:** [DataTables integration](#datatables-integration) · [Tables reference](#tables-reference) · [CSS handoff guide](#css-handoff-guide) · [Forms reference](#forms-reference) · [Layout & CSS classes](#layout--css-classes) · [Nice to haves](#nice-to-haves)
+**Quick jump:** [CSS handoff guide](#css-handoff-guide) · [Layout & CSS classes](#layout--css-classes) · [Forms reference](#forms-reference) · [Nice to haves](#nice-to-haves) · [Site map](#site-map) · [DataTables integration](#datatables-integration) · [Tables reference](#tables-reference)
+
+---
+
+## CSS handoff guide
+
+What a frontend dev needs to get started. Detailed table column specs and DataTables config are in [DataTables integration](#datatables-integration) and [Tables reference](#tables-reference) at the end of this document.
+
+### Must have — structure & hooks
+
+| Detail | Why | Where |
+|--------|-----|-------|
+| Page inventory | Know every screen | [Site map](#site-map) |
+| Layout structure | Sidebar + header + content vs standalone login | `templates/layouts/app_shell.html`, `base.html` |
+| CSS class names | Templates already use these — style them, don't rename | `static/css/app.css`, [Key CSS classes](#key-css-classes) |
+| Table headers & column count | Column widths, sort types, `data-order` attrs | [Tables reference](#tables-reference), [DataTables integration](#datatables-integration) |
+| Form fields & labels | Input sizing, grids, required markers | [Forms reference](#forms-reference) |
+| Component variants | Badges, messages, empty states | `.badge`, `.message`, `.empty-state` |
+| DataTables UI | Length filter, search, paginate controls | `.dataTables_wrapper` and children |
+
+### Must have — behavior & constraints
+
+| Detail | Notes |
+|--------|-------|
+| **DataTables on all data tables** | 21 read-only tables use DataTables — see [DataTables integration](#datatables-integration). Replaces list `.search-input` and `.pagination`. |
+| **HTMX partial updates** | List containers still swap via HTMX after add forms. **Destroy + re-init** DataTable after each swap. Keep stable list container IDs. |
+| **Backend page size** | Django paginates **25 rows** per request today. Client-side DT only sees current page unless server-side DT is added. |
+| **Responsive breakpoint** | Mobile sidebar drawer at **max-width 900px**. DataTables **Responsive** extension for table columns. |
+| **Two layout modes** | `body.app-body` (full app) vs `body.standalone-page` (login, centered max 960px). |
+| **Sticky header** | `.app-header` is sticky. Use **FixedHeader** extension for table `<thead>`, not the app header. |
+| **Wide report tables** | Up to 10 columns — FixedHeader + horizontal scroll in `.dataTables_wrapper` |
+| **Sidebar width** | Fixed **240px** on desktop; slides in as overlay on mobile. |
+
+### Should have — visual system (decisions needed)
+
+There is no formal design system yet — only functional CSS. Decide or inherit defaults for:
+
+| Token | Current value | Dev should define |
+|-------|---------------|-------------------|
+| Primary | `#1d4ed8` | Brand primary + hover (`#1e40af`) |
+| Text | `#111827` | Body, muted (`#6b7280`), labels (`#4b5563`) |
+| Background | `#f9fafb` | Page bg, card bg (`#fff`), sidebar (`#111827`) |
+| Borders | `#e5e7eb` | Dividers, inputs, cards |
+| Font | `system-ui, sans-serif` | Family + scale (h1 1.25rem, badges 0.75rem, etc.) |
+| Radius | `0.375rem` / `0.5rem` | Consistent radius tokens |
+| Spacing | Ad hoc | Scale (4 / 8 / 12 / 16 / 24px…) |
+| Shadows | Almost none | Cards, dropdowns, elevated panels |
+| Focus rings | Not styled | Keyboard accessibility on all interactive elements |
+
+Suggested approach: define CSS variables in `:root` at the top of `app.css` and refactor hardcoded values to use them.
+
+### Should have — states & edge cases
+
+Style these explicitly — they appear on many pages:
+
+| State | Class / element | Pages |
+|-------|-----------------|-------|
+| Empty table | `.empty-state` | All list + report pages |
+| Field validation | `.error` on field, `.message.error` on form | All add forms |
+| Success after submit | `.message.success` | All HTMX add forms |
+| Active nav link | `.sidebar-link.is-active` | Sidebar |
+| Alert KPI | `.kpi-card-alert` | Dashboard pending counts |
+| Disabled pagination | `.pagination-disabled` | Legacy — remove when DT replaces `.pagination` |
+| Missing badge CSS | `.status-early_out`, `.status-auto_approved`, etc. | Daily attendance, overtime reports |
+| Collapsed sidebar group | `.sidebar-group[open]` | Leave, Schedule, Reports nav |
+| Mobile overlay | `.sidebar-overlay` + `[hidden]` | ≤900px viewport |
+
+### Handoff checklist (give the dev)
+
+- [ ] This document (`docs/frontend-handoff.md`)
+- [ ] Running app access (or screenshots of each page type)
+- [ ] Brand inputs — logo, colors, font (optional; defaults exist)
+- [ ] Target devices — desktop-first vs mobile-first
+- [ ] Design reference — Figma/mockup if available
+- [ ] Scope — DataTables client-side (Phase 1) vs server-side JSON APIs (Phase 2)
+- [ ] Backend coordination — add `id` + `.datatable` to tables, `data-order` on badge/num cells
+
+### Suggested CSS build order
+
+1. CSS variables / design tokens in `:root`
+2. App shell — sidebar, header, breadcrumbs, mobile drawer
+3. Typography + base element styles
+4. Buttons (`.btn`, `.btn-primary`) + form inputs (`.field`, `.field-row`)
+5. **DataTables** — base CSS + `datatables-overrides.css`; init helper; per-table config from [Tables reference](#tables-reference)
+6. Badges + messages + empty states (badges render inside DT cells)
+7. Form sections (`.form-section`) + formset table (not DT)
+8. Report filters (`.report-filters`) — keep above DT result tables
+9. Dashboard KPI cards
+10. Login page + Django flash messages
+11. Nice-to-haves (see below)
+
+### What the dev does NOT need
+
+- Django/Python business logic
+- REST API contracts (server-rendered HTML only)
+- Database schema (field types are in [Forms reference](#forms-reference))
+
+---
+
+## Layout & CSS classes
+
+### Page modes
+
+| Mode | Body class | Used for |
+|------|------------|----------|
+| App shell | `app-body` | All authenticated pages |
+| Standalone | `standalone-page` | Login only |
+
+### App shell structure
+
+```
+.app-layout
+  .sidebar          ← dark nav, 240px
+  .app-main
+    .app-header     ← sticky: toggle, breadcrumbs, h1, .btn-primary, username
+    .app-content    ← max-width 1200px, page body
+```
+
+### Key CSS classes
+
+| Class | Purpose |
+|-------|---------|
+| `.employee-table`, `.data-table`, `.datatable` | Data tables (DT init on `.datatable`) |
+| `.formset-table` | Inline formset only — **no DataTables** |
+| `.field`, `.field-row`, `.field.checkbox` | Form layout |
+| `.form-section` | Fieldset card with legend |
+| `.search-input` | **Deprecated** on list pages when DT search is active |
+| `.report-filters` | Report filter panel (keep — separate from DT search) |
+| `.badge`, `.badge.status-*` | Status pills inside table cells |
+| `.message.success`, `.message.error` | Form feedback |
+| `.empty-state` | No results (when table not rendered) |
+| `.pagination` | **Deprecated** when DataTables pagination is active |
+| `.dataTables_wrapper`, `.dataTables_filter`, etc. | DataTables injected UI |
+| `.dashboard-kpis`, `.kpi-card` | Dashboard metrics |
+| `.btn.btn-primary` | Header action button |
+
+### Badge modifiers in use
+
+`.active`, `.inactive`, `.status-draft`, `.status-pending`, `.status-approved`, `.status-rejected`, `.status-cancelled`, `.status-present`, `.status-absent`, `.status-late`, `.status-incomplete`, `.status-leave`
+
+Additional attendance statuses in data but **no CSS yet:** `early_out`, `day_off`, `holiday`, `overtime`, `worked_holiday`, `auto_approved`
+
+### Current color palette (from `app.css`)
+
+| Role | Hex |
+|------|-----|
+| Primary / active link | `#1d4ed8` |
+| Primary hover | `#1e40af` |
+| Body text | `#111827` |
+| Muted text | `#6b7280` |
+| Label text | `#4b5563` |
+| Page background | `#f9fafb` |
+| Card / table bg | `#ffffff` |
+| Border | `#e5e7eb` |
+| Sidebar bg | `#111827` |
+| Sidebar text | `#d1d5db` / `#e5e7eb` |
+| Success bg / text | `#dcfce7` / `#166534` |
+| Error bg / text | `#fee2e2` / `#991b1b` |
+| Warning badge bg / text | `#fef3c7` / `#92400e` |
+| Alert KPI border / bg | `#fcd34d` / `#fffbeb` |
+| Overlay | `rgba(17, 24, 39, 0.45)` |
+
+### HTMX swap targets (do not remove or rename)
+
+| Page | List container | Form container | Refresh event |
+|------|----------------|----------------|---------------|
+| Employees | `#employee-list` | `#employee-form-container` | `employeeCreated` |
+| Punches | `#transaction-list` | `#transaction-form-container` | `attendanceTransactionCreated` |
+| Daily | `#daily-list` | `#daily-form-container` | `dailyAttendanceCreated` |
+| Corrections | `#correction-list` | `#correction-form-container` | `attendanceCorrectionCreated` |
+| Rules | `#rule-list` | `#rule-form-container` | `attendanceRuleCreated` |
+| Leave types | `#leave-type-list` | `#leave-type-form-container` | `leaveTypeCreated` |
+| Leave policies | `#leave-policy-list` | `#leave-policy-form-container` | `leavePolicyCreated` |
+| Leave requests | `#leave-request-list` | `#leave-request-form-container` | `leaveRequestCreated` |
+| Holidays | `#holiday-list` | `#holiday-form-container` | `holidayCreated` |
+| Timetables | `#timetable-list` | `#timetable-form-container` | `timetableCreated` |
+| Shifts | `#shift-list` | `#shift-form-container` | `shiftCreated` |
+| Assignments | `#assignment-list` | `#assignment-form-container` | `assignmentCreated` |
+| Temporary | `#temporary-list` | `#temporary-form-container` | `temporaryCreated` |
+
+Pagination in HTMX mode uses `hx-target` pointing at the list container — **will be removed** when DataTables replaces server pagination. Until migration is complete, destroy DT before HTMX swap and re-init after.
+
+Style `htmx-request` on list targets for loading feedback during refresh.
+
+---
+
+## Forms reference
+
+Every form in the app. **Label** is the exact text shown to the user in the template. **Field name** is the Django form field / HTML `name` attribute.
+
+Form CSS: fields use `.field`, checkboxes use `.field.checkbox`, grouped sections use `.form-section` with `<legend>`, side-by-side fields use `.field-row`.
+
+---
+
+### Login
+
+| | |
+|---|---|
+| **Page URL** | `/accounts/login/` |
+| **Template** | `templates/account/login.html` |
+| **Layout** | Standalone (no sidebar) |
+| **Submit button** | "Sign In" |
+| **Note** | Rendered via django-allauth `{{ form.as_p }}` — typically Login, Password, Remember me |
+
+---
+
+### Profile (read-only, not a form)
+
+| | |
+|---|---|
+| **Page URL** | `/accounts/profile/` |
+| **Template** | `templates/account/profile.html` |
+| **Display fields** | Username, Email (if set) — rendered as `<dl class="profile-details">` |
+
+---
+
+### Add employee
+
+| | |
+|---|---|
+| **Page URL** | `/employees/add/` |
+| **Template** | `templates/employees/partials/employee_form.html` |
+| **Form ID** | `#employee-form` |
+| **Submit button** | "Add Employee" |
+| **HTMX** | Posts to same URL; replaces `#employee-form-container` |
+
+| # | Label | Field name | Input type | Required |
+|---|-------|------------|------------|----------|
+| 1 | First name * | `first_name` | text | Yes |
+| 2 | Last name | `last_name` | text | No |
+| 3 | Employee code | `emp_code` | text | No |
+| 4 | Department | `department` | select | No |
+| 5 | Position | `position` | select | No |
+| 6 | Email | `email` | email | No |
+| 7 | Mobile | `mobile` | text | No |
+| 8 | Hire date | `hire_date` | date | No |
+| 9 | Active | `is_active` | checkbox | No |
+
+**Success state:** `.invite-box` with password-setup link, Copy button, "Add another employee" link.
+
+---
+
+### Record punch
+
+| | |
+|---|---|
+| **Page URL** | `/attendance/transactions/add/` |
+| **Template** | `templates/attendance/partials/transaction_form.html` |
+| **Form ID** | `#transaction-form` |
+| **Submit button** | "Record Punch" |
+
+| # | Label | Field name | Input type | Required |
+|---|-------|------------|------------|----------|
+| 1 | Employee * | `employee` | select | Yes |
+| 2 | Timestamp * | `timestamp` | datetime-local | Yes |
+| 3 | Direction | `direction` | select | No |
+| 4 | Source | `source` | select | No |
+| 5 | External ID * | `external_id` | text | Yes |
+| 6 | External employee ID | `external_employee_id` | text | No |
+
+**Direction options:** Check In, Check Out, Unknown  
+**Source options:** Biometric, Web, Mobile, Manual, Import
+
+---
+
+### Add daily attendance record
+
+| | |
+|---|---|
+| **Page URL** | `/attendance/daily/add/` |
+| **Template** | `templates/attendance/partials/daily_form.html` |
+| **Form ID** | `#daily-form` |
+| **Submit button** | "Add Daily Record" |
+
+| # | Label | Field name | Input type | Required |
+|---|-------|------------|------------|----------|
+| 1 | Employee * | `employee` | select | Yes |
+| 2 | Date * | `date` | date | Yes |
+| 3 | Status | `status` | select | No |
+| 4 | Shift | `shift` | select | No |
+| 5 | Timetable | `timetable` | select | No |
+| 6 | Scheduled minutes | `scheduled_minutes` | number | No |
+| 7 | Worked minutes | `worked_minutes` | number | No |
+| 8 | Late minutes | `late_minutes` | number | No |
+| 9 | Early leave minutes | `early_leave_minutes` | number | No |
+| 10 | Overtime minutes | `overtime_minutes` | number | No |
+| 11 | Has check in | `has_check_in` | checkbox | No |
+| 12 | Has check out | `has_check_out` | checkbox | No |
+| 13 | Notes | `notes` | textarea | No |
+
+**Status options:** Present, Absent, Late, Early Out, Incomplete, Day Off, Holiday, Leave, Worked Holiday, Overtime
+
+---
+
+### Submit attendance correction
+
+| | |
+|---|---|
+| **Page URL** | `/attendance/corrections/add/` |
+| **Template** | `templates/attendance/partials/correction_form.html` |
+| **Form ID** | `#correction-form` |
+| **Submit button** | "Submit Correction" |
+
+| # | Label | Field name | Input type | Required |
+|---|-------|------------|------------|----------|
+| 1 | Employee * | `employee` | select | Yes |
+| 2 | Date * | `date` | date | Yes |
+| 3 | Status | `status` | select | No |
+| 4 | Check in | `check_in` | datetime-local | No |
+| 5 | Check out | `check_out` | datetime-local | No |
+| 6 | Reason * | `reason` | textarea | Yes |
+
+**Status options:** Pending, Approved, Rejected, Cancelled
+
+---
+
+### Add attendance rule
+
+| | |
+|---|---|
+| **Page URL** | `/attendance/rules/add/` |
+| **Template** | `templates/attendance/partials/rule_form.html` |
+| **Form ID** | `#rule-form` |
+| **Submit button** | "Add Rule" |
+
+| # | Label | Field name | Input type | Required | Section |
+|---|-------|------------|------------|----------|---------|
+| 1 | Name * | `name` | text | Yes | — |
+| 2 | Require check in | `require_check_in` | checkbox | No | Punch requirements |
+| 3 | Require check out | `require_check_out` | checkbox | No | Punch requirements |
+| 4 | Allow multiple in/out | `allow_multiple_in_out` | checkbox | No | Punch requirements |
+| 5 | Missing check-in = absence | `missing_check_in_as_absence` | checkbox | No | Punch requirements |
+| 6 | Missing check-out = incomplete | `missing_check_out_as_incomplete` | checkbox | No | Punch requirements |
+| 7 | Late grace (min) | `late_grace_minutes` | number | No | Grace periods |
+| 8 | Early leave grace (min) | `early_leave_grace_minutes` | number | No | Grace periods |
+| 9 | Late to absence (min) | `late_to_absence_minutes` | number | No | Grace periods |
+| 10 | Duplicate punch window (min) | `duplicate_punch_window_minutes` | number | No | Grace periods |
+| 11 | Active | `is_active` | checkbox | No | — |
+
+---
+
+### Add leave type
+
+| | |
+|---|---|
+| **Page URL** | `/leave/types/add/` |
+| **Template** | `templates/leave/partials/leave_type_form.html` |
+| **Form ID** | `#leave-type-form` |
+| **Submit button** | "Add Leave Type" |
+
+| # | Label | Field name | Input type | Required |
+|---|-------|------------|------------|----------|
+| 1 | Name * | `name` | text | Yes |
+| 2 | Code * | `code` | text | Yes |
+| 3 | Description | `description` | textarea | No |
+| 4 | Paid leave | `paid` | checkbox | No |
+| 5 | Requires approval | `requires_approval` | checkbox | No |
+| 6 | Allow half day | `allow_half_day` | checkbox | No |
+| 7 | Allow negative balance | `allow_negative_balance` | checkbox | No |
+| 8 | Active | `is_active` | checkbox | No |
+
+---
+
+### Add leave policy
+
+| | |
+|---|---|
+| **Page URL** | `/leave/policies/add/` |
+| **Template** | `templates/leave/partials/leave_policy_form.html` |
+| **Form ID** | `#leave-policy-form` |
+| **Submit button** | "Add Leave Policy" |
+
+| # | Label | Field name | Input type | Required |
+|---|-------|------------|------------|----------|
+| 1 | Leave type * | `leave_type` | select | Yes |
+| 2 | Policy name * | `name` | text | Yes |
+| 3 | Entitlement days | `entitlement_days` | number | No |
+| 4 | Accrual type | `accrual_type` | select | No |
+| 5 | Accrual days | `accrual_days` | number | No |
+| 6 | Carry forward | `carry_forward` | checkbox | No |
+| 7 | Max carry forward days | `max_carry_forward_days` | number | No |
+| 8 | Minimum service days | `minimum_service_days` | number | No |
+| 9 | Expiry enabled | `expiry_enabled` | checkbox | No |
+| 10 | Expiry days | `expiry_days` | number | No |
+| 11 | Active | `is_active` | checkbox | No |
+
+**Accrual type options:** Yearly, Monthly, No Accrual
+
+---
+
+### Add leave request
+
+| | |
+|---|---|
+| **Page URL** | `/leave/requests/add/` |
+| **Template** | `templates/leave/partials/leave_request_form.html` |
+| **Form ID** | `#leave-request-form` |
+| **Submit button** | "Add Leave Request" |
+
+| # | Label | Field name | Input type | Required |
+|---|-------|------------|------------|----------|
+| 1 | Employee * | `employee` | select | Yes |
+| 2 | Leave type * | `leave_type` | select | Yes |
+| 3 | Start date * | `start_date` | date | Yes |
+| 4 | End date * | `end_date` | date | Yes |
+| 5 | Days * | `days` | number | Yes |
+| 6 | Duration type | `duration_type` | select | No |
+| 7 | Status | `status` | select | No |
+| 8 | Start half day | `start_half` | checkbox | No |
+| 9 | End half day | `end_half` | checkbox | No |
+| 10 | Reason | `reason` | textarea | No |
+
+**Duration type options:** Full Day, Half Day, Hourly  
+**Status options:** Draft, Pending, Approved, Rejected, Cancelled
+
+---
+
+### Add holiday
+
+| | |
+|---|---|
+| **Page URL** | `/leave/holidays/add/` |
+| **Template** | `templates/leave/partials/holiday_form.html` |
+| **Form ID** | `#holiday-form` |
+| **Submit button** | "Add Holiday" |
+
+| # | Label | Field name | Input type | Required |
+|---|-------|------------|------------|----------|
+| 1 | Name * | `name` | text | Yes |
+| 2 | Date * | `date` | date | Yes |
+| 3 | End date | `end_date` | date | No |
+| 4 | Type | `holiday_type` | select | No |
+| 5 | Description | `description` | textarea | No |
+| 6 | Active | `is_active` | checkbox | No |
+
+**Type options:** Public Holiday, Company Holiday, Optional Holiday
+
+---
+
+### Add timetable
+
+| | |
+|---|---|
+| **Page URL** | `/schedule/timetables/add/` |
+| **Template** | `templates/schedule/partials/timetable_form.html` |
+| **Form ID** | `#timetable-form` |
+| **Submit button** | "Add Timetable" |
+
+| # | Label | Field name | Input type | Required | Section |
+|---|-------|------------|------------|----------|---------|
+| 1 | Name * | `name` | text | Yes | Basic info |
+| 2 | Code * | `code` | text | Yes | Basic info |
+| 3 | Type | `type` | select | No | Basic info |
+| 4 | Work type | `work_type` | select | No | Basic info |
+| 5 | Workday | `workday` | number | No | Basic info |
+| 6 | Color | `color` | text | No | Basic info |
+| 7 | Check in | `check_in` | time | No | Working hours |
+| 8 | Check out | `check_out` | time | No | Working hours |
+| 9 | Work minutes (flexible) | `work_minutes` | number | No | Working hours |
+| 10 | Check-in window start | `check_in_start` | time | No | Working hours |
+| 11 | Check-in window end | `check_in_end` | time | No | Working hours |
+| 12 | Check-out window start | `check_out_start` | time | No | Working hours |
+| 13 | Check-out window end | `check_out_end` | time | No | Working hours |
+| 14 | Check-in cross days | `check_in_cross_days` | number | No | Working hours |
+| 15 | Check-out cross days | `check_out_cross_days` | number | No | Working hours |
+| 16 | Day change time | `day_change_time` | time | No | Working hours |
+| 17 | Require check in | `require_check_in` | checkbox | No | Attendance rules |
+| 18 | Require check out | `require_check_out` | checkbox | No | Attendance rules |
+| 19 | Multiple in/out | `multiple_in_out` | checkbox | No | Attendance rules |
+| 20 | Allow late in | `allow_late_in` | checkbox | No | Attendance rules |
+| 21 | Late-in grace (min) | `late_in_grace_minutes` | number | No | Attendance rules |
+| 22 | Allow early out | `allow_early_out` | checkbox | No | Attendance rules |
+| 23 | Early-out grace (min) | `early_out_grace_minutes` | number | No | Attendance rules |
+| 24 | Active | `is_active` | checkbox | No | Attendance rules |
+
+**Type options:** Normal, Flexible  
+**Work type options:** Work, Day Off, Overtime
+
+---
+
+### Add shift
+
+| | |
+|---|---|
+| **Page URL** | `/schedule/shifts/add/` |
+| **Template** | `templates/schedule/partials/shift_form.html` |
+| **Form ID** | `#shift-form` |
+| **Submit button** | "Add Shift" |
+
+| # | Label | Field name | Input type | Required | Section |
+|---|-------|------------|------------|----------|---------|
+| 1 | Name * | `name` | text | Yes | Shift details |
+| 2 | Code * | `code` | text | Yes | Shift details |
+| 3 | Cycle unit | `cycle_unit` | select | No | Shift details |
+| 4 | Cycle count | `cycle_count` | number | No | Shift details |
+| 5 | Auto shift | `auto_shift` | checkbox | No | Shift details |
+| 6 | Active | `is_active` | checkbox | No | Shift details |
+| 7 | Day # | `days-N-day_number` | number | No | Cycle days (formset) |
+| 8 | Timetable | `days-N-timetable` | select | No | Cycle days (formset) |
+| 9 | Remove | `days-N-DELETE` | checkbox | No | Cycle days (formset) |
+
+**Cycle unit options:** Day, Week, Month  
+See [Shift formset table](#shift-formset-table-inside-add-shift-form) for inline table headers.
+
+---
+
+### Add schedule assignment
+
+| | |
+|---|---|
+| **Page URL** | `/schedule/assignments/add/` |
+| **Template** | `templates/schedule/partials/assignment_form.html` |
+| **Form ID** | `#assignment-form` |
+| **Submit button** | "Add Assignment" |
+
+| # | Label | Field name | Input type | Required |
+|---|-------|------------|------------|----------|
+| 1 | Assignment type * | `assignment_type` | select | Yes |
+| 2 | Shift * | `shift` | select | Yes |
+| 3 | Start date * | `start_date` | date | Yes |
+| 4 | End date * | `end_date` | date | Yes |
+| 5 | Employee | `employee` | select | Conditional |
+| 6 | Department | `department` | select | Conditional |
+| 7 | Overwrite existing schedules | `overwrite_existing` | checkbox | No |
+
+**Assignment type options:** Employee, Department, Group  
+Employee required when type = Employee; Department required when type = Department.
+
+---
+
+### Add temporary schedule
+
+| | |
+|---|---|
+| **Page URL** | `/schedule/temporary/add/` |
+| **Template** | `templates/schedule/partials/temporary_form.html` |
+| **Form ID** | `#temporary-form` |
+| **Submit button** | "Add Temporary Schedule" |
+
+| # | Label | Field name | Input type | Required |
+|---|-------|------------|------------|----------|
+| 1 | Employee * | `employee` | select | Yes |
+| 2 | Date * | `date` | date | Yes |
+| 3 | Timetable * | `timetable` | select | Yes |
+| 4 | Reason | `reason` | textarea | No |
+| 5 | Overrides normal schedule | `overrides_normal_schedule` | checkbox | No |
+
+---
+
+### Report filter forms
+
+All report pages use `templates/reports/partials/filter_form.html` (class `.report-filters`). Submit button: **"Apply filters"**. Below the form: export links (Download CSV, Download Excel, Download PDF).
+
+#### Standard date-range filter (Attendance summary, Department, Exceptions, Punch log)
+
+| # | Label | Field name | Input type |
+|---|-------|------------|------------|
+| 1 | Date from | `date_from` | date |
+| 2 | Date to | `date_to` | date |
+| 3 | Department | `department` | select (empty = "All departments") |
+| 4 | Employee | `employee` | select (empty = "All employees") |
+
+#### Individual attendance filter
+
+Same as above, but employee empty label is **"Select employee"**.
+
+#### Exceptions filter (adds one field)
+
+| # | Label | Field name | Input type |
+|---|-------|------------|------------|
+| 5 | Exception type | `exception_type` | select |
+
+**Exception type options:** All exceptions, Late, Absent, Incomplete, Missing punch
+
+#### Overtime filter (adds one field)
+
+| # | Label | Field name | Input type |
+|---|-------|------------|------------|
+| 5 | Status | `status` | select |
+
+**Status options:** All statuses, Pending, Approved, Rejected, Auto approved
+
+#### Leave report filter
+
+| # | Label | Field name | Input type |
+|---|-------|------------|------------|
+| 1 | Report type | `report_type` | select |
+| 2 | Date from | `date_from` | date |
+| 3 | Date to | `date_to` | date |
+| 4 | Department | `department` | select |
+| 5 | Employee | `employee` | select |
+| 6 | Year | `year` | number |
+
+**Report type options:** Leave balance, Leave utilization, Pending leave
+
+---
+
+### List page search inputs — replaced by DataTables
+
+When DataTables is active, **remove or hide** these — DT provides its own `.dataTables_filter` search:
+
+| Page | Input ID | Was used for |
+|------|----------|--------------|
+| Employees | `#employee-search` | HTMX server search |
+| Punches | `#transaction-search` | HTMX server search |
+| Daily | `#daily-search` | HTMX server search |
+| Corrections | `#correction-search` | HTMX server search |
+| Rules | `#rule-search` | HTMX server search |
+| Leave types | `#leave-type-search` | HTMX server search |
+| Leave policies | `#leave-policy-search` | HTMX server search |
+| Leave requests | `#leave-request-search` | HTMX server search |
+| Holidays | `#holiday-search` | HTMX server search |
+| Timetables | `#timetable-search` | HTMX server search |
+| Shifts | `#shift-search` | HTMX server search |
+| Assignments | `#assignment-search` | HTMX server search |
+| Temporary | `#temporary-search` | HTMX server search |
+
+Until server-side DataTables is built, client-side search only filters the **current page** (≤25 rows).
+
+---
+
+## Nice to haves
+
+Polish items — not required for MVP styling but improve UX. Several have minimal or no CSS today.
+
+### Login page
+
+| | |
+|---|---|
+| **URL** | `/accounts/login/` |
+| **Template** | `templates/account/login.html` |
+| **Issue** | Uses django-allauth `{{ form.as_p }}` — unstyled paragraph layout |
+| **Nice to have** | Centered card, branded header, styled inputs matching `.field` pattern, "Forgot password?" link styling |
+
+### Django flash messages
+
+| | |
+|---|---|
+| **Template** | `templates/base.html` |
+| **Issue** | Messages render as bare `<p>{{ message }}</p>` with no class |
+| **Nice to have** | Toast or banner using `.message.success` / `.message.error`; dismiss button; fixed position top of content |
+
+### HTMX loading states
+
+| | |
+|---|---|
+| **Issue** | Table/form swaps have no visual feedback during request |
+| **Nice to have** | Opacity fade on swap target, skeleton rows, or spinner overlay on `#employee-list` etc. Can use HTMX `htmx-request` class on body or target. |
+
+### Employee invite box
+
+| | |
+|---|---|
+| **Template** | `templates/employees/partials/employee_invite.html` |
+| **Class** | `.invite-box` (minimal styling) |
+| **Nice to have** | Card layout, monospace/code block for link, styled Copy button, success icon |
+
+### Export buttons
+
+| | |
+|---|---|
+| **Class** | `.export-buttons` |
+| **Current** | Plain text links: Download CSV, Excel, PDF |
+| **Nice to have** | DataTables **Buttons** extension as alternative/complement; secondary `.btn` variant |
+
+### DataTables enhancements
+
+| Enhancement | Notes |
+|-------------|-------|
+| Server-side processing | JSON API per table — full search/sort across all records |
+| Buttons extension | CSV / Excel / PDF export from DT toolbar on reports |
+| Row hover | Style `table.dataTable tbody tr:hover` |
+| State saving | `stateSave: true` — remember page length, sort, search per table |
+| Column visibility | ColVis button for wide report tables |
+| Processing indicator | `processing: true` during server-side AJAX |
+
+### Report hub links
+
+| | |
+|---|---|
+| **Class** | `.report-link-list` |
+| **Current** | Basic bordered cards |
+| **Nice to have** | Icons per report type, description subtext, grid layout on wide screens |
+
+### Table enhancements (legacy — prefer DataTables)
+
+Most table UX (sort, search, paginate, responsive) is handled by DataTables. Remaining custom work:
+
+| Enhancement | Notes |
+|-------------|-------|
+| Custom DT theme | Match app tokens in `datatables-overrides.css` |
+| Badge rendering in cells | Ensure `.badge` styles work inside `table.dataTable td` |
+| Print stylesheet | `@media print` on `.dataTables_wrapper` — hide controls, show all rows |
+
+### Form enhancements
+
+| Enhancement | Applies to |
+|-------------|------------|
+| Focus ring on inputs | All `.field input/select/textarea` |
+| Disabled submit while posting | HTMX forms — `htmx-request` on button |
+| Inline required indicator style | Fields marked `*` in labels |
+| Section collapse | Long forms (Timetable, Shift) — accordion on `.form-section` |
+| Date/time picker styling | Native `date`, `time`, `datetime-local` inputs |
+
+### Sidebar enhancements
+
+| Enhancement | Notes |
+|-------------|-------|
+| Icon-only collapsed mode | Planned in ui-shell-plan — 240px → 64px + localStorage |
+| Badge counts on nav items | Pending leave, corrections (not implemented) |
+| User avatar in footer | Replace plain username in header |
+
+### Dashboard enhancements
+
+| Enhancement | Notes |
+|-------------|-------|
+| Sparklines or trend arrows on KPIs | Not in data yet |
+| Clickable KPI cards linking to reports | e.g. Pending Leave → leave requests list |
+| Recent activity table | Not implemented |
+
+### Icons & illustration
+
+| | |
+|---|---|
+| **Current** | No icon set; hamburger is Unicode `☰` |
+| **Nice to have** | Icon library (Lucide, Heroicons) for nav, status, export, empty states |
+
+### Print styles
+
+| | |
+|---|---|
+| **Applies to** | Report pages with tables |
+| **Nice to have** | `@media print` — hide sidebar/header, full-width table, page breaks |
+
+### Dark mode
+
+| | |
+|---|---|
+| **Current** | Light mode only (sidebar is dark, content is light) |
+| **Nice to have** | Optional `prefers-color-scheme` or toggle — low priority for internal HR tool |
+
+---
+
+## Site map
+
+| Section | List URL | Add URL |
+|---------|----------|---------|
+| Dashboard | `/` | — |
+| Employees | `/employees/` | `/employees/add/` |
+| Punches | `/attendance/transactions/` | `/attendance/transactions/add/` |
+| Daily attendance | `/attendance/daily/` | `/attendance/daily/add/` |
+| Corrections | `/attendance/corrections/` | `/attendance/corrections/add/` |
+| Rules | `/attendance/rules/` | `/attendance/rules/add/` |
+| Leave types | `/leave/types/` | `/leave/types/add/` |
+| Leave policies | `/leave/policies/` | `/leave/policies/add/` |
+| Leave requests | `/leave/requests/` | `/leave/requests/add/` |
+| Holidays | `/leave/holidays/` | `/leave/holidays/add/` |
+| Timetables | `/schedule/timetables/` | `/schedule/timetables/add/` |
+| Shifts | `/schedule/shifts/` | `/schedule/shifts/add/` |
+| Assignments | `/schedule/assignments/` | `/schedule/assignments/add/` |
+| Temporary | `/schedule/temporary/` | `/schedule/temporary/add/` |
+| Reports hub | `/reports/` | — |
+| Attendance summary | `/reports/attendance/` | — |
+| Individual attendance | `/reports/individual/` | — |
+| Department attendance | `/reports/department/` | — |
+| Exceptions | `/reports/exceptions/` | — |
+| Punch log | `/reports/punch-log/` | — |
+| Overtime | `/reports/overtime/` | — |
+| Leave reports | `/reports/leave/` | — |
+| Profile | `/accounts/profile/` | — |
+| Login | `/accounts/login/` | — |
+
+List pages show a primary action button in the header (e.g. "Add employee" → `/employees/add/`).
+
+---
+
+## File reference
+
+| What | Path |
+|------|------|
+| CSS | `static/css/app.css` |
+| DataTables overrides (proposed) | `static/css/datatables-overrides.css` |
+| JS | `static/js/app.js` |
+| DataTables init (proposed) | `static/js/datatables-init.js` |
+| Shell layout | `templates/layouts/app_shell.html` |
+| Table partials | `templates/{app}/partials/*_table.html` |
+| Form partials | `templates/{app}/partials/*_form.html` |
+| Report filters | `templates/reports/partials/filter_form.html` |
+| Pagination (legacy) | `templates/partials/pagination.html` |
+| Form Python defs | `{app}/forms.py` |
+| Page size constant | `common/pagination.py` (`DEFAULT_PAGE_SIZE = 25`) |
 
 ---
 
@@ -712,796 +1502,6 @@ Column headers match template `<th>` text. **DataTables ID** and per-column sort
 | 3 | Remove | Delete checkbox |
 
 Up to 7 rows. Style as a form grid, not a DataTable.
-
----
-
-## Forms reference
-
-Every form in the app. **Label** is the exact text shown to the user in the template. **Field name** is the Django form field / HTML `name` attribute.
-
-Form CSS: fields use `.field`, checkboxes use `.field.checkbox`, grouped sections use `.form-section` with `<legend>`, side-by-side fields use `.field-row`.
-
----
-
-### Login
-
-| | |
-|---|---|
-| **Page URL** | `/accounts/login/` |
-| **Template** | `templates/account/login.html` |
-| **Layout** | Standalone (no sidebar) |
-| **Submit button** | "Sign In" |
-| **Note** | Rendered via django-allauth `{{ form.as_p }}` — typically Login, Password, Remember me |
-
----
-
-### Profile (read-only, not a form)
-
-| | |
-|---|---|
-| **Page URL** | `/accounts/profile/` |
-| **Template** | `templates/account/profile.html` |
-| **Display fields** | Username, Email (if set) — rendered as `<dl class="profile-details">` |
-
----
-
-### Add employee
-
-| | |
-|---|---|
-| **Page URL** | `/employees/add/` |
-| **Template** | `templates/employees/partials/employee_form.html` |
-| **Form ID** | `#employee-form` |
-| **Submit button** | "Add Employee" |
-| **HTMX** | Posts to same URL; replaces `#employee-form-container` |
-
-| # | Label | Field name | Input type | Required |
-|---|-------|------------|------------|----------|
-| 1 | First name * | `first_name` | text | Yes |
-| 2 | Last name | `last_name` | text | No |
-| 3 | Employee code | `emp_code` | text | No |
-| 4 | Department | `department` | select | No |
-| 5 | Position | `position` | select | No |
-| 6 | Email | `email` | email | No |
-| 7 | Mobile | `mobile` | text | No |
-| 8 | Hire date | `hire_date` | date | No |
-| 9 | Active | `is_active` | checkbox | No |
-
-**Success state:** `.invite-box` with password-setup link, Copy button, "Add another employee" link.
-
----
-
-### Record punch
-
-| | |
-|---|---|
-| **Page URL** | `/attendance/transactions/add/` |
-| **Template** | `templates/attendance/partials/transaction_form.html` |
-| **Form ID** | `#transaction-form` |
-| **Submit button** | "Record Punch" |
-
-| # | Label | Field name | Input type | Required |
-|---|-------|------------|------------|----------|
-| 1 | Employee * | `employee` | select | Yes |
-| 2 | Timestamp * | `timestamp` | datetime-local | Yes |
-| 3 | Direction | `direction` | select | No |
-| 4 | Source | `source` | select | No |
-| 5 | External ID * | `external_id` | text | Yes |
-| 6 | External employee ID | `external_employee_id` | text | No |
-
-**Direction options:** Check In, Check Out, Unknown  
-**Source options:** Biometric, Web, Mobile, Manual, Import
-
----
-
-### Add daily attendance record
-
-| | |
-|---|---|
-| **Page URL** | `/attendance/daily/add/` |
-| **Template** | `templates/attendance/partials/daily_form.html` |
-| **Form ID** | `#daily-form` |
-| **Submit button** | "Add Daily Record" |
-
-| # | Label | Field name | Input type | Required |
-|---|-------|------------|------------|----------|
-| 1 | Employee * | `employee` | select | Yes |
-| 2 | Date * | `date` | date | Yes |
-| 3 | Status | `status` | select | No |
-| 4 | Shift | `shift` | select | No |
-| 5 | Timetable | `timetable` | select | No |
-| 6 | Scheduled minutes | `scheduled_minutes` | number | No |
-| 7 | Worked minutes | `worked_minutes` | number | No |
-| 8 | Late minutes | `late_minutes` | number | No |
-| 9 | Early leave minutes | `early_leave_minutes` | number | No |
-| 10 | Overtime minutes | `overtime_minutes` | number | No |
-| 11 | Has check in | `has_check_in` | checkbox | No |
-| 12 | Has check out | `has_check_out` | checkbox | No |
-| 13 | Notes | `notes` | textarea | No |
-
-**Status options:** Present, Absent, Late, Early Out, Incomplete, Day Off, Holiday, Leave, Worked Holiday, Overtime
-
----
-
-### Submit attendance correction
-
-| | |
-|---|---|
-| **Page URL** | `/attendance/corrections/add/` |
-| **Template** | `templates/attendance/partials/correction_form.html` |
-| **Form ID** | `#correction-form` |
-| **Submit button** | "Submit Correction" |
-
-| # | Label | Field name | Input type | Required |
-|---|-------|------------|------------|----------|
-| 1 | Employee * | `employee` | select | Yes |
-| 2 | Date * | `date` | date | Yes |
-| 3 | Status | `status` | select | No |
-| 4 | Check in | `check_in` | datetime-local | No |
-| 5 | Check out | `check_out` | datetime-local | No |
-| 6 | Reason * | `reason` | textarea | Yes |
-
-**Status options:** Pending, Approved, Rejected, Cancelled
-
----
-
-### Add attendance rule
-
-| | |
-|---|---|
-| **Page URL** | `/attendance/rules/add/` |
-| **Template** | `templates/attendance/partials/rule_form.html` |
-| **Form ID** | `#rule-form` |
-| **Submit button** | "Add Rule" |
-
-| # | Label | Field name | Input type | Required | Section |
-|---|-------|------------|------------|----------|---------|
-| 1 | Name * | `name` | text | Yes | — |
-| 2 | Require check in | `require_check_in` | checkbox | No | Punch requirements |
-| 3 | Require check out | `require_check_out` | checkbox | No | Punch requirements |
-| 4 | Allow multiple in/out | `allow_multiple_in_out` | checkbox | No | Punch requirements |
-| 5 | Missing check-in = absence | `missing_check_in_as_absence` | checkbox | No | Punch requirements |
-| 6 | Missing check-out = incomplete | `missing_check_out_as_incomplete` | checkbox | No | Punch requirements |
-| 7 | Late grace (min) | `late_grace_minutes` | number | No | Grace periods |
-| 8 | Early leave grace (min) | `early_leave_grace_minutes` | number | No | Grace periods |
-| 9 | Late to absence (min) | `late_to_absence_minutes` | number | No | Grace periods |
-| 10 | Duplicate punch window (min) | `duplicate_punch_window_minutes` | number | No | Grace periods |
-| 11 | Active | `is_active` | checkbox | No | — |
-
----
-
-### Add leave type
-
-| | |
-|---|---|
-| **Page URL** | `/leave/types/add/` |
-| **Template** | `templates/leave/partials/leave_type_form.html` |
-| **Form ID** | `#leave-type-form` |
-| **Submit button** | "Add Leave Type" |
-
-| # | Label | Field name | Input type | Required |
-|---|-------|------------|------------|----------|
-| 1 | Name * | `name` | text | Yes |
-| 2 | Code * | `code` | text | Yes |
-| 3 | Description | `description` | textarea | No |
-| 4 | Paid leave | `paid` | checkbox | No |
-| 5 | Requires approval | `requires_approval` | checkbox | No |
-| 6 | Allow half day | `allow_half_day` | checkbox | No |
-| 7 | Allow negative balance | `allow_negative_balance` | checkbox | No |
-| 8 | Active | `is_active` | checkbox | No |
-
----
-
-### Add leave policy
-
-| | |
-|---|---|
-| **Page URL** | `/leave/policies/add/` |
-| **Template** | `templates/leave/partials/leave_policy_form.html` |
-| **Form ID** | `#leave-policy-form` |
-| **Submit button** | "Add Leave Policy" |
-
-| # | Label | Field name | Input type | Required |
-|---|-------|------------|------------|----------|
-| 1 | Leave type * | `leave_type` | select | Yes |
-| 2 | Policy name * | `name` | text | Yes |
-| 3 | Entitlement days | `entitlement_days` | number | No |
-| 4 | Accrual type | `accrual_type` | select | No |
-| 5 | Accrual days | `accrual_days` | number | No |
-| 6 | Carry forward | `carry_forward` | checkbox | No |
-| 7 | Max carry forward days | `max_carry_forward_days` | number | No |
-| 8 | Minimum service days | `minimum_service_days` | number | No |
-| 9 | Expiry enabled | `expiry_enabled` | checkbox | No |
-| 10 | Expiry days | `expiry_days` | number | No |
-| 11 | Active | `is_active` | checkbox | No |
-
-**Accrual type options:** Yearly, Monthly, No Accrual
-
----
-
-### Add leave request
-
-| | |
-|---|---|
-| **Page URL** | `/leave/requests/add/` |
-| **Template** | `templates/leave/partials/leave_request_form.html` |
-| **Form ID** | `#leave-request-form` |
-| **Submit button** | "Add Leave Request" |
-
-| # | Label | Field name | Input type | Required |
-|---|-------|------------|------------|----------|
-| 1 | Employee * | `employee` | select | Yes |
-| 2 | Leave type * | `leave_type` | select | Yes |
-| 3 | Start date * | `start_date` | date | Yes |
-| 4 | End date * | `end_date` | date | Yes |
-| 5 | Days * | `days` | number | Yes |
-| 6 | Duration type | `duration_type` | select | No |
-| 7 | Status | `status` | select | No |
-| 8 | Start half day | `start_half` | checkbox | No |
-| 9 | End half day | `end_half` | checkbox | No |
-| 10 | Reason | `reason` | textarea | No |
-
-**Duration type options:** Full Day, Half Day, Hourly  
-**Status options:** Draft, Pending, Approved, Rejected, Cancelled
-
----
-
-### Add holiday
-
-| | |
-|---|---|
-| **Page URL** | `/leave/holidays/add/` |
-| **Template** | `templates/leave/partials/holiday_form.html` |
-| **Form ID** | `#holiday-form` |
-| **Submit button** | "Add Holiday" |
-
-| # | Label | Field name | Input type | Required |
-|---|-------|------------|------------|----------|
-| 1 | Name * | `name` | text | Yes |
-| 2 | Date * | `date` | date | Yes |
-| 3 | End date | `end_date` | date | No |
-| 4 | Type | `holiday_type` | select | No |
-| 5 | Description | `description` | textarea | No |
-| 6 | Active | `is_active` | checkbox | No |
-
-**Type options:** Public Holiday, Company Holiday, Optional Holiday
-
----
-
-### Add timetable
-
-| | |
-|---|---|
-| **Page URL** | `/schedule/timetables/add/` |
-| **Template** | `templates/schedule/partials/timetable_form.html` |
-| **Form ID** | `#timetable-form` |
-| **Submit button** | "Add Timetable" |
-
-| # | Label | Field name | Input type | Required | Section |
-|---|-------|------------|------------|----------|---------|
-| 1 | Name * | `name` | text | Yes | Basic info |
-| 2 | Code * | `code` | text | Yes | Basic info |
-| 3 | Type | `type` | select | No | Basic info |
-| 4 | Work type | `work_type` | select | No | Basic info |
-| 5 | Workday | `workday` | number | No | Basic info |
-| 6 | Color | `color` | text | No | Basic info |
-| 7 | Check in | `check_in` | time | No | Working hours |
-| 8 | Check out | `check_out` | time | No | Working hours |
-| 9 | Work minutes (flexible) | `work_minutes` | number | No | Working hours |
-| 10 | Check-in window start | `check_in_start` | time | No | Working hours |
-| 11 | Check-in window end | `check_in_end` | time | No | Working hours |
-| 12 | Check-out window start | `check_out_start` | time | No | Working hours |
-| 13 | Check-out window end | `check_out_end` | time | No | Working hours |
-| 14 | Check-in cross days | `check_in_cross_days` | number | No | Working hours |
-| 15 | Check-out cross days | `check_out_cross_days` | number | No | Working hours |
-| 16 | Day change time | `day_change_time` | time | No | Working hours |
-| 17 | Require check in | `require_check_in` | checkbox | No | Attendance rules |
-| 18 | Require check out | `require_check_out` | checkbox | No | Attendance rules |
-| 19 | Multiple in/out | `multiple_in_out` | checkbox | No | Attendance rules |
-| 20 | Allow late in | `allow_late_in` | checkbox | No | Attendance rules |
-| 21 | Late-in grace (min) | `late_in_grace_minutes` | number | No | Attendance rules |
-| 22 | Allow early out | `allow_early_out` | checkbox | No | Attendance rules |
-| 23 | Early-out grace (min) | `early_out_grace_minutes` | number | No | Attendance rules |
-| 24 | Active | `is_active` | checkbox | No | Attendance rules |
-
-**Type options:** Normal, Flexible  
-**Work type options:** Work, Day Off, Overtime
-
----
-
-### Add shift
-
-| | |
-|---|---|
-| **Page URL** | `/schedule/shifts/add/` |
-| **Template** | `templates/schedule/partials/shift_form.html` |
-| **Form ID** | `#shift-form` |
-| **Submit button** | "Add Shift" |
-
-| # | Label | Field name | Input type | Required | Section |
-|---|-------|------------|------------|----------|---------|
-| 1 | Name * | `name` | text | Yes | Shift details |
-| 2 | Code * | `code` | text | Yes | Shift details |
-| 3 | Cycle unit | `cycle_unit` | select | No | Shift details |
-| 4 | Cycle count | `cycle_count` | number | No | Shift details |
-| 5 | Auto shift | `auto_shift` | checkbox | No | Shift details |
-| 6 | Active | `is_active` | checkbox | No | Shift details |
-| 7 | Day # | `days-N-day_number` | number | No | Cycle days (formset) |
-| 8 | Timetable | `days-N-timetable` | select | No | Cycle days (formset) |
-| 9 | Remove | `days-N-DELETE` | checkbox | No | Cycle days (formset) |
-
-**Cycle unit options:** Day, Week, Month  
-See [Shift formset table](#shift-formset-table-inside-add-shift-form) for inline table headers.
-
----
-
-### Add schedule assignment
-
-| | |
-|---|---|
-| **Page URL** | `/schedule/assignments/add/` |
-| **Template** | `templates/schedule/partials/assignment_form.html` |
-| **Form ID** | `#assignment-form` |
-| **Submit button** | "Add Assignment" |
-
-| # | Label | Field name | Input type | Required |
-|---|-------|------------|------------|----------|
-| 1 | Assignment type * | `assignment_type` | select | Yes |
-| 2 | Shift * | `shift` | select | Yes |
-| 3 | Start date * | `start_date` | date | Yes |
-| 4 | End date * | `end_date` | date | Yes |
-| 5 | Employee | `employee` | select | Conditional |
-| 6 | Department | `department` | select | Conditional |
-| 7 | Overwrite existing schedules | `overwrite_existing` | checkbox | No |
-
-**Assignment type options:** Employee, Department, Group  
-Employee required when type = Employee; Department required when type = Department.
-
----
-
-### Add temporary schedule
-
-| | |
-|---|---|
-| **Page URL** | `/schedule/temporary/add/` |
-| **Template** | `templates/schedule/partials/temporary_form.html` |
-| **Form ID** | `#temporary-form` |
-| **Submit button** | "Add Temporary Schedule" |
-
-| # | Label | Field name | Input type | Required |
-|---|-------|------------|------------|----------|
-| 1 | Employee * | `employee` | select | Yes |
-| 2 | Date * | `date` | date | Yes |
-| 3 | Timetable * | `timetable` | select | Yes |
-| 4 | Reason | `reason` | textarea | No |
-| 5 | Overrides normal schedule | `overrides_normal_schedule` | checkbox | No |
-
----
-
-### Report filter forms
-
-All report pages use `templates/reports/partials/filter_form.html` (class `.report-filters`). Submit button: **"Apply filters"**. Below the form: export links (Download CSV, Download Excel, Download PDF).
-
-#### Standard date-range filter (Attendance summary, Department, Exceptions, Punch log)
-
-| # | Label | Field name | Input type |
-|---|-------|------------|------------|
-| 1 | Date from | `date_from` | date |
-| 2 | Date to | `date_to` | date |
-| 3 | Department | `department` | select (empty = "All departments") |
-| 4 | Employee | `employee` | select (empty = "All employees") |
-
-#### Individual attendance filter
-
-Same as above, but employee empty label is **"Select employee"**.
-
-#### Exceptions filter (adds one field)
-
-| # | Label | Field name | Input type |
-|---|-------|------------|------------|
-| 5 | Exception type | `exception_type` | select |
-
-**Exception type options:** All exceptions, Late, Absent, Incomplete, Missing punch
-
-#### Overtime filter (adds one field)
-
-| # | Label | Field name | Input type |
-|---|-------|------------|------------|
-| 5 | Status | `status` | select |
-
-**Status options:** All statuses, Pending, Approved, Rejected, Auto approved
-
-#### Leave report filter
-
-| # | Label | Field name | Input type |
-|---|-------|------------|------------|
-| 1 | Report type | `report_type` | select |
-| 2 | Date from | `date_from` | date |
-| 3 | Date to | `date_to` | date |
-| 4 | Department | `department` | select |
-| 5 | Employee | `employee` | select |
-| 6 | Year | `year` | number |
-
-**Report type options:** Leave balance, Leave utilization, Pending leave
-
----
-
-### List page search inputs — replaced by DataTables
-
-When DataTables is active, **remove or hide** these — DT provides its own `.dataTables_filter` search:
-
-| Page | Input ID | Was used for |
-|------|----------|--------------|
-| Employees | `#employee-search` | HTMX server search |
-| Punches | `#transaction-search` | HTMX server search |
-| Daily | `#daily-search` | HTMX server search |
-| Corrections | `#correction-search` | HTMX server search |
-| Rules | `#rule-search` | HTMX server search |
-| Leave types | `#leave-type-search` | HTMX server search |
-| Leave policies | `#leave-policy-search` | HTMX server search |
-| Leave requests | `#leave-request-search` | HTMX server search |
-| Holidays | `#holiday-search` | HTMX server search |
-| Timetables | `#timetable-search` | HTMX server search |
-| Shifts | `#shift-search` | HTMX server search |
-| Assignments | `#assignment-search` | HTMX server search |
-| Temporary | `#temporary-search` | HTMX server search |
-
-Until server-side DataTables is built, client-side search only filters the **current page** (≤25 rows).
-
----
-
-## CSS handoff guide
-
-What a frontend dev needs beyond the tables/forms inventory above.
-
-### Must have — structure & hooks
-
-| Detail | Why | Where |
-|--------|-----|-------|
-| Page inventory | Know every screen | [Site map](#site-map) |
-| Layout structure | Sidebar + header + content vs standalone login | `templates/layouts/app_shell.html`, `base.html` |
-| CSS class names | Templates already use these — style them, don't rename | `static/css/app.css`, [Key CSS classes](#key-css-classes) |
-| Table headers & column count | Column widths, sort types, `data-order` attrs | [Tables reference](#tables-reference), [DataTables integration](#datatables-integration) |
-| Form fields & labels | Input sizing, grids, required markers | [Forms reference](#forms-reference) |
-| Component variants | Badges, messages, empty states | `.badge`, `.message`, `.empty-state` |
-| DataTables UI | Length filter, search, paginate controls | `.dataTables_wrapper` and children |
-
-### Must have — behavior & constraints
-
-| Detail | Notes |
-|--------|-------|
-| **DataTables on all data tables** | 21 read-only tables use DataTables — see [DataTables integration](#datatables-integration). Replaces list `.search-input` and `.pagination`. |
-| **HTMX partial updates** | List containers still swap via HTMX after add forms. **Destroy + re-init** DataTable after each swap. Keep stable list container IDs. |
-| **Backend page size** | Django paginates **25 rows** per request today. Client-side DT only sees current page unless server-side DT is added. |
-| **Responsive breakpoint** | Mobile sidebar drawer at **max-width 900px**. DataTables **Responsive** extension for table columns. |
-| **Two layout modes** | `body.app-body` (full app) vs `body.standalone-page` (login, centered max 960px). |
-| **Sticky header** | `.app-header` is sticky. Use **FixedHeader** extension for table `<thead>`, not the app header. |
-| **Wide report tables** | Up to 10 columns — FixedHeader + horizontal scroll in `.dataTables_wrapper` |
-| **Sidebar width** | Fixed **240px** on desktop; slides in as overlay on mobile. |
-
-### Should have — visual system (decisions needed)
-
-There is no formal design system yet — only functional CSS. Decide or inherit defaults for:
-
-| Token | Current value | Dev should define |
-|-------|---------------|-------------------|
-| Primary | `#1d4ed8` | Brand primary + hover (`#1e40af`) |
-| Text | `#111827` | Body, muted (`#6b7280`), labels (`#4b5563`) |
-| Background | `#f9fafb` | Page bg, card bg (`#fff`), sidebar (`#111827`) |
-| Borders | `#e5e7eb` | Dividers, inputs, cards |
-| Font | `system-ui, sans-serif` | Family + scale (h1 1.25rem, badges 0.75rem, etc.) |
-| Radius | `0.375rem` / `0.5rem` | Consistent radius tokens |
-| Spacing | Ad hoc | Scale (4 / 8 / 12 / 16 / 24px…) |
-| Shadows | Almost none | Cards, dropdowns, elevated panels |
-| Focus rings | Not styled | Keyboard accessibility on all interactive elements |
-
-Suggested approach: define CSS variables in `:root` at the top of `app.css` and refactor hardcoded values to use them.
-
-### Should have — states & edge cases
-
-Style these explicitly — they appear on many pages:
-
-| State | Class / element | Pages |
-|-------|-----------------|-------|
-| Empty table | `.empty-state` | All list + report pages |
-| Field validation | `.error` on field, `.message.error` on form | All add forms |
-| Success after submit | `.message.success` | All HTMX add forms |
-| Active nav link | `.sidebar-link.is-active` | Sidebar |
-| Alert KPI | `.kpi-card-alert` | Dashboard pending counts |
-| Disabled pagination | `.pagination-disabled` | Legacy — remove when DT replaces `.pagination` |
-| Missing badge CSS | `.status-early_out`, `.status-auto_approved`, etc. | Daily attendance, overtime reports |
-| Collapsed sidebar group | `.sidebar-group[open]` | Leave, Schedule, Reports nav |
-| Mobile overlay | `.sidebar-overlay` + `[hidden]` | ≤900px viewport |
-
-### Handoff checklist (give the dev)
-
-- [ ] This document (`docs/frontend-handoff.md`)
-- [ ] Running app access (or screenshots of each page type)
-- [ ] Brand inputs — logo, colors, font (optional; defaults exist)
-- [ ] Target devices — desktop-first vs mobile-first
-- [ ] Design reference — Figma/mockup if available
-- [ ] Scope — DataTables client-side (Phase 1) vs server-side JSON APIs (Phase 2)
-- [ ] Backend coordination — add `id` + `.datatable` to tables, `data-order` on badge/num cells
-
-### Suggested CSS build order
-
-1. CSS variables / design tokens in `:root`
-2. App shell — sidebar, header, breadcrumbs, mobile drawer
-3. Typography + base element styles
-4. Buttons (`.btn`, `.btn-primary`) + form inputs (`.field`, `.field-row`)
-5. **DataTables** — base CSS + `datatables-overrides.css`; init helper; per-table config from [Tables reference](#tables-reference)
-6. Badges + messages + empty states (badges render inside DT cells)
-7. Form sections (`.form-section`) + formset table (not DT)
-8. Report filters (`.report-filters`) — keep above DT result tables
-9. Dashboard KPI cards
-10. Login page + Django flash messages
-11. Nice-to-haves (see below)
-
-### What the dev does NOT need
-
-- Django/Python business logic
-- REST API contracts (server-rendered HTML only)
-- Database schema (field types are in [Forms reference](#forms-reference))
-
----
-
-## Layout & CSS classes
-
-### Page modes
-
-| Mode | Body class | Used for |
-|------|------------|----------|
-| App shell | `app-body` | All authenticated pages |
-| Standalone | `standalone-page` | Login only |
-
-### App shell structure
-
-```
-.app-layout
-  .sidebar          ← dark nav, 240px
-  .app-main
-    .app-header     ← sticky: toggle, breadcrumbs, h1, .btn-primary, username
-    .app-content    ← max-width 1200px, page body
-```
-
-### Key CSS classes
-
-| Class | Purpose |
-|-------|---------|
-| `.employee-table`, `.data-table`, `.datatable` | Data tables (DT init on `.datatable`) |
-| `.formset-table` | Inline formset only — **no DataTables** |
-| `.field`, `.field-row`, `.field.checkbox` | Form layout |
-| `.form-section` | Fieldset card with legend |
-| `.search-input` | **Deprecated** on list pages when DT search is active |
-| `.report-filters` | Report filter panel (keep — separate from DT search) |
-| `.badge`, `.badge.status-*` | Status pills inside table cells |
-| `.message.success`, `.message.error` | Form feedback |
-| `.empty-state` | No results (when table not rendered) |
-| `.pagination` | **Deprecated** when DataTables pagination is active |
-| `.dataTables_wrapper`, `.dataTables_filter`, etc. | DataTables injected UI |
-| `.dashboard-kpis`, `.kpi-card` | Dashboard metrics |
-| `.btn.btn-primary` | Header action button |
-
-### Badge modifiers in use
-
-`.active`, `.inactive`, `.status-draft`, `.status-pending`, `.status-approved`, `.status-rejected`, `.status-cancelled`, `.status-present`, `.status-absent`, `.status-late`, `.status-incomplete`, `.status-leave`
-
-Additional attendance statuses in data but **no CSS yet:** `early_out`, `day_off`, `holiday`, `overtime`, `worked_holiday`, `auto_approved`
-
-### Current color palette (from `app.css`)
-
-| Role | Hex |
-|------|-----|
-| Primary / active link | `#1d4ed8` |
-| Primary hover | `#1e40af` |
-| Body text | `#111827` |
-| Muted text | `#6b7280` |
-| Label text | `#4b5563` |
-| Page background | `#f9fafb` |
-| Card / table bg | `#ffffff` |
-| Border | `#e5e7eb` |
-| Sidebar bg | `#111827` |
-| Sidebar text | `#d1d5db` / `#e5e7eb` |
-| Success bg / text | `#dcfce7` / `#166534` |
-| Error bg / text | `#fee2e2` / `#991b1b` |
-| Warning badge bg / text | `#fef3c7` / `#92400e` |
-| Alert KPI border / bg | `#fcd34d` / `#fffbeb` |
-| Overlay | `rgba(17, 24, 39, 0.45)` |
-
-### HTMX swap targets (do not remove or rename)
-
-| Page | List container | Form container | Refresh event |
-|------|----------------|----------------|---------------|
-| Employees | `#employee-list` | `#employee-form-container` | `employeeCreated` |
-| Punches | `#transaction-list` | `#transaction-form-container` | `attendanceTransactionCreated` |
-| Daily | `#daily-list` | `#daily-form-container` | `dailyAttendanceCreated` |
-| Corrections | `#correction-list` | `#correction-form-container` | `attendanceCorrectionCreated` |
-| Rules | `#rule-list` | `#rule-form-container` | `attendanceRuleCreated` |
-| Leave types | `#leave-type-list` | `#leave-type-form-container` | `leaveTypeCreated` |
-| Leave policies | `#leave-policy-list` | `#leave-policy-form-container` | `leavePolicyCreated` |
-| Leave requests | `#leave-request-list` | `#leave-request-form-container` | `leaveRequestCreated` |
-| Holidays | `#holiday-list` | `#holiday-form-container` | `holidayCreated` |
-| Timetables | `#timetable-list` | `#timetable-form-container` | `timetableCreated` |
-| Shifts | `#shift-list` | `#shift-form-container` | `shiftCreated` |
-| Assignments | `#assignment-list` | `#assignment-form-container` | `assignmentCreated` |
-| Temporary | `#temporary-list` | `#temporary-form-container` | `temporaryCreated` |
-
-Pagination in HTMX mode uses `hx-target` pointing at the list container — **will be removed** when DataTables replaces server pagination. Until migration is complete, destroy DT before HTMX swap and re-init after.
-
-Style `htmx-request` on list targets for loading feedback during refresh.
-
----
-
-## Nice to haves
-
-Polish items — not required for MVP styling but improve UX. Several have minimal or no CSS today.
-
-### Login page
-
-| | |
-|---|---|
-| **URL** | `/accounts/login/` |
-| **Template** | `templates/account/login.html` |
-| **Issue** | Uses django-allauth `{{ form.as_p }}` — unstyled paragraph layout |
-| **Nice to have** | Centered card, branded header, styled inputs matching `.field` pattern, "Forgot password?" link styling |
-
-### Django flash messages
-
-| | |
-|---|---|
-| **Template** | `templates/base.html` |
-| **Issue** | Messages render as bare `<p>{{ message }}</p>` with no class |
-| **Nice to have** | Toast or banner using `.message.success` / `.message.error`; dismiss button; fixed position top of content |
-
-### HTMX loading states
-
-| | |
-|---|---|
-| **Issue** | Table/form swaps have no visual feedback during request |
-| **Nice to have** | Opacity fade on swap target, skeleton rows, or spinner overlay on `#employee-list` etc. Can use HTMX `htmx-request` class on body or target. |
-
-### Employee invite box
-
-| | |
-|---|---|
-| **Template** | `templates/employees/partials/employee_invite.html` |
-| **Class** | `.invite-box` (minimal styling) |
-| **Nice to have** | Card layout, monospace/code block for link, styled Copy button, success icon |
-
-### Export buttons
-
-| | |
-|---|---|
-| **Class** | `.export-buttons` |
-| **Current** | Plain text links: Download CSV, Excel, PDF |
-| **Nice to have** | DataTables **Buttons** extension as alternative/complement; secondary `.btn` variant |
-
-### DataTables enhancements
-
-| Enhancement | Notes |
-|-------------|-------|
-| Server-side processing | JSON API per table — full search/sort across all records |
-| Buttons extension | CSV / Excel / PDF export from DT toolbar on reports |
-| Row hover | Style `table.dataTable tbody tr:hover` |
-| State saving | `stateSave: true` — remember page length, sort, search per table |
-| Column visibility | ColVis button for wide report tables |
-| Processing indicator | `processing: true` during server-side AJAX |
-
-### Report hub links
-
-| | |
-|---|---|
-| **Class** | `.report-link-list` |
-| **Current** | Basic bordered cards |
-| **Nice to have** | Icons per report type, description subtext, grid layout on wide screens |
-
-### Table enhancements (legacy — prefer DataTables)
-
-Most table UX (sort, search, paginate, responsive) is handled by DataTables. Remaining custom work:
-
-| Enhancement | Notes |
-|-------------|-------|
-| Custom DT theme | Match app tokens in `datatables-overrides.css` |
-| Badge rendering in cells | Ensure `.badge` styles work inside `table.dataTable td` |
-| Print stylesheet | `@media print` on `.dataTables_wrapper` — hide controls, show all rows |
-
-### Form enhancements
-
-| Enhancement | Applies to |
-|-------------|------------|
-| Focus ring on inputs | All `.field input/select/textarea` |
-| Disabled submit while posting | HTMX forms — `htmx-request` on button |
-| Inline required indicator style | Fields marked `*` in labels |
-| Section collapse | Long forms (Timetable, Shift) — accordion on `.form-section` |
-| Date/time picker styling | Native `date`, `time`, `datetime-local` inputs |
-
-### Sidebar enhancements
-
-| Enhancement | Notes |
-|-------------|-------|
-| Icon-only collapsed mode | Planned in ui-shell-plan — 240px → 64px + localStorage |
-| Badge counts on nav items | Pending leave, corrections (not implemented) |
-| User avatar in footer | Replace plain username in header |
-
-### Dashboard enhancements
-
-| Enhancement | Notes |
-|-------------|-------|
-| Sparklines or trend arrows on KPIs | Not in data yet |
-| Clickable KPI cards linking to reports | e.g. Pending Leave → leave requests list |
-| Recent activity table | Not implemented |
-
-### Icons & illustration
-
-| | |
-|---|---|
-| **Current** | No icon set; hamburger is Unicode `☰` |
-| **Nice to have** | Icon library (Lucide, Heroicons) for nav, status, export, empty states |
-
-### Print styles
-
-| | |
-|---|---|
-| **Applies to** | Report pages with tables |
-| **Nice to have** | `@media print` — hide sidebar/header, full-width table, page breaks |
-
-### Dark mode
-
-| | |
-|---|---|
-| **Current** | Light mode only (sidebar is dark, content is light) |
-| **Nice to have** | Optional `prefers-color-scheme` or toggle — low priority for internal HR tool |
-
----
-
-## Site map
-
-| Section | List URL | Add URL |
-|---------|----------|---------|
-| Dashboard | `/` | — |
-| Employees | `/employees/` | `/employees/add/` |
-| Punches | `/attendance/transactions/` | `/attendance/transactions/add/` |
-| Daily attendance | `/attendance/daily/` | `/attendance/daily/add/` |
-| Corrections | `/attendance/corrections/` | `/attendance/corrections/add/` |
-| Rules | `/attendance/rules/` | `/attendance/rules/add/` |
-| Leave types | `/leave/types/` | `/leave/types/add/` |
-| Leave policies | `/leave/policies/` | `/leave/policies/add/` |
-| Leave requests | `/leave/requests/` | `/leave/requests/add/` |
-| Holidays | `/leave/holidays/` | `/leave/holidays/add/` |
-| Timetables | `/schedule/timetables/` | `/schedule/timetables/add/` |
-| Shifts | `/schedule/shifts/` | `/schedule/shifts/add/` |
-| Assignments | `/schedule/assignments/` | `/schedule/assignments/add/` |
-| Temporary | `/schedule/temporary/` | `/schedule/temporary/add/` |
-| Reports hub | `/reports/` | — |
-| Attendance summary | `/reports/attendance/` | — |
-| Individual attendance | `/reports/individual/` | — |
-| Department attendance | `/reports/department/` | — |
-| Exceptions | `/reports/exceptions/` | — |
-| Punch log | `/reports/punch-log/` | — |
-| Overtime | `/reports/overtime/` | — |
-| Leave reports | `/reports/leave/` | — |
-| Profile | `/accounts/profile/` | — |
-| Login | `/accounts/login/` | — |
-
-List pages show a primary action button in the header (e.g. "Add employee" → `/employees/add/`).
-
----
-
-## File reference
-
-| What | Path |
-|------|------|
-| CSS | `static/css/app.css` |
-| DataTables overrides (proposed) | `static/css/datatables-overrides.css` |
-| JS | `static/js/app.js` |
-| DataTables init (proposed) | `static/js/datatables-init.js` |
-| Shell layout | `templates/layouts/app_shell.html` |
-| Table partials | `templates/{app}/partials/*_table.html` |
-| Form partials | `templates/{app}/partials/*_form.html` |
-| Report filters | `templates/reports/partials/filter_form.html` |
-| Pagination (legacy) | `templates/partials/pagination.html` |
-| Form Python defs | `{app}/forms.py` |
-| Page size constant | `common/pagination.py` (`DEFAULT_PAGE_SIZE = 25`) |
 
 ---
 

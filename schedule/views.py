@@ -1,8 +1,10 @@
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
+from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
+from common.pagination import list_pagination_context
 from schedule.forms import (
     ScheduleAssignmentForm,
     ShiftForm,
@@ -78,8 +80,13 @@ def _render_temporary_form(
 @require_http_methods(["GET"])
 def timetable_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
-    timetables = timetable_list(search=search)
-    context = {"timetables": timetables, "search": search}
+    context = list_pagination_context(
+        request,
+        timetable_list(search=search),
+        search=search,
+        base_url=reverse("timetable_list"),
+        hx_target="#timetable-list",
+    )
 
     if request.headers.get("HX-Request"):
         return render(request, "schedule/partials/timetable_table.html", context)
@@ -115,8 +122,13 @@ def timetable_add(request: HttpRequest) -> HttpResponse:
 @require_http_methods(["GET"])
 def shift_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
-    shifts = shift_list(search=search)
-    context = {"shifts": shifts, "search": search}
+    context = list_pagination_context(
+        request,
+        shift_list(search=search),
+        search=search,
+        base_url=reverse("shift_list"),
+        hx_target="#shift-list",
+    )
 
     if request.headers.get("HX-Request"):
         return render(request, "schedule/partials/shift_table.html", context)
@@ -167,8 +179,13 @@ def shift_add(request: HttpRequest) -> HttpResponse:
 @require_http_methods(["GET"])
 def assignment_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
-    assignments = schedule_assignment_list(search=search)
-    context = {"assignments": assignments, "search": search}
+    context = list_pagination_context(
+        request,
+        schedule_assignment_list(search=search),
+        search=search,
+        base_url=reverse("assignment_list"),
+        hx_target="#assignment-list",
+    )
 
     if request.headers.get("HX-Request"):
         return render(request, "schedule/partials/assignment_table.html", context)
@@ -204,8 +221,13 @@ def assignment_add(request: HttpRequest) -> HttpResponse:
 @require_http_methods(["GET"])
 def temporary_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
-    temporary_schedules = temporary_schedule_list(search=search)
-    context = {"temporary_schedules": temporary_schedules, "search": search}
+    context = list_pagination_context(
+        request,
+        temporary_schedule_list(search=search),
+        search=search,
+        base_url=reverse("temporary_list"),
+        hx_target="#temporary-list",
+    )
 
     if request.headers.get("HX-Request"):
         return render(request, "schedule/partials/temporary_table.html", context)

@@ -1,4 +1,4 @@
-{% if leave_requests %}
+{% if page_obj.paginator.count %}
 <table class="data-table">
     <thead>
         <tr>
@@ -12,7 +12,7 @@
         </tr>
     </thead>
     <tbody>
-        {% for leave_request in leave_requests %}
+        {% for leave_request in page_obj %}
         <tr>
             <td>{{ leave_request.employee.full_name }}</td>
             <td>{{ leave_request.employee.department|default:"—" }}</td>
@@ -25,6 +25,7 @@
         {% endfor %}
     </tbody>
 </table>
+{% include "partials/pagination.html" %}
 {% else %}
 <p class="empty-state">No leave requests for the selected filters.</p>
 {% endif %}

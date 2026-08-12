@@ -310,3 +310,40 @@ class ReportViewTests(BaseTenantTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Ind")
+
+
+class ReportPaginationTests(BaseTenantTestCase):
+    def test_attendance_summary_pagination_and_full_export(self):
+        for index in range(26):
+            employee = employee_factory(
+                first_name=f"Report{index:02d}",
+                emp_code=f"R-PG-{index:02d}",
+            )
+            daily_attendance_factory(
+                employee=employee,
+                date=date(2026, 9, 1),
+            )
+
+        page_one = self.client.get(
+            reverse("report_attendance_summary"),
+            {"date_from": "2026-09-01", "date_to": "2026-09-30"},
+        )
+        page_two = self.client.get(
+            reverse("report_attendance_summary"),
+            {"date_from": "2026-09-01", "date_to": "2026-09-30", "page": 2},
+        )
+        export_response = self.client.get(
+            reverse("report_attendance_summary"),
+            {
+                "date_from": "2026-09-01",
+                "date_to": "2026-09-30",
+                "page": 2,
+                "format": "csv",
+            },
+        )
+
+        self.assertContains(page_one, "Showing 1–25 of 26")
+        self.assertContains(page_two, "Showing 26–26 of 26")
+        self.assertEqual(page_one.content.count(b"<tr>"), 26)
+        self.assertEqual(page_two.content.count(b"<tr>"), 2)
+        self.assertEqual(len(export_response.content.decode().splitlines()), 27)

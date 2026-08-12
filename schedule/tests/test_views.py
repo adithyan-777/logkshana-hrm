@@ -4,6 +4,7 @@ from django.urls import reverse
 from django_tenants.test.client import TenantClient
 
 from common.tests.base import BaseTenantTestCase
+from common.tests.factories import timetable_factory
 from schedule.models import Timetable
 
 
@@ -29,6 +30,26 @@ class TimetableViewTests(BaseTenantTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "schedule/partials/timetable_table.html")
+
+    def test_list_pagination(self):
+        for index in range(26):
+            timetable_factory(
+                name=f"Timetable {index:02d}",
+                code=f"TT-PG-{index:02d}",
+            )
+
+        page_one = self.client.get(reverse("timetable_list"))
+        page_two = self.client.get(reverse("timetable_list"), {"page": 2})
+        htmx_page_one = self.client.get(
+            reverse("timetable_list"),
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertContains(page_one, "Showing 1–25 of 26")
+        self.assertContains(page_two, "Showing 26–26 of 26")
+        self.assertContains(htmx_page_one, 'class="pagination"')
+        self.assertEqual(page_one.content.count(b"<tr>"), 26)
+        self.assertEqual(page_two.content.count(b"<tr>"), 2)
 
     def test_add_creates_timetable(self):
         code = f"MORN-{uuid4().hex[:6]}"

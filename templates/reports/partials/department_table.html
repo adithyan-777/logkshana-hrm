@@ -1,4 +1,4 @@
-{% if rows %}
+{% if page_obj.paginator.count %}
 <table class="data-table">
     <thead>
         <tr>
@@ -13,7 +13,7 @@
         </tr>
     </thead>
     <tbody>
-        {% for row in rows %}
+        {% for row in page_obj %}
         <tr>
             <td>{{ row.employee__department__name|default:"Unassigned" }}</td>
             <td>{{ row.employee_count }}</td>
@@ -27,6 +27,7 @@
         {% endfor %}
     </tbody>
 </table>
+{% include "partials/pagination.html" %}
 {% else %}
 <p class="empty-state">No department attendance data for the selected filters.</p>
 {% endif %}

@@ -1,4 +1,4 @@
-{% if corrections %}
+{% if page_obj.paginator.count %}
 <table class="data-table">
     <thead>
         <tr>
@@ -11,7 +11,7 @@
         </tr>
     </thead>
     <tbody>
-        {% for correction in corrections %}
+        {% for correction in page_obj %}
         <tr>
             <td>{{ correction.date }}</td>
             <td>{{ correction.employee.full_name }}</td>
@@ -23,6 +23,7 @@
         {% endfor %}
     </tbody>
 </table>
+{% include "partials/pagination.html" %}
 {% else %}
 <p class="empty-state">
     {% if search %}

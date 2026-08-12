@@ -1,4 +1,4 @@
-{% if balances %}
+{% if page_obj.paginator.count %}
 <table class="data-table">
     <thead>
         <tr>
@@ -15,7 +15,7 @@
         </tr>
     </thead>
     <tbody>
-        {% for balance in balances %}
+        {% for balance in page_obj %}
         <tr>
             <td>{{ balance.employee.full_name }}</td>
             <td>{{ balance.employee.department|default:"—" }}</td>
@@ -31,6 +31,7 @@
         {% endfor %}
     </tbody>
 </table>
+{% include "partials/pagination.html" %}
 {% else %}
 <p class="empty-state">No leave balances for the selected filters.</p>
 {% endif %}

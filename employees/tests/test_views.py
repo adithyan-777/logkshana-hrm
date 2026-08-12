@@ -82,3 +82,23 @@ class EmployeeViewTests(BaseTenantTestCase):
 
         self.assertContains(response, "Visible")
         self.assertContains(response, "E-VIS")
+
+    def test_list_pagination(self):
+        for index in range(26):
+            employee_factory(
+                first_name=f"Paginated{index:02d}",
+                emp_code=f"E-PG-{index:02d}",
+            )
+
+        page_one = self.client.get(reverse("employee_list"))
+        page_two = self.client.get(reverse("employee_list"), {"page": 2})
+        htmx_page_one = self.client.get(
+            reverse("employee_list"),
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertContains(page_one, "Showing 1–25 of 26")
+        self.assertContains(page_two, "Showing 26–26 of 26")
+        self.assertContains(htmx_page_one, 'class="pagination"')
+        self.assertEqual(page_one.content.count(b"<tr>"), 26)
+        self.assertEqual(page_two.content.count(b"<tr>"), 2)

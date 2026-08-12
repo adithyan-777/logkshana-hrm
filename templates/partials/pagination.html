@@ -1,0 +1,42 @@
+{% if page_obj.paginator.count %}
+<nav class="pagination" aria-label="Pagination">
+    <p class="pagination-summary">
+        Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
+    </p>
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="pagination-links">
+        {% if page_obj.has_previous %}
+            {% if pagination_mode == "htmx" %}
+            <a
+                href="{{ base_url }}?{% if search %}q={{ search|urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}"
+                hx-get="{{ base_url }}?{% if search %}q={{ search|urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}"
+                hx-target="{{ pagination_target }}"
+                hx-push-url="true"
+            >Previous</a>
+            {% else %}
+            <a href="{{ prev_page_url }}">Previous</a>
+            {% endif %}
+        {% else %}
+            <span class="pagination-disabled">Previous</span>
+        {% endif %}
+
+        <span class="pagination-current">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+
+        {% if page_obj.has_next %}
+            {% if pagination_mode == "htmx" %}
+            <a
+                href="{{ base_url }}?{% if search %}q={{ search|urlencode }}&{% endif %}page={{ page_obj.next_page_number }}"
+                hx-get="{{ base_url }}?{% if search %}q={{ search|urlencode }}&{% endif %}page={{ page_obj.next_page_number }}"
+                hx-target="{{ pagination_target }}"
+                hx-push-url="true"
+            >Next</a>
+            {% else %}
+            <a href="{{ next_page_url }}">Next</a>
+            {% endif %}
+        {% else %}
+            <span class="pagination-disabled">Next</span>
+        {% endif %}
+    </div>
+    {% endif %}
+</nav>
+{% endif %}

@@ -1,8 +1,10 @@
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
+from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
+from common.pagination import list_pagination_context
 from leave.forms import (
     HolidayForm,
     LeavePolicyForm,
@@ -67,8 +69,13 @@ def _render_holiday_form(
 @require_http_methods(["GET"])
 def leave_type_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
-    leave_types = leave_type_list(search=search)
-    context = {"leave_types": leave_types, "search": search}
+    context = list_pagination_context(
+        request,
+        leave_type_list(search=search),
+        search=search,
+        base_url=reverse("leave_type_list"),
+        hx_target="#leave-type-list",
+    )
 
     if request.headers.get("HX-Request"):
         return render(request, "leave/partials/leave_type_table.html", context)
@@ -104,8 +111,13 @@ def leave_type_add(request: HttpRequest) -> HttpResponse:
 @require_http_methods(["GET"])
 def leave_policy_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
-    policies = leave_policy_list(search=search)
-    context = {"policies": policies, "search": search}
+    context = list_pagination_context(
+        request,
+        leave_policy_list(search=search),
+        search=search,
+        base_url=reverse("leave_policy_list"),
+        hx_target="#leave-policy-list",
+    )
 
     if request.headers.get("HX-Request"):
         return render(request, "leave/partials/leave_policy_table.html", context)
@@ -141,8 +153,13 @@ def leave_policy_add(request: HttpRequest) -> HttpResponse:
 @require_http_methods(["GET"])
 def leave_request_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
-    leave_requests = leave_request_list(search=search)
-    context = {"leave_requests": leave_requests, "search": search}
+    context = list_pagination_context(
+        request,
+        leave_request_list(search=search),
+        search=search,
+        base_url=reverse("leave_request_list"),
+        hx_target="#leave-request-list",
+    )
 
     if request.headers.get("HX-Request"):
         return render(request, "leave/partials/leave_request_table.html", context)
@@ -178,8 +195,13 @@ def leave_request_add(request: HttpRequest) -> HttpResponse:
 @require_http_methods(["GET"])
 def holiday_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
-    holidays = holiday_list(search=search)
-    context = {"holidays": holidays, "search": search}
+    context = list_pagination_context(
+        request,
+        holiday_list(search=search),
+        search=search,
+        base_url=reverse("holiday_list"),
+        hx_target="#holiday-list",
+    )
 
     if request.headers.get("HX-Request"):
         return render(request, "leave/partials/holiday_table.html", context)

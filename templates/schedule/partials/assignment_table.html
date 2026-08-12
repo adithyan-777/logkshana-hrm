@@ -1,4 +1,4 @@
-{% if assignments %}
+{% if page_obj.paginator.count %}
 <table class="data-table">
     <thead>
         <tr>
@@ -11,7 +11,7 @@
         </tr>
     </thead>
     <tbody>
-        {% for assignment in assignments %}
+        {% for assignment in page_obj %}
         <tr>
             <td>{{ assignment.get_assignment_type_display }}</td>
             <td>
@@ -31,6 +31,7 @@
         {% endfor %}
     </tbody>
 </table>
+{% include "partials/pagination.html" %}
 {% else %}
 <p class="empty-state">
     {% if search %}

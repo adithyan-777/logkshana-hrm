@@ -79,6 +79,26 @@ class LeaveTypeViewTests(BaseTenantTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "leave/partials/leave_type_table.html")
 
+    def test_list_pagination(self):
+        for index in range(26):
+            leave_type_factory(
+                name=f"Leave Type {index:02d}",
+                code=f"LT-PG-{index:02d}",
+            )
+
+        page_one = self.client.get(reverse("leave_type_list"))
+        page_two = self.client.get(reverse("leave_type_list"), {"page": 2})
+        htmx_page_one = self.client.get(
+            reverse("leave_type_list"),
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertContains(page_one, "Showing 1–25 of 26")
+        self.assertContains(page_two, "Showing 26–26 of 26")
+        self.assertContains(htmx_page_one, 'class="pagination"')
+        self.assertEqual(page_one.content.count(b"<tr>"), 26)
+        self.assertEqual(page_two.content.count(b"<tr>"), 2)
+
     def test_add_creates_leave_type(self):
         code = f"LT-{uuid4().hex[:6]}"
         response = self.client.post(

@@ -1,8 +1,10 @@
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
+from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
+from common.pagination import list_pagination_context
 from employees.forms import EmployeeForm
 from employees.selectors import employee_list
 from employees.services import employee_create, employee_invite_link
@@ -30,8 +32,13 @@ def _render_invite(request: HttpRequest, employee, invite_link: str) -> HttpResp
 @require_http_methods(["GET"])
 def employee_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
-    employees = employee_list(search=search)
-    context = {"employees": employees, "search": search}
+    context = list_pagination_context(
+        request,
+        employee_list(search=search),
+        search=search,
+        base_url=reverse("employee_list"),
+        hx_target="#employee-list",
+    )
 
     if request.headers.get("HX-Request"):
         return render(request, "employees/partials/employee_table.html", context)

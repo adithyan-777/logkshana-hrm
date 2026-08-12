@@ -1,6 +1,6 @@
 {% if not employee_selected %}
 <p class="empty-state">Select an employee to view their attendance timesheet.</p>
-{% elif records %}
+{% elif page_obj.paginator.count %}
 <table class="data-table">
     <thead>
         <tr>
@@ -17,7 +17,7 @@
         </tr>
     </thead>
     <tbody>
-        {% for record in records %}
+        {% for record in page_obj %}
         <tr>
             <td>{{ record.date }}</td>
             <td><span class="badge status-{{ record.status }}">{{ record.get_status_display }}</span></td>
@@ -33,6 +33,7 @@
         {% endfor %}
     </tbody>
 </table>
+{% include "partials/pagination.html" %}
 {% else %}
 <p class="empty-state">No attendance records for the selected employee and date range.</p>
 {% endif %}

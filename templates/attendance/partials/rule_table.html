@@ -1,4 +1,4 @@
-{% if rules %}
+{% if page_obj.paginator.count %}
 <table class="data-table">
     <thead>
         <tr>
@@ -10,7 +10,7 @@
         </tr>
     </thead>
     <tbody>
-        {% for rule in rules %}
+        {% for rule in page_obj %}
         <tr>
             <td>{{ rule.name }}</td>
             <td>{{ rule.late_grace_minutes }}m</td>
@@ -27,6 +27,7 @@
         {% endfor %}
     </tbody>
 </table>
+{% include "partials/pagination.html" %}
 {% else %}
 <p class="empty-state">
     {% if search %}

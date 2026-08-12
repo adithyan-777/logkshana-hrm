@@ -5,6 +5,7 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
+from common.pagination import paginate_queryset
 from reports.exports import render_report_response
 from reports.forms import (
     DateRangeFilterForm,
@@ -37,7 +38,7 @@ from reports.selectors.leave import (
 )
 from reports.selectors.overtime import overtime_report_list
 from reports.selectors.punch_log import punch_log_list
-from reports.utils import current_month_range
+from reports.utils import current_month_range, report_pagination_context
 
 
 def _export_format(request: HttpRequest) -> str:
@@ -95,26 +96,25 @@ def attendance_summary_view(request: HttpRequest) -> HttpResponse:
         department_id = form.cleaned_data["department"].pk if form.cleaned_data["department"] else None
         employee_id = form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
 
-    rows = list(
-        attendance_summary_list(
-            date_from=date_from,
-            date_to=date_to,
-            department_id=department_id,
-            employee_id=employee_id,
-        )
+    queryset = attendance_summary_list(
+        date_from=date_from,
+        date_to=date_to,
+        department_id=department_id,
+        employee_id=employee_id,
     )
 
     export_response = _maybe_export(
         request,
-        data=attendance_summary_report_data(rows),
+        data=attendance_summary_report_data(list(queryset)),
         filename="attendance-summary",
     )
     if export_response:
         return export_response
 
+    page_obj = paginate_queryset(request, queryset)
     context = {
         **_filter_context(request, form, report_url_name="report_attendance_summary"),
-        "rows": rows,
+        **report_pagination_context(request, page_obj),
         "date_from": date_from,
         "date_to": date_to,
     }
@@ -131,32 +131,31 @@ def individual_attendance_view(request: HttpRequest) -> HttpResponse:
     form = IndividualReportFilterForm(request.GET or None)
     date_from, date_to = current_month_range()
     employee_id = None
-    records = []
+    queryset = []
 
     if form.is_valid():
         date_from, date_to = form.cleaned_date_range()
         if form.cleaned_data["employee"]:
             employee_id = form.cleaned_data["employee"].pk
-            records = list(
-                individual_attendance_list(
-                    date_from=date_from,
-                    date_to=date_to,
-                    employee_id=employee_id,
-                )
+            queryset = individual_attendance_list(
+                date_from=date_from,
+                date_to=date_to,
+                employee_id=employee_id,
             )
 
     if employee_id:
         export_response = _maybe_export(
             request,
-            data=individual_attendance_report_data(records),
+            data=individual_attendance_report_data(list(queryset)),
             filename="individual-attendance",
         )
         if export_response:
             return export_response
 
+    page_obj = paginate_queryset(request, queryset)
     context = {
         **_filter_context(request, form, report_url_name="report_individual_attendance"),
-        "records": records,
+        **report_pagination_context(request, page_obj),
         "date_from": date_from,
         "date_to": date_to,
         "employee_selected": employee_id is not None,
@@ -179,25 +178,24 @@ def department_attendance_view(request: HttpRequest) -> HttpResponse:
         date_from, date_to = form.cleaned_date_range()
         department_id = form.cleaned_data["department"].pk if form.cleaned_data["department"] else None
 
-    rows = list(
-        department_attendance_list(
-            date_from=date_from,
-            date_to=date_to,
-            department_id=department_id,
-        )
+    queryset = department_attendance_list(
+        date_from=date_from,
+        date_to=date_to,
+        department_id=department_id,
     )
 
     export_response = _maybe_export(
         request,
-        data=department_attendance_report_data(rows),
+        data=department_attendance_report_data(list(queryset)),
         filename="department-attendance",
     )
     if export_response:
         return export_response
 
+    page_obj = paginate_queryset(request, queryset)
     context = {
         **_filter_context(request, form, report_url_name="report_department_attendance"),
-        "rows": rows,
+        **report_pagination_context(request, page_obj),
         "date_from": date_from,
         "date_to": date_to,
     }
@@ -223,27 +221,26 @@ def exception_report_view(request: HttpRequest) -> HttpResponse:
         employee_id = form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
         exception_type = form.cleaned_data.get("exception_type") or ""
 
-    records = list(
-        exception_report_list(
-            date_from=date_from,
-            date_to=date_to,
-            department_id=department_id,
-            employee_id=employee_id,
-            exception_type=exception_type,
-        )
+    queryset = exception_report_list(
+        date_from=date_from,
+        date_to=date_to,
+        department_id=department_id,
+        employee_id=employee_id,
+        exception_type=exception_type,
     )
 
     export_response = _maybe_export(
         request,
-        data=exception_report_data(records),
+        data=exception_report_data(list(queryset)),
         filename="attendance-exceptions",
     )
     if export_response:
         return export_response
 
+    page_obj = paginate_queryset(request, queryset)
     context = {
         **_filter_context(request, form, report_url_name="report_exceptions"),
-        "records": records,
+        **report_pagination_context(request, page_obj),
         "date_from": date_from,
         "date_to": date_to,
     }
@@ -267,26 +264,25 @@ def punch_log_view(request: HttpRequest) -> HttpResponse:
         department_id = form.cleaned_data["department"].pk if form.cleaned_data["department"] else None
         employee_id = form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
 
-    transactions = list(
-        punch_log_list(
-            date_from=date_from,
-            date_to=date_to,
-            department_id=department_id,
-            employee_id=employee_id,
-        )
+    queryset = punch_log_list(
+        date_from=date_from,
+        date_to=date_to,
+        department_id=department_id,
+        employee_id=employee_id,
     )
 
     export_response = _maybe_export(
         request,
-        data=punch_log_report_data(transactions),
+        data=punch_log_report_data(list(queryset)),
         filename="punch-log",
     )
     if export_response:
         return export_response
 
+    page_obj = paginate_queryset(request, queryset)
     context = {
         **_filter_context(request, form, report_url_name="report_punch_log"),
-        "transactions": transactions,
+        **report_pagination_context(request, page_obj),
         "date_from": date_from,
         "date_to": date_to,
     }
@@ -312,27 +308,26 @@ def overtime_report_view(request: HttpRequest) -> HttpResponse:
         employee_id = form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
         status = form.cleaned_data.get("status") or ""
 
-    records = list(
-        overtime_report_list(
-            date_from=date_from,
-            date_to=date_to,
-            department_id=department_id,
-            employee_id=employee_id,
-            status=status,
-        )
+    queryset = overtime_report_list(
+        date_from=date_from,
+        date_to=date_to,
+        department_id=department_id,
+        employee_id=employee_id,
+        status=status,
     )
 
     export_response = _maybe_export(
         request,
-        data=overtime_report_data(records),
+        data=overtime_report_data(list(queryset)),
         filename="overtime-summary",
     )
     if export_response:
         return export_response
 
+    page_obj = paginate_queryset(request, queryset)
     context = {
         **_filter_context(request, form, report_url_name="report_overtime"),
-        "records": records,
+        **report_pagination_context(request, page_obj),
         "date_from": date_from,
         "date_to": date_to,
     }
@@ -352,8 +347,7 @@ def leave_report_view(request: HttpRequest) -> HttpResponse:
     year = date_to.year
     department_id = None
     employee_id = None
-    balances = []
-    leave_requests = []
+    queryset = []
 
     if form.is_valid():
         report_type = form.cleaned_data.get("report_type") or "balance"
@@ -363,53 +357,47 @@ def leave_report_view(request: HttpRequest) -> HttpResponse:
         employee_id = form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
 
     if report_type == "balance":
-        balances = list(
-            leave_balance_list(
-                year=year,
-                department_id=department_id,
-                employee_id=employee_id,
-            )
+        queryset = leave_balance_list(
+            year=year,
+            department_id=department_id,
+            employee_id=employee_id,
         )
         export_response = _maybe_export(
             request,
-            data=leave_balance_report_data(balances),
+            data=leave_balance_report_data(list(queryset)),
             filename="leave-balance",
         )
     elif report_type == "utilization":
-        leave_requests = list(
-            leave_utilization_list(
-                date_from=date_from,
-                date_to=date_to,
-                department_id=department_id,
-                employee_id=employee_id,
-            )
+        queryset = leave_utilization_list(
+            date_from=date_from,
+            date_to=date_to,
+            department_id=department_id,
+            employee_id=employee_id,
         )
         export_response = _maybe_export(
             request,
-            data=leave_utilization_report_data(leave_requests),
+            data=leave_utilization_report_data(list(queryset)),
             filename="leave-utilization",
         )
     else:
-        leave_requests = list(
-            pending_leave_list(
-                department_id=department_id,
-                employee_id=employee_id,
-            )
+        queryset = pending_leave_list(
+            department_id=department_id,
+            employee_id=employee_id,
         )
         export_response = _maybe_export(
             request,
-            data=pending_leave_report_data(leave_requests),
+            data=pending_leave_report_data(list(queryset)),
             filename="pending-leave",
         )
 
     if export_response:
         return export_response
 
+    page_obj = paginate_queryset(request, queryset)
     context = {
         **_filter_context(request, form, report_url_name="report_leave"),
+        **report_pagination_context(request, page_obj),
         "report_type": report_type,
-        "balances": balances,
-        "leave_requests": leave_requests,
         "date_from": date_from,
         "date_to": date_to,
         "year": year,

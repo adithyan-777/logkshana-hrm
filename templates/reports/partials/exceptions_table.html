@@ -1,4 +1,4 @@
-{% if records %}
+{% if page_obj.paginator.count %}
 <table class="data-table">
     <thead>
         <tr>
@@ -13,7 +13,7 @@
         </tr>
     </thead>
     <tbody>
-        {% for record in records %}
+        {% for record in page_obj %}
         <tr>
             <td>{{ record.date }}</td>
             <td>{{ record.employee.full_name }}</td>
@@ -27,6 +27,7 @@
         {% endfor %}
     </tbody>
 </table>
+{% include "partials/pagination.html" %}
 {% else %}
 <p class="empty-state">No exceptions for the selected filters.</p>
 {% endif %}

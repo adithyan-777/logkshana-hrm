@@ -83,6 +83,25 @@ class AttendanceTransactionViewTests(BaseTenantTestCase):
         self.assertContains(response, "Visible")
         self.assertContains(response, "SEARCH-VIS")
 
+    def test_list_pagination(self):
+        for index in range(26):
+            attendance_transaction_factory(
+                external_id=f"PAG-{index:02d}",
+            )
+
+        page_one = self.client.get(reverse("attendance_transaction_list"))
+        page_two = self.client.get(reverse("attendance_transaction_list"), {"page": 2})
+        htmx_page_one = self.client.get(
+            reverse("attendance_transaction_list"),
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertContains(page_one, "Showing 1–25 of 26")
+        self.assertContains(page_two, "Showing 26–26 of 26")
+        self.assertContains(htmx_page_one, 'class="pagination"')
+        self.assertEqual(page_one.content.count(b"<tr>"), 26)
+        self.assertEqual(page_two.content.count(b"<tr>"), 2)
+
     def test_add_creates_transaction(self):
         employee = employee_factory(first_name="View", emp_code="AT300")
         external_id = f"EXT-{uuid4().hex[:6]}"

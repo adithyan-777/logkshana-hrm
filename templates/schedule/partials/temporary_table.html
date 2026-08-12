@@ -1,4 +1,4 @@
-{% if temporary_schedules %}
+{% if page_obj.paginator.count %}
 <table class="data-table">
     <thead>
         <tr>
@@ -10,7 +10,7 @@
         </tr>
     </thead>
     <tbody>
-        {% for item in temporary_schedules %}
+        {% for item in page_obj %}
         <tr>
             <td>{{ item.date }}</td>
             <td>{{ item.employee.full_name }}</td>
@@ -21,6 +21,7 @@
         {% endfor %}
     </tbody>
 </table>
+{% include "partials/pagination.html" %}
 {% else %}
 <p class="empty-state">
     {% if search %}

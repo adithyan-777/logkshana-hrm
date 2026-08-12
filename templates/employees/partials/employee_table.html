@@ -1,4 +1,4 @@
-{% if employees %}
+{% if page_obj.paginator.count %}
 <table class="employee-table">
     <thead>
         <tr>
@@ -12,7 +12,7 @@
         </tr>
     </thead>
     <tbody>
-        {% for employee in employees %}
+        {% for employee in page_obj %}
         <tr>
             <td>{{ employee.emp_code|default:"—" }}</td>
             <td>{{ employee.first_name }} {{ employee.last_name }}</td>
@@ -31,6 +31,7 @@
         {% endfor %}
     </tbody>
 </table>
+{% include "partials/pagination.html" %}
 {% else %}
 <p class="empty-state">
     {% if search %}

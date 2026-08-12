@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
+from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
 from attendance.forms import (
@@ -21,6 +22,7 @@ from attendance.services import (
     attendance_transaction_create,
     daily_attendance_create,
 )
+from common.pagination import list_pagination_context
 
 
 def _configure_datetime_fields(form):
@@ -74,8 +76,13 @@ def _render_rule_form(
 @require_http_methods(["GET"])
 def transaction_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
-    transactions = attendance_transaction_list(search=search)
-    context = {"transactions": transactions, "search": search}
+    context = list_pagination_context(
+        request,
+        attendance_transaction_list(search=search),
+        search=search,
+        base_url=reverse("attendance_transaction_list"),
+        hx_target="#transaction-list",
+    )
 
     if request.headers.get("HX-Request"):
         return render(request, "attendance/partials/transaction_table.html", context)
@@ -115,8 +122,13 @@ def transaction_add(request: HttpRequest) -> HttpResponse:
 @require_http_methods(["GET"])
 def daily_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
-    daily_records = daily_attendance_list(search=search)
-    context = {"daily_records": daily_records, "search": search}
+    context = list_pagination_context(
+        request,
+        daily_attendance_list(search=search),
+        search=search,
+        base_url=reverse("daily_attendance_list"),
+        hx_target="#daily-list",
+    )
 
     if request.headers.get("HX-Request"):
         return render(request, "attendance/partials/daily_table.html", context)
@@ -152,8 +164,13 @@ def daily_add(request: HttpRequest) -> HttpResponse:
 @require_http_methods(["GET"])
 def correction_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
-    corrections = attendance_correction_list(search=search)
-    context = {"corrections": corrections, "search": search}
+    context = list_pagination_context(
+        request,
+        attendance_correction_list(search=search),
+        search=search,
+        base_url=reverse("attendance_correction_list"),
+        hx_target="#correction-list",
+    )
 
     if request.headers.get("HX-Request"):
         return render(request, "attendance/partials/correction_table.html", context)
@@ -196,8 +213,13 @@ def correction_add(request: HttpRequest) -> HttpResponse:
 @require_http_methods(["GET"])
 def rule_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
-    rules = attendance_rule_list(search=search)
-    context = {"rules": rules, "search": search}
+    context = list_pagination_context(
+        request,
+        attendance_rule_list(search=search),
+        search=search,
+        base_url=reverse("attendance_rule_list"),
+        hx_target="#rule-list",
+    )
 
     if request.headers.get("HX-Request"):
         return render(request, "attendance/partials/rule_table.html", context)

@@ -1,4 +1,4 @@
-{% if leave_types %}
+{% if page_obj.paginator.count %}
 <table class="data-table">
     <thead>
         <tr>
@@ -11,7 +11,7 @@
         </tr>
     </thead>
     <tbody>
-        {% for leave_type in leave_types %}
+        {% for leave_type in page_obj %}
         <tr>
             <td>{{ leave_type.code }}</td>
             <td>{{ leave_type.name }}</td>
@@ -29,6 +29,7 @@
         {% endfor %}
     </tbody>
 </table>
+{% include "partials/pagination.html" %}
 {% else %}
 <p class="empty-state">
     {% if search %}

@@ -1,4 +1,4 @@
-{% if shifts %}
+{% if page_obj.paginator.count %}
 <table class="data-table">
     <thead>
         <tr>
@@ -11,7 +11,7 @@
         </tr>
     </thead>
     <tbody>
-        {% for shift in shifts %}
+        {% for shift in page_obj %}
         <tr>
             <td>{{ shift.code }}</td>
             <td>{{ shift.name }}</td>
@@ -29,6 +29,7 @@
         {% endfor %}
     </tbody>
 </table>
+{% include "partials/pagination.html" %}
 {% else %}
 <p class="empty-state">
     {% if search %}

@@ -1,4 +1,4 @@
-{% if transactions %}
+{% if page_obj.paginator.count %}
 <table class="data-table">
     <thead>
         <tr>
@@ -10,7 +10,7 @@
         </tr>
     </thead>
     <tbody>
-        {% for transaction in transactions %}
+        {% for transaction in page_obj %}
         <tr>
             <td>{{ transaction.employee.full_name }}</td>
             <td>{{ transaction.timestamp }}</td>
@@ -21,6 +21,7 @@
         {% endfor %}
     </tbody>
 </table>
+{% include "partials/pagination.html" %}
 {% else %}
 <p class="empty-state">
     {% if search %}

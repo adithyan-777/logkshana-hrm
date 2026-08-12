@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Leave Reports{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+
+<h1>Leave Reports</h1>
+{% if report_type == "balance" %}
+<p>Year: {{ year }}</p>
+{% else %}
+<p>Date range: {{ date_from }} to {{ date_to }}</p>
+{% endif %}
+
+{% include "reports/partials/filter_form.html" %}
+{% if report_type == "balance" %}
+    {% include "reports/partials/leave_balance_table.html" %}
+{% else %}
+    {% include "reports/partials/leave_requests_table.html" %}
+{% endif %}
+
+<p><a href="{% url 'report_hub' %}">Back to Reports</a></p>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% if records %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Employee</th>
+            <th>Department</th>
+            <th>Status</th>
+            <th>Check In</th>
+            <th>Check Out</th>
+            <th>Late (min)</th>
+            <th>Notes</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in records %}
+        <tr>
+            <td>{{ record.date }}</td>
+            <td>{{ record.employee.full_name }}</td>
+            <td>{{ record.employee.department|default:"—" }}</td>
+            <td><span class="badge status-{{ record.status }}">{{ record.get_status_display }}</span></td>
+            <td>{% if record.has_check_in %}Yes{% else %}No{% endif %}</td>
+            <td>{% if record.has_check_out %}Yes{% else %}No{% endif %}</td>
+            <td>{{ record.late_minutes }}m</td>
+            <td>{{ record.notes|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="empty-state">No exceptions for the selected filters.</p>
+{% endif %}

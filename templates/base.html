@@ -49,8 +49,20 @@
         .profile-details { margin: 1.5rem 0; }
         .profile-details dt { font-size: 0.875rem; color: #4b5563; margin-bottom: 0.125rem; }
         .profile-details dd { margin: 0 0 1rem; font-weight: 500; }
+        .export-buttons { display: flex; gap: 1rem; margin: 1rem 0; }
+        .export-buttons a { color: #1d4ed8; text-decoration: none; }
+        .export-buttons a:hover { text-decoration: underline; }
+        .report-filters { margin-bottom: 1rem; }
+        .dashboard-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+        .kpi-card { border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem; background: #fff; }
+        .kpi-card h2 { font-size: 0.875rem; color: #4b5563; margin: 0 0 0.5rem; font-weight: 500; }
+        .kpi-value { font-size: 1.75rem; font-weight: 700; margin: 0; color: #111827; }
+        .kpi-subtext { font-size: 0.75rem; color: #6b7280; margin: 0.25rem 0 0; }
+        .kpi-card-alert { border-color: #fcd34d; background: #fffbeb; }
+        .dashboard-links ul { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 1rem; }
+        .dashboard-links a { color: #1d4ed8; text-decoration: none; }
+        .dashboard-links a:hover { text-decoration: underline; }
     </style>
-</head>
 <body>
     {% if messages %}
         {% for message in messages %}

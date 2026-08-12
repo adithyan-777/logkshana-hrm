@@ -21,6 +21,7 @@ from django.urls import path, include
 from config import views
 
 urlpatterns = [
+    path("", include("dashboard.urls")),
     path("admin/", admin.site.urls),
     path("accounts/profile/", views.account_profile, name="account_profile"),
     path("accounts/", include("allauth.urls")),
@@ -28,4 +29,5 @@ urlpatterns = [
     path("schedule/", include("schedule.urls")),
     path("leave/", include("leave.urls")),
     path("attendance/", include("attendance.urls")),
+    path("reports/", include("reports.urls")),
 ]

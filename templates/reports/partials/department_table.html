@@ -1,0 +1,32 @@
+{% if rows %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Department</th>
+            <th>Employees</th>
+            <th>Total Days</th>
+            <th>Present</th>
+            <th>Absent</th>
+            <th>Late</th>
+            <th>Late (min)</th>
+            <th>OT (min)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in rows %}
+        <tr>
+            <td>{{ row.employee__department__name|default:"Unassigned" }}</td>
+            <td>{{ row.employee_count }}</td>
+            <td>{{ row.total_days }}</td>
+            <td>{{ row.present_days }}</td>
+            <td>{{ row.absent_days }}</td>
+            <td>{{ row.late_days }}</td>
+            <td>{{ row.total_late_minutes|default:0 }}m</td>
+            <td>{{ row.total_overtime_minutes|default:0 }}m</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="empty-state">No department attendance data for the selected filters.</p>
+{% endif %}

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+
+<h1>Dashboard</h1>
+<p>Overview for {{ summary.target_date }}</p>
+
+<section class="dashboard-kpis">
+    <div class="kpi-card">
+        <h2>Active Employees</h2>
+        <p class="kpi-value">{{ summary.active_employee_count }}</p>
+    </div>
+    <div class="kpi-card">
+        <h2>Present Today</h2>
+        <p class="kpi-value">{{ summary.today_present_count }}</p>
+        <p class="kpi-subtext">{{ summary.present_percentage }}% of active staff</p>
+    </div>
+    <div class="kpi-card">
+        <h2>Absent Today</h2>
+        <p class="kpi-value">{{ summary.today_absent_count }}</p>
+    </div>
+    <div class="kpi-card">
+        <h2>Late Today</h2>
+        <p class="kpi-value">{{ summary.today_late_count }}</p>
+    </div>
+    <div class="kpi-card">
+        <h2>On Leave Today</h2>
+        <p class="kpi-value">{{ summary.today_leave_count }}</p>
+    </div>
+    <div class="kpi-card">
+        <h2>Incomplete Today</h2>
+        <p class="kpi-value">{{ summary.today_incomplete_count }}</p>
+    </div>
+    <div class="kpi-card">
+        <h2>Missing Punch Today</h2>
+        <p class="kpi-value">{{ summary.today_missing_punch_count }}</p>
+    </div>
+    <div class="kpi-card kpi-card-alert">
+        <h2>Pending Leave</h2>
+        <p class="kpi-value">{{ summary.pending_leave_count }}</p>
+    </div>
+    <div class="kpi-card kpi-card-alert">
+        <h2>Pending Overtime</h2>
+        <p class="kpi-value">{{ summary.pending_overtime_count }}</p>
+    </div>
+    <div class="kpi-card kpi-card-alert">
+        <h2>Pending Corrections</h2>
+        <p class="kpi-value">{{ summary.pending_correction_count }}</p>
+    </div>
+</section>
+
+<section class="dashboard-links">
+    <h2>Quick Links</h2>
+    <ul>
+        <li><a href="{% url 'employee_list' %}">Employees</a></li>
+        <li><a href="{% url 'daily_attendance_list' %}">Daily Attendance</a></li>
+        <li><a href="{% url 'leave_request_list' %}">Leave Requests</a></li>
+        <li><a href="{% url 'report_hub' %}">Reports</a></li>
+        <li><a href="{% url 'report_exceptions' %}">Attendance Exceptions</a></li>
+        <li><a href="{% url 'report_attendance_summary' %}">Attendance Summary Report</a></li>
+    </ul>
+</section>
+{% endblock %}

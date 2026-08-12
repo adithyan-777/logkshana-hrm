@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Punch Log Report{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+
+<h1>Punch Log</h1>
+<p>Date range: {{ date_from }} to {{ date_to }}</p>
+
+{% include "reports/partials/filter_form.html" %}
+{% include "reports/partials/punch_log_table.html" %}
+
+<p><a href="{% url 'report_hub' %}">Back to Reports</a></p>
+{% endblock %}

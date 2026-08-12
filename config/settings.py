@@ -50,7 +50,7 @@ SHARED_APPS = [
     "allauth.socialaccount",
 ]
 
-TENANT_APPS = ("employees", "schedule", "leave", "attendance")
+TENANT_APPS = ("employees", "schedule", "leave", "attendance", "reports", "dashboard")
 
 INSTALLED_APPS = list(SHARED_APPS) + [
     app for app in TENANT_APPS if app not in SHARED_APPS
@@ -98,6 +98,8 @@ ACCOUNT_EMAIL_VERIFICATION = "optional"
 
 ACCOUNT_LOGIN_METHODS = {"username"}
 ACCOUNT_SIGNUP_FIELDS = ["username*", "password1*", "password2*"]
+
+LOGIN_REDIRECT_URL = "dashboard"
 
 
 # Database

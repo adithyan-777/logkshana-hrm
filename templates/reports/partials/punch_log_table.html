@@ -1,0 +1,28 @@
+{% if transactions %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Timestamp</th>
+            <th>Employee</th>
+            <th>Department</th>
+            <th>Direction</th>
+            <th>Source</th>
+            <th>External ID</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for transaction in transactions %}
+        <tr>
+            <td>{{ transaction.timestamp }}</td>
+            <td>{{ transaction.employee.full_name }}</td>
+            <td>{{ transaction.employee.department|default:"—" }}</td>
+            <td>{{ transaction.get_direction_display }}</td>
+            <td>{{ transaction.get_source_display }}</td>
+            <td>{{ transaction.external_id }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="empty-state">No punch records for the selected filters.</p>
+{% endif %}

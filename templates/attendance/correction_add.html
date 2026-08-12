@@ -1,11 +1,9 @@
-{% extends "base.html" %}
+{% extends "layouts/app_shell.html" %}
 
 {% block title %}Submit Correction{% endblock %}
+{% block page_title %}Submit Correction{% endblock %}
 
-{% block content %}
-{% include "partials/app_nav.html" %}
-
-<h1>Submit Correction</h1>
+{% block page_content %}
 <div id="correction-form-container">
     {% include "attendance/partials/correction_form.html" %}
 </div>

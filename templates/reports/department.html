@@ -1,15 +1,11 @@
-{% extends "base.html" %}
+{% extends "layouts/app_shell.html" %}
 
 {% block title %}Department Attendance Report{% endblock %}
+{% block page_title %}Department Attendance{% endblock %}
 
-{% block content %}
-{% include "partials/app_nav.html" %}
-
-<h1>Department Attendance</h1>
-<p>Date range: {{ date_from }} to {{ date_to }}</p>
+{% block page_content %}
+<p class="page-lead">Date range: {{ date_from }} to {{ date_to }}</p>
 
 {% include "reports/partials/filter_form.html" %}
 {% include "reports/partials/department_table.html" %}
-
-<p><a href="{% url 'report_hub' %}">Back to Reports</a></p>
 {% endblock %}

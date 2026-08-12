@@ -1,11 +1,9 @@
-{% extends "base.html" %}
+{% extends "layouts/app_shell.html" %}
 
 {% block title %}Record Punch{% endblock %}
+{% block page_title %}Record Punch{% endblock %}
 
-{% block content %}
-{% include "partials/app_nav.html" %}
-
-<h1>Record Punch</h1>
+{% block page_content %}
 <div id="transaction-form-container">
     {% include "attendance/partials/transaction_form.html" %}
 </div>

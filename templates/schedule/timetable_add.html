@@ -1,11 +1,9 @@
-{% extends "base.html" %}
+{% extends "layouts/app_shell.html" %}
 
 {% block title %}Add Timetable{% endblock %}
+{% block page_title %}Add Timetable{% endblock %}
 
-{% block content %}
-{% include "schedule/partials/nav.html" %}
-
-<h1>Add Timetable</h1>
+{% block page_content %}
 <div id="timetable-form-container">
     {% include "schedule/partials/timetable_form.html" %}
 </div>

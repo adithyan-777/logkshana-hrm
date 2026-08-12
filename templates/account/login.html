@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% load allauth %}
 
+{% block body_class %}standalone-page{% endblock %}
+
 {% block content %}
 <h1>Sign In</h1>
 <form method="post" action="{% url 'account_login' %}">

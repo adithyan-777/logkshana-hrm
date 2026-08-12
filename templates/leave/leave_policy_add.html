@@ -1,11 +1,9 @@
-{% extends "base.html" %}
+{% extends "layouts/app_shell.html" %}
 
 {% block title %}Add Leave Policy{% endblock %}
+{% block page_title %}Add Leave Policy{% endblock %}
 
-{% block content %}
-{% include "partials/app_nav.html" %}
-
-<h1>Add Leave Policy</h1>
+{% block page_content %}
 <div id="leave-policy-form-container">
     {% include "leave/partials/leave_policy_form.html" %}
 </div>

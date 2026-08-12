@@ -1,12 +1,9 @@
-{% extends "base.html" %}
+{% extends "layouts/app_shell.html" %}
 
 {% block title %}Leave Requests{% endblock %}
+{% block page_title %}Leave Requests{% endblock %}
 
-{% block content %}
-{% include "partials/app_nav.html" %}
-
-<h1>Leave Requests</h1>
-
+{% block page_content %}
 <label for="leave-request-search">Search</label>
 <input
     id="leave-request-search"
@@ -29,6 +26,4 @@
 >
     {% include "leave/partials/leave_request_table.html" %}
 </div>
-
-<p><a href="{% url 'leave_request_add' %}">Add leave request</a></p>
 {% endblock %}

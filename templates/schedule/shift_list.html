@@ -1,12 +1,9 @@
-{% extends "base.html" %}
+{% extends "layouts/app_shell.html" %}
 
 {% block title %}Shifts{% endblock %}
+{% block page_title %}Shifts{% endblock %}
 
-{% block content %}
-{% include "schedule/partials/nav.html" %}
-
-<h1>Shifts</h1>
-
+{% block page_content %}
 <label for="shift-search">Search</label>
 <input
     id="shift-search"
@@ -29,6 +26,4 @@
 >
     {% include "schedule/partials/shift_table.html" %}
 </div>
-
-<p><a href="{% url 'shift_add' %}">Add shift</a></p>
 {% endblock %}

@@ -1,11 +1,9 @@
-{% extends "base.html" %}
+{% extends "layouts/app_shell.html" %}
 
 {% block title %}Add Employee{% endblock %}
+{% block page_title %}Add Employee{% endblock %}
 
-{% block content %}
-{% include "partials/app_nav.html" %}
-
-<h1>Add Employee</h1>
+{% block page_content %}
 <div id="employee-form-container">
     {% include "employees/partials/employee_form.html" %}
 </div>

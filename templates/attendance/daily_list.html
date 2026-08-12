@@ -1,12 +1,9 @@
-{% extends "base.html" %}
+{% extends "layouts/app_shell.html" %}
 
 {% block title %}Daily Attendance{% endblock %}
+{% block page_title %}Daily Attendance{% endblock %}
 
-{% block content %}
-{% include "partials/app_nav.html" %}
-
-<h1>Daily Attendance</h1>
-
+{% block page_content %}
 <label for="daily-search">Search</label>
 <input
     id="daily-search"
@@ -29,6 +26,4 @@
 >
     {% include "attendance/partials/daily_table.html" %}
 </div>
-
-<p><a href="{% url 'daily_attendance_add' %}">Add daily record</a></p>
 {% endblock %}

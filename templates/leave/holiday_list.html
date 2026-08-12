@@ -1,12 +1,9 @@
-{% extends "base.html" %}
+{% extends "layouts/app_shell.html" %}
 
 {% block title %}Holidays{% endblock %}
+{% block page_title %}Holidays{% endblock %}
 
-{% block content %}
-{% include "partials/app_nav.html" %}
-
-<h1>Holidays</h1>
-
+{% block page_content %}
 <label for="holiday-search">Search</label>
 <input
     id="holiday-search"
@@ -29,6 +26,4 @@
 >
     {% include "leave/partials/holiday_table.html" %}
 </div>
-
-<p><a href="{% url 'holiday_add' %}">Add holiday</a></p>
 {% endblock %}

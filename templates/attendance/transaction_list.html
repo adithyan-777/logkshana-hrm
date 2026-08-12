@@ -1,12 +1,9 @@
-{% extends "base.html" %}
+{% extends "layouts/app_shell.html" %}
 
 {% block title %}Attendance Punches{% endblock %}
+{% block page_title %}Attendance Punches{% endblock %}
 
-{% block content %}
-{% include "partials/app_nav.html" %}
-
-<h1>Attendance Punches</h1>
-
+{% block page_content %}
 <label for="transaction-search">Search</label>
 <input
     id="transaction-search"
@@ -29,6 +26,4 @@
 >
     {% include "attendance/partials/transaction_table.html" %}
 </div>
-
-<p><a href="{% url 'attendance_transaction_add' %}">Record punch</a></p>
 {% endblock %}

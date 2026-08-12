@@ -1,11 +1,9 @@
-{% extends "base.html" %}
+{% extends "layouts/app_shell.html" %}
 
 {% block title %}Add Shift{% endblock %}
+{% block page_title %}Add Shift{% endblock %}
 
-{% block content %}
-{% include "schedule/partials/nav.html" %}
-
-<h1>Add Shift</h1>
+{% block page_content %}
 <div id="shift-form-container">
     {% include "schedule/partials/shift_form.html" %}
 </div>

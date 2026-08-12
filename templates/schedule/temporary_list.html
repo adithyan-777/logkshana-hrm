@@ -1,12 +1,9 @@
-{% extends "base.html" %}
+{% extends "layouts/app_shell.html" %}
 
 {% block title %}Temporary Schedules{% endblock %}
+{% block page_title %}Temporary Schedules{% endblock %}
 
-{% block content %}
-{% include "schedule/partials/nav.html" %}
-
-<h1>Temporary Schedules</h1>
-
+{% block page_content %}
 <label for="temporary-search">Search</label>
 <input
     id="temporary-search"
@@ -29,6 +26,4 @@
 >
     {% include "schedule/partials/temporary_table.html" %}
 </div>
-
-<p><a href="{% url 'temporary_add' %}">Add temporary schedule</a></p>
 {% endblock %}

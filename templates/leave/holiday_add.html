@@ -1,11 +1,9 @@
-{% extends "base.html" %}
+{% extends "layouts/app_shell.html" %}
 
 {% block title %}Add Holiday{% endblock %}
+{% block page_title %}Add Holiday{% endblock %}
 
-{% block content %}
-{% include "partials/app_nav.html" %}
-
-<h1>Add Holiday</h1>
+{% block page_content %}
 <div id="holiday-form-container">
     {% include "leave/partials/holiday_form.html" %}
 </div>

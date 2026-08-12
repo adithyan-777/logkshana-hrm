@@ -1,12 +1,9 @@
-{% extends "base.html" %}
+{% extends "layouts/app_shell.html" %}
 
 {% block title %}Attendance Corrections{% endblock %}
+{% block page_title %}Corrections{% endblock %}
 
-{% block content %}
-{% include "partials/app_nav.html" %}
-
-<h1>Attendance Corrections</h1>
-
+{% block page_content %}
 <label for="correction-search">Search</label>
 <input
     id="correction-search"
@@ -29,6 +26,4 @@
 >
     {% include "attendance/partials/correction_table.html" %}
 </div>
-
-<p><a href="{% url 'attendance_correction_add' %}">Submit correction</a></p>
 {% endblock %}

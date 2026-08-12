@@ -1,11 +1,9 @@
-{% extends "base.html" %}
+{% extends "layouts/app_shell.html" %}
 
 {% block title %}Add Daily Attendance{% endblock %}
+{% block page_title %}Add Daily Record{% endblock %}
 
-{% block content %}
-{% include "partials/app_nav.html" %}
-
-<h1>Add Daily Attendance</h1>
+{% block page_content %}
 <div id="daily-form-container">
     {% include "attendance/partials/daily_form.html" %}
 </div>

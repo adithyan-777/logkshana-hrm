@@ -1,12 +1,9 @@
-{% extends "base.html" %}
+{% extends "layouts/app_shell.html" %}
 
 {% block title %}Attendance Rules{% endblock %}
+{% block page_title %}Attendance Rules{% endblock %}
 
-{% block content %}
-{% include "partials/app_nav.html" %}
-
-<h1>Attendance Rules</h1>
-
+{% block page_content %}
 <label for="rule-search">Search</label>
 <input
     id="rule-search"
@@ -29,6 +26,4 @@
 >
     {% include "attendance/partials/rule_table.html" %}
 </div>
-
-<p><a href="{% url 'attendance_rule_add' %}">Add rule</a></p>
 {% endblock %}

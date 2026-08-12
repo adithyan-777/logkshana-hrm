@@ -1,10 +1,9 @@
-{% extends "base.html" %}
+{% extends "layouts/app_shell.html" %}
 
 {% block title %}Profile{% endblock %}
+{% block page_title %}Profile{% endblock %}
 
-{% block content %}
-<h1>Profile</h1>
-
+{% block page_content %}
 <dl class="profile-details">
     <dt>Username</dt>
     <dd>{{ user.username }}</dd>
@@ -14,9 +13,4 @@
     <dd>{{ user.email }}</dd>
     {% endif %}
 </dl>
-
-<nav class="page-nav">
-    <a href="{% url 'employee_list' %}">Employees</a>
-    <a href="{% url 'account_logout' %}">Log out</a>
-</nav>
 {% endblock %}

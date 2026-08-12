@@ -1,0 +1,186 @@
+<aside class="sidebar" aria-label="Main navigation">
+    <div class="sidebar-brand">
+        <a href="{% url 'dashboard' %}">Logkshana</a>
+    </div>
+
+    <nav class="sidebar-nav">
+        <section class="sidebar-section">
+            <h2 class="sidebar-section-title">Overview</h2>
+            <ul class="sidebar-links">
+                <li>
+                    <a
+                        href="{% url 'dashboard' %}"
+                        class="sidebar-link{% if request.resolver_match.url_name == 'dashboard' %} is-active{% endif %}"
+                    >Dashboard</a>
+                </li>
+            </ul>
+        </section>
+
+        <section class="sidebar-section">
+            <h2 class="sidebar-section-title">Employees</h2>
+            <ul class="sidebar-links">
+                <li>
+                    <a
+                        href="{% url 'employee_list' %}"
+                        class="sidebar-link{% if request.path|slice:':11' == '/employees/' %} is-active{% endif %}"
+                    >Employees</a>
+                </li>
+                <li>
+                    <a
+                        href="{% url 'employee_add' %}"
+                        class="sidebar-link sidebar-link-sub{% if request.resolver_match.url_name == 'employee_add' %} is-active{% endif %}"
+                    >Add employee</a>
+                </li>
+            </ul>
+        </section>
+
+        <section class="sidebar-section">
+            <h2 class="sidebar-section-title">Attendance</h2>
+            <ul class="sidebar-links">
+                <li>
+                    <a
+                        href="{% url 'attendance_transaction_list' %}"
+                        class="sidebar-link{% if request.resolver_match.url_name == 'attendance_transaction_list' or request.resolver_match.url_name == 'attendance_transaction_add' %} is-active{% endif %}"
+                    >Punches</a>
+                </li>
+                <li>
+                    <a
+                        href="{% url 'daily_attendance_list' %}"
+                        class="sidebar-link{% if request.path|slice:':17' == '/attendance/daily' %} is-active{% endif %}"
+                    >Daily</a>
+                </li>
+                <li>
+                    <a
+                        href="{% url 'attendance_correction_list' %}"
+                        class="sidebar-link{% if request.path|slice:':23' == '/attendance/correction' %} is-active{% endif %}"
+                    >Corrections</a>
+                </li>
+                <li>
+                    <a
+                        href="{% url 'attendance_rule_list' %}"
+                        class="sidebar-link{% if request.path|slice:':17' == '/attendance/rules' %} is-active{% endif %}"
+                    >Rules</a>
+                </li>
+            </ul>
+        </section>
+
+        <details class="sidebar-group"{% if nav_section == "leave" %} open{% endif %}>
+            <summary class="sidebar-group-summary">Leave</summary>
+            <ul class="sidebar-links">
+                <li>
+                    <a
+                        href="{% url 'leave_type_list' %}"
+                        class="sidebar-link{% if request.path|slice:':13' == '/leave/types/' %} is-active{% endif %}"
+                    >Types</a>
+                </li>
+                <li>
+                    <a
+                        href="{% url 'leave_policy_list' %}"
+                        class="sidebar-link{% if request.path|slice:':16' == '/leave/policies/' %} is-active{% endif %}"
+                    >Policies</a>
+                </li>
+                <li>
+                    <a
+                        href="{% url 'leave_request_list' %}"
+                        class="sidebar-link{% if request.path|slice:':16' == '/leave/requests' %} is-active{% endif %}"
+                    >Requests</a>
+                </li>
+                <li>
+                    <a
+                        href="{% url 'holiday_list' %}"
+                        class="sidebar-link{% if request.path|slice:':15' == '/leave/holidays' %} is-active{% endif %}"
+                    >Holidays</a>
+                </li>
+            </ul>
+        </details>
+
+        <details class="sidebar-group"{% if nav_section == "schedule" %} open{% endif %}>
+            <summary class="sidebar-group-summary">Schedule</summary>
+            <ul class="sidebar-links">
+                <li>
+                    <a
+                        href="{% url 'timetable_list' %}"
+                        class="sidebar-link{% if request.path|slice:':20' == '/schedule/timetables' %} is-active{% endif %}"
+                    >Timetables</a>
+                </li>
+                <li>
+                    <a
+                        href="{% url 'shift_list' %}"
+                        class="sidebar-link{% if request.path|slice:':15' == '/schedule/shifts' %} is-active{% endif %}"
+                    >Shifts</a>
+                </li>
+                <li>
+                    <a
+                        href="{% url 'assignment_list' %}"
+                        class="sidebar-link{% if request.path|slice:':20' == '/schedule/assignments' %} is-active{% endif %}"
+                    >Assignments</a>
+                </li>
+                <li>
+                    <a
+                        href="{% url 'temporary_list' %}"
+                        class="sidebar-link{% if request.path|slice:':19' == '/schedule/temporary' %} is-active{% endif %}"
+                    >Temporary</a>
+                </li>
+            </ul>
+        </details>
+
+        <details class="sidebar-group"{% if nav_section == "reports" %} open{% endif %}>
+            <summary class="sidebar-group-summary">Reports</summary>
+            <ul class="sidebar-links">
+                <li>
+                    <a
+                        href="{% url 'report_hub' %}"
+                        class="sidebar-link{% if request.resolver_match.url_name == 'report_hub' %} is-active{% endif %}"
+                    >All reports</a>
+                </li>
+                <li>
+                    <a
+                        href="{% url 'report_attendance_summary' %}"
+                        class="sidebar-link sidebar-link-sub{% if request.resolver_match.url_name == 'report_attendance_summary' %} is-active{% endif %}"
+                    >Attendance summary</a>
+                </li>
+                <li>
+                    <a
+                        href="{% url 'report_individual_attendance' %}"
+                        class="sidebar-link sidebar-link-sub{% if request.resolver_match.url_name == 'report_individual_attendance' %} is-active{% endif %}"
+                    >Individual attendance</a>
+                </li>
+                <li>
+                    <a
+                        href="{% url 'report_department_attendance' %}"
+                        class="sidebar-link sidebar-link-sub{% if request.resolver_match.url_name == 'report_department_attendance' %} is-active{% endif %}"
+                    >Department attendance</a>
+                </li>
+                <li>
+                    <a
+                        href="{% url 'report_exceptions' %}"
+                        class="sidebar-link sidebar-link-sub{% if request.resolver_match.url_name == 'report_exceptions' %} is-active{% endif %}"
+                    >Exceptions</a>
+                </li>
+                <li>
+                    <a
+                        href="{% url 'report_punch_log' %}"
+                        class="sidebar-link sidebar-link-sub{% if request.resolver_match.url_name == 'report_punch_log' %} is-active{% endif %}"
+                    >Punch log</a>
+                </li>
+                <li>
+                    <a
+                        href="{% url 'report_overtime' %}"
+                        class="sidebar-link sidebar-link-sub{% if request.resolver_match.url_name == 'report_overtime' %} is-active{% endif %}"
+                    >Overtime</a>
+                </li>
+                <li>
+                    <a
+                        href="{% url 'report_leave' %}"
+                        class="sidebar-link sidebar-link-sub{% if request.resolver_match.url_name == 'report_leave' %} is-active{% endif %}"
+                    >Leave reports</a>
+                </li>
+            </ul>
+        </details>
+    </nav>
+
+    <footer class="sidebar-footer">
+        <a href="{% url 'account_profile' %}" class="sidebar-link{% if request.resolver_match.url_name == 'account_profile' %} is-active{% endif %}">Profile</a>
+        <a href="{% url 'account_logout' %}" class="sidebar-link">Log out</a>
+    </footer>
+</aside>

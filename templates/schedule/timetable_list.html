@@ -1,12 +1,9 @@
-{% extends "base.html" %}
+{% extends "layouts/app_shell.html" %}
 
 {% block title %}Timetables{% endblock %}
+{% block page_title %}Timetables{% endblock %}
 
-{% block content %}
-{% include "schedule/partials/nav.html" %}
-
-<h1>Timetables</h1>
-
+{% block page_content %}
 <label for="timetable-search">Search</label>
 <input
     id="timetable-search"
@@ -29,6 +26,4 @@
 >
     {% include "schedule/partials/timetable_table.html" %}
 </div>
-
-<p><a href="{% url 'timetable_add' %}">Add timetable</a></p>
 {% endblock %}

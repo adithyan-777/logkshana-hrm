@@ -1,12 +1,9 @@
-{% extends "base.html" %}
+{% extends "layouts/app_shell.html" %}
 
 {% block title %}Schedule Assignments{% endblock %}
+{% block page_title %}Assignments{% endblock %}
 
-{% block content %}
-{% include "schedule/partials/nav.html" %}
-
-<h1>Schedule Assignments</h1>
-
+{% block page_content %}
 <label for="assignment-search">Search</label>
 <input
     id="assignment-search"
@@ -29,6 +26,4 @@
 >
     {% include "schedule/partials/assignment_table.html" %}
 </div>
-
-<p><a href="{% url 'assignment_add' %}">Add assignment</a></p>
 {% endblock %}

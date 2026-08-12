@@ -1,12 +1,10 @@
-{% extends "base.html" %}
+{% extends "layouts/app_shell.html" %}
 
 {% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
 
-{% block content %}
-{% include "partials/app_nav.html" %}
-
-<h1>Dashboard</h1>
-<p>Overview for {{ summary.target_date }}</p>
+{% block page_content %}
+<p class="page-lead">Overview for {{ summary.target_date }}</p>
 
 <section class="dashboard-kpis">
     <div class="kpi-card">
@@ -53,14 +51,12 @@
 </section>
 
 <section class="dashboard-links">
-    <h2>Quick Links</h2>
+    <h2>Quick Actions</h2>
     <ul>
-        <li><a href="{% url 'employee_list' %}">Employees</a></li>
-        <li><a href="{% url 'daily_attendance_list' %}">Daily Attendance</a></li>
-        <li><a href="{% url 'leave_request_list' %}">Leave Requests</a></li>
-        <li><a href="{% url 'report_hub' %}">Reports</a></li>
-        <li><a href="{% url 'report_exceptions' %}">Attendance Exceptions</a></li>
-        <li><a href="{% url 'report_attendance_summary' %}">Attendance Summary Report</a></li>
+        <li><a href="{% url 'leave_request_list' %}">Review pending leave</a></li>
+        <li><a href="{% url 'attendance_correction_list' %}">Review pending corrections</a></li>
+        <li><a href="{% url 'report_exceptions' %}">Attendance exceptions</a></li>
+        <li><a href="{% url 'report_overtime' %}">Pending overtime</a></li>
     </ul>
 </section>
 {% endblock %}

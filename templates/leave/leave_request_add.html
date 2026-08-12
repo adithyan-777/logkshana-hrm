@@ -1,11 +1,9 @@
-{% extends "base.html" %}
+{% extends "layouts/app_shell.html" %}
 
 {% block title %}Add Leave Request{% endblock %}
+{% block page_title %}Add Leave Request{% endblock %}
 
-{% block content %}
-{% include "partials/app_nav.html" %}
-
-<h1>Add Leave Request</h1>
+{% block page_content %}
 <div id="leave-request-form-container">
     {% include "leave/partials/leave_request_form.html" %}
 </div>

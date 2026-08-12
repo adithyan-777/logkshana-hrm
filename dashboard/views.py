@@ -13,5 +13,19 @@ def dashboard_view(request: HttpRequest) -> HttpResponse:
     return render(
         request,
         "dashboard/index.html",
-        {"summary": summary},
+        {
+            "summary": summary,
+            "chart_data": summary.attendance_chart_data(),
+        },
+    )
+
+
+@login_required
+@require_http_methods(["GET"])
+def dashboard_attendance_chart_partial(request: HttpRequest) -> HttpResponse:
+    summary = dashboard_summary_get()
+    return render(
+        request,
+        "dashboard/partials/attendance_chart.html",
+        {"chart_data": summary.attendance_chart_data()},
     )

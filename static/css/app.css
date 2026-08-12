@@ -58,6 +58,12 @@ button { padding: 0.5rem 1rem; cursor: pointer; }
 .dashboard-links ul { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 1rem; }
 .dashboard-links a { color: #1d4ed8; text-decoration: none; }
 .dashboard-links a:hover { text-decoration: underline; }
+.dashboard-charts { margin: 0 0 1.5rem; }
+.dashboard-chart-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
+.dashboard-chart-header h2 { margin: 0; font-size: 1.125rem; font-weight: 600; color: #111827; }
+.dashboard-chart-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem; max-width: 420px; }
+.dashboard-chart-card canvas { width: 100% !important; height: 280px !important; }
+.dashboard-chart-empty { margin: 0; padding: 2rem 0; text-align: center; }
 .pagination { margin-top: 1rem; }
 .pagination-summary { color: #6b7280; font-size: 0.875rem; margin: 0 0 0.5rem; }
 .pagination-links { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
@@ -107,6 +113,9 @@ button { padding: 0.5rem 1rem; cursor: pointer; }
 .btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.5rem 1rem; border-radius: 0.375rem; font-size: 0.875rem; font-weight: 500; text-decoration: none; border: 1px solid transparent; cursor: pointer; white-space: nowrap; }
 .btn-primary { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
 .btn-primary:hover { background: #1e40af; border-color: #1e40af; color: #fff; text-decoration: none; }
+.btn-secondary { background: #fff; color: #374151; border-color: #d1d5db; }
+.btn-secondary:hover { background: #f9fafb; border-color: #9ca3af; color: #111827; }
+.btn-sm { padding: 0.375rem 0.75rem; font-size: 0.8125rem; }
 
 @media (max-width: 900px) {
     .app-layout { grid-template-columns: 1fr; }

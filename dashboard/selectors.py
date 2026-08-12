@@ -24,6 +24,26 @@ class DashboardSummary:
     pending_overtime_count: int
     pending_correction_count: int
 
+    def attendance_chart_data(self) -> dict[str, list]:
+        return {
+            "labels": [
+                "Present",
+                "Absent",
+                "Late",
+                "On leave",
+                "Incomplete",
+                "Missing punch",
+            ],
+            "values": [
+                self.today_present_count,
+                self.today_absent_count,
+                self.today_late_count,
+                self.today_leave_count,
+                self.today_incomplete_count,
+                self.today_missing_punch_count,
+            ],
+        }
+
 
 def dashboard_summary_get(*, target_date: date | None = None) -> DashboardSummary:
     if target_date is None:

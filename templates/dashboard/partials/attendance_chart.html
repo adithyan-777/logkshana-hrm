@@ -1,0 +1,11 @@
+{{ chart_data|json_script:"attendance-chart-data" }}
+<div class="dashboard-chart-card">
+    <p class="dashboard-chart-empty empty-state" id="attendance-chart-empty" hidden>
+        No attendance records today.
+    </p>
+    <canvas
+        id="attendance-chart"
+        role="img"
+        aria-label="Attendance breakdown for today"
+    ></canvas>
+</div>

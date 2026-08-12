@@ -59,6 +59,24 @@ class DashboardSummaryTests(BaseTenantTestCase):
         self.assertEqual(summary.pending_overtime_count, 1)
         self.assertEqual(summary.pending_correction_count, 1)
 
+    def test_attendance_chart_data(self):
+        summary = dashboard_summary_get(target_date=date(2026, 2, 10))
+
+        chart_data = summary.attendance_chart_data()
+
+        self.assertEqual(
+            chart_data["labels"],
+            [
+                "Present",
+                "Absent",
+                "Late",
+                "On leave",
+                "Incomplete",
+                "Missing punch",
+            ],
+        )
+        self.assertEqual(len(chart_data["values"]), 6)
+
 
 class DashboardViewTests(BaseTenantTestCase):
     def test_dashboard_requires_login(self):
@@ -78,3 +96,27 @@ class DashboardViewTests(BaseTenantTestCase):
         self.assertContains(response, "sidebar")
         self.assertContains(response, "sidebar-group")
         self.assertContains(response, "breadcrumbs")
+        self.assertContains(response, 'id="attendance-chart"')
+        self.assertContains(response, 'id="attendance-chart-panel"')
+        self.assertContains(response, 'id="attendance-chart-data"')
+        self.assertContains(response, "chart.js@4.4.7")
+        self.assertContains(response, "dashboard-charts.js")
+        self.assertContains(response, 'hx-get="/partials/attendance-chart/"')
+
+    def test_attendance_chart_partial_requires_login(self):
+        self.client.logout()
+        response = self.client.get(reverse("dashboard_attendance_chart_partial"))
+        self.assertEqual(response.status_code, 302)
+
+    def test_attendance_chart_partial_returns_partial_markup(self):
+        response = self.client.get(
+            reverse("dashboard_attendance_chart_partial"),
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "dashboard/partials/attendance_chart.html")
+        self.assertContains(response, 'id="attendance-chart"')
+        self.assertContains(response, 'id="attendance-chart-data"')
+        self.assertNotContains(response, "sidebar")
+        self.assertNotContains(response, "chart.js")

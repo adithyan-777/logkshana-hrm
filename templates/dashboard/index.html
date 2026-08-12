@@ -1,4 +1,5 @@
 {% extends "layouts/app_shell.html" %}
+{% load static %}
 
 {% block title %}Dashboard{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
@@ -50,6 +51,29 @@
     </div>
 </section>
 
+<section class="dashboard-charts">
+    <div class="dashboard-chart-header">
+        <h2>Today's attendance</h2>
+        <button
+            type="button"
+            class="btn btn-secondary btn-sm"
+            hx-get="{% url 'dashboard_attendance_chart_partial' %}"
+            hx-target="#attendance-chart-panel"
+            hx-swap="innerHTML"
+        >
+            Refresh
+        </button>
+    </div>
+    <div
+        id="attendance-chart-panel"
+        hx-get="{% url 'dashboard_attendance_chart_partial' %}"
+        hx-trigger="every 60s"
+        hx-swap="innerHTML"
+    >
+        {% include "dashboard/partials/attendance_chart.html" %}
+    </div>
+</section>
+
 <section class="dashboard-links">
     <h2>Quick Actions</h2>
     <ul>
@@ -59,4 +83,9 @@
         <li><a href="{% url 'report_overtime' %}">Pending overtime</a></li>
     </ul>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="{% static 'js/dashboard-charts.js' %}"></script>
 {% endblock %}

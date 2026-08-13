@@ -1,0 +1,24 @@
+<details class="profile-menu profile-menu--topbar">
+  <summary class="profile profile--compact" aria-label="Account menu">
+    <span class="profile__avatar-wrap">
+      <span class="profile__avatar">{{ user.get_username|slice:":2"|upper }}</span>
+      <span class="profile__status" aria-hidden="true"></span>
+    </span>
+  </summary>
+  <div class="profile-menu__panel">
+    <div class="profile-menu__head">
+      <span class="profile__name">{{ user.get_username }}</span>
+      <span class="profile-menu__email">{{ user.email|default:"—" }}</span>
+    </div>
+    <hr class="profile-menu__divider">
+    <a href="{% url 'account_profile' %}" class="profile-menu__item">
+      <i class="bx bx-user admin-icon admin-icon--18"></i>
+      Profile
+    </a>
+    <hr class="profile-menu__divider">
+    <a href="{% url 'account_logout' %}" class="profile-menu__item profile-menu__item--danger">
+      <i class="bx bx-arrow-from-right admin-icon admin-icon--18"></i>
+      Log out
+    </a>
+  </div>
+</details>

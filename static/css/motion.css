@@ -1,0 +1,139 @@
+/* =====================================================
+ *  Motion — shared keyframes & transition utilities
+ * ===================================================== */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes toastOut {
+  to { opacity: 0; transform: translateY(4px) scale(0.98); }
+}
+
+@keyframes modalBackdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes modalDialogIn {
+  from { opacity: 0; transform: translateY(-16px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.05); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Page enter */
+.page-content {
+  animation: fadeInUp var(--t-slow) var(--ease-out) both;
+}
+
+.page-head {
+  animation: fadeIn var(--t-base) var(--ease-out) both;
+  animation-delay: 40ms;
+}
+
+/* Staggered dashboard tiles */
+.dashboard-tiles .info-box {
+  animation: fadeInUp var(--t-slow) var(--ease-out) both;
+}
+
+.dashboard-tiles .info-box:nth-child(1) { animation-delay: 60ms; }
+.dashboard-tiles .info-box:nth-child(2) { animation-delay: 100ms; }
+.dashboard-tiles .info-box:nth-child(3) { animation-delay: 140ms; }
+.dashboard-tiles .info-box:nth-child(4) { animation-delay: 180ms; }
+
+.charts-grid .card {
+  animation: fadeInUp var(--t-slow) var(--ease-out) both;
+  animation-delay: 200ms;
+}
+
+.charts-grid .card:nth-child(2) { animation-delay: 260ms; }
+
+.card:not(.charts-grid .card) {
+  animation: fadeInUp var(--t-slow) var(--ease-out) both;
+  animation-delay: 300ms;
+}
+
+/* HTMX swap transitions */
+.htmx-swapping {
+  opacity: 0 !important;
+  transform: translateY(4px) !important;
+  transition: var(--motion-base) !important;
+}
+
+.htmx-settling {
+  opacity: 1;
+  transform: translateY(0);
+  transition: var(--motion-base);
+}
+
+.htmx-indicator {
+  transition: var(--motion-micro);
+}
+
+.htmx-indicator .bx-loader-dots,
+.htmx-indicator .bx-loader-lines,
+.bx-spin {
+  display: inline-block;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  .page-content,
+  .page-head,
+  .dashboard-tiles .info-box,
+  .charts-grid .card,
+  .card {
+    animation: none;
+  }
+}

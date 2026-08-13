@@ -1,7 +1,6 @@
-<!-- employees/partials/employee_invite.html -->
-<div class="invite-box">
-    <p>{{ employee.first_name }} {{ employee.last_name }} was added.</p>
-    <p>Share this link with them to set their password:</p>
+<div class="alert alert--success invite-box">
+    <p><strong>{{ employee.first_name }} {{ employee.last_name }}</strong> was added.</p>
+    <p class="text-muted">Share this link with them to set their password:</p>
     <p><code>{{ invite_link }}</code></p>
     <button
       type="button"
@@ -12,4 +11,4 @@
     <a href="{% url 'employee_add' %}" hx-get="{% url 'employee_add' %}" hx-target="this" hx-swap="outerHTML">
       Add another employee
     </a>
-  </div>
+</div>

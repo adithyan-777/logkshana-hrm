@@ -1,12 +1,14 @@
 {% if breadcrumbs %}
 <nav class="breadcrumbs" aria-label="Breadcrumb">
-    {% for label, url_name in breadcrumbs %}
-        {% if url_name %}
-            <a href="{% url url_name %}">{{ label }}</a>
-        {% else %}
-            <span aria-current="page">{{ label }}</span>
-        {% endif %}
-        {% if not forloop.last %}<span class="breadcrumb-sep">/</span>{% endif %}
-    {% endfor %}
+  {% for label, url_name in breadcrumbs %}
+    {% if url_name %}
+      <a href="{% url url_name %}" class="breadcrumbs__link">{{ label }}</a>
+    {% else %}
+      <span class="breadcrumbs__current">{{ label }}</span>
+    {% endif %}
+    {% if not forloop.last %}
+      <span class="breadcrumbs__sep"><i class="bx bx-chevron-right"></i></span>
+    {% endif %}
+  {% endfor %}
 </nav>
 {% endif %}

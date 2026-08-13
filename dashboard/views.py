@@ -16,6 +16,7 @@ def dashboard_view(request: HttpRequest) -> HttpResponse:
         {
             "summary": summary,
             "chart_data": summary.attendance_chart_data(),
+            "greeting_name": request.user.get_short_name() or request.user.get_username(),
         },
     )
 

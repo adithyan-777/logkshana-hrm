@@ -1,19 +1,23 @@
 {% extends "layouts/app_shell.html" %}
 
 {% block title %}Leave Reports{% endblock %}
-{% block page_title %}Leave Reports{% endblock %}
 
 {% block page_content %}
-{% if report_type == "balance" %}
-<p class="page-lead">Year: {{ year }}</p>
-{% else %}
-<p class="page-lead">Date range: {{ date_from }} to {{ date_to }}</p>
-{% endif %}
+{% include "partials/tabs_reports.html" %}
 
-{% include "reports/partials/filter_form.html" %}
-{% if report_type == "balance" %}
-    {% include "reports/partials/leave_balance_table.html" %}
-{% else %}
-    {% include "reports/partials/leave_requests_table.html" %}
-{% endif %}
+<div class="report-toolbar">
+  {% include "reports/partials/filter_form.html" %}
+</div>
+
+<div class="card card--table">
+  <div class="card__body">
+    <div class="data-table-wrap">
+      {% if report_type == "balance" %}
+        {% include "reports/partials/leave_balance_table.html" %}
+      {% else %}
+        {% include "reports/partials/leave_requests_table.html" %}
+      {% endif %}
+    </div>
+  </div>
+</div>
 {% endblock %}

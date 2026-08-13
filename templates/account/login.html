@@ -1,13 +1,69 @@
-{% extends "base.html" %}
-{% load allauth %}
+{% extends "standalone.html" %}
 
-{% block body_class %}standalone-page{% endblock %}
+{% block title %}Sign In{% endblock %}
 
 {% block content %}
-<h1>Sign In</h1>
-<form method="post" action="{% url 'account_login' %}">
+<div class="login-card">
+  <div class="login-card__brand">
+    <span class="login-card__logo"><i class="bx bx-robot"></i></span>
+    <h1 class="login-card__title">Logkshana</h1>
+    <p class="login-card__subtitle">Sign in to continue.</p>
+  </div>
+
+  <form method="post" action="{% url 'account_login' %}" class="login-card__form">
     {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Sign In</button>
-</form>
+    {% if form.non_field_errors %}
+      <div class="alert alert--error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="form-field">
+      <label class="form-label" for="{{ form.login.id_for_label }}">Username</label>
+      <input
+        class="form-input"
+        id="{{ form.login.id_for_label }}"
+        name="{{ form.login.html_name }}"
+        type="text"
+        autocomplete="username"
+        placeholder="Username"
+        required
+        value="{{ form.login.value|default_if_none:'' }}"
+      >
+      {% if form.login.errors %}<span class="form-error">{{ form.login.errors }}</span>{% endif %}
+    </div>
+
+    <div class="form-field">
+      <label class="form-label" for="{{ form.password.id_for_label }}">Password</label>
+      <input
+        class="form-input"
+        id="{{ form.password.id_for_label }}"
+        name="{{ form.password.html_name }}"
+        type="password"
+        autocomplete="current-password"
+        placeholder="Password"
+        required
+      >
+      {% if form.password.errors %}<span class="form-error">{{ form.password.errors }}</span>{% endif %}
+    </div>
+
+    {% if form.remember %}
+    <div class="form-field">
+      <label class="text-muted" style="display:flex; gap: var(--space-2); align-items:center;">
+        <input type="checkbox" name="{{ form.remember.html_name }}" id="{{ form.remember.id_for_label }}" {% if form.remember.value %}checked{% endif %}>
+        Remember me
+      </label>
+    </div>
+    {% endif %}
+
+    {% for field in form.hidden_fields %}
+      {{ field }}
+    {% endfor %}
+    {% if redirect_field_value %}
+      <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
+    {% endif %}
+
+    <div class="form-actions" style="margin-top: var(--space-3);">
+      <button type="submit" class="btn btn--primary" style="width:100%; justify-content:center;">Sign In</button>
+    </div>
+  </form>
+</div>
 {% endblock %}

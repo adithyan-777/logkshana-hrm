@@ -1,0 +1,66 @@
+<details class="notify-menu">
+  <summary class="btn-icon topbar__notify" aria-label="Notifications" title="Notifications">
+    <i class="bx bx-bell admin-icon admin-icon--20"></i>
+    {% if nav_alerts.pending_leave or nav_alerts.pending_corrections or nav_alerts.pending_overtime %}
+    <span class="topbar__notify-dot" aria-hidden="true"></span>
+    {% endif %}
+  </summary>
+  <div class="notify-menu__panel" role="dialog" aria-label="Notifications">
+    <div class="notify-menu__head">
+      <div>
+        <div class="notify-menu__title">Notifications</div>
+        <p class="notify-menu__subtitle">Items that need a quick look</p>
+      </div>
+    </div>
+
+    <div class="notify-menu__list">
+      <a class="notify-menu__item" href="{% url 'leave_request_list' %}">
+        <span class="notify-menu__icon notify-menu__icon--warn">
+          <i class="bx bx-calendar-minus admin-icon admin-icon--18"></i>
+        </span>
+        <span class="notify-menu__copy">
+          <span class="notify-menu__label">Pending leave requests</span>
+          <span class="notify-menu__meta">Awaiting approval</span>
+        </span>
+        <span class="notify-menu__count">{{ nav_alerts.pending_leave|default:0 }}</span>
+      </a>
+      <a class="notify-menu__item" href="{% url 'attendance_correction_list' %}">
+        <span class="notify-menu__icon notify-menu__icon--info">
+          <i class="bx bx-edit admin-icon admin-icon--18"></i>
+        </span>
+        <span class="notify-menu__copy">
+          <span class="notify-menu__label">Attendance corrections</span>
+          <span class="notify-menu__meta">Punch fixes to review</span>
+        </span>
+        <span class="notify-menu__count">{{ nav_alerts.pending_corrections|default:0 }}</span>
+      </a>
+      <a class="notify-menu__item" href="{% url 'report_overtime' %}">
+        <span class="notify-menu__icon notify-menu__icon--accent">
+          <i class="bx bx-time-five admin-icon admin-icon--18"></i>
+        </span>
+        <span class="notify-menu__copy">
+          <span class="notify-menu__label">Overtime pending</span>
+          <span class="notify-menu__meta">Claims that need a decision</span>
+        </span>
+        <span class="notify-menu__count">{{ nav_alerts.pending_overtime|default:0 }}</span>
+      </a>
+      <a class="notify-menu__item" href="{% url 'report_exceptions' %}">
+        <span class="notify-menu__icon notify-menu__icon--danger">
+          <i class="bx bx-error-circle admin-icon admin-icon--18"></i>
+        </span>
+        <span class="notify-menu__copy">
+          <span class="notify-menu__label">Missing punches</span>
+          <span class="notify-menu__meta">Incomplete days flagged</span>
+        </span>
+        <span class="notify-menu__count">{{ nav_alerts.missing_punch|default:0 }}</span>
+      </a>
+    </div>
+
+    <div class="notify-menu__footer">
+      <a class="notify-menu__link" href="{% url 'daily_attendance_list' %}">
+        View attendance
+        <i class="bx bx-right-arrow-alt admin-icon admin-icon--18"></i>
+      </a>
+    </div>
+  </div>
+</details>

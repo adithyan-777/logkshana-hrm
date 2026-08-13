@@ -1,0 +1,17 @@
+{# Shared page heading. Uses page_heading, page_subtitle, topbar_action from context. #}
+<div class="page-head">
+  <div class="page-head__copy">
+    <h1 class="page-head__title">{{ page_heading|default:"Dashboard" }}</h1>
+    {% if page_subtitle %}
+    <p class="page-head__subtitle">{{ page_subtitle }}</p>
+    {% endif %}
+  </div>
+  {% if topbar_action %}
+    <div class="page-head__actions">
+      <a class="btn btn--primary" href="{{ topbar_action.url }}">
+        <i class="bx bx-plus admin-icon admin-icon--18"></i>
+        {{ topbar_action.label }}
+      </a>
+    </div>
+  {% endif %}
+</div>

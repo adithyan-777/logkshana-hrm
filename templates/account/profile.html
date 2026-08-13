@@ -1,16 +1,25 @@
 {% extends "layouts/app_shell.html" %}
 
 {% block title %}Profile{% endblock %}
-{% block page_title %}Profile{% endblock %}
 
 {% block page_content %}
-<dl class="profile-details">
-    <dt>Username</dt>
-    <dd>{{ user.username }}</dd>
-
-    {% if user.email %}
-    <dt>Email</dt>
-    <dd>{{ user.email }}</dd>
-    {% endif %}
-</dl>
+<div class="card" style="max-width: 520px;">
+  <div class="card__header">
+    <span class="card__title">Account</span>
+  </div>
+  <div class="card__body">
+    <dl class="profile-details">
+      <div class="profile-details__row">
+        <dt>Username</dt>
+        <dd>{{ user.username }}</dd>
+      </div>
+      {% if user.email %}
+      <div class="profile-details__row">
+        <dt>Email</dt>
+        <dd>{{ user.email }}</dd>
+      </div>
+      {% endif %}
+    </dl>
+  </div>
+</div>
 {% endblock %}

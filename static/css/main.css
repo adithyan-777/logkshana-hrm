@@ -1,0 +1,22 @@
+/*
+  CSS entry — import order is the style standard:
+  1. tokens.css     — colors, radii, spacing, motion vars
+  2. base.css       — resets, typography, document chrome
+  3. motion.css     — shared keyframes / entrance motion
+  4. layout.css     — app shell (.app, .main, .topbar, .main-scroll)
+  5. sidebar.css    — nav rail only
+  6. components.css — reusable UI (.btn, .card, .tabs, forms, tables…)
+  7. utilities.css  — tiny helpers (.mt-3, .text-muted)
+  8. compat.css     — aliases for existing Django form/table markup
+
+  Naming: BEM-ish — .block / .block__element / .block--modifier
+  Prefer tokens over hard-coded colors.
+*/
+@import url('tokens.css');
+@import url('base.css');
+@import url('motion.css');
+@import url('layout.css');
+@import url('sidebar.css');
+@import url('components.css');
+@import url('utilities.css');
+@import url('compat.css');

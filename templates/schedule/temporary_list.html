@@ -1,13 +1,15 @@
 {% extends "layouts/app_shell.html" %}
 
 {% block title %}Temporary Schedules{% endblock %}
-{% block page_title %}Temporary Schedules{% endblock %}
 
 {% block page_content %}
-<label for="temporary-search">Search</label>
-<input
+{% include "partials/tabs_schedule.html" %}
+
+<div class="toolbar">
+  <label class="sr-only" for="temporary-search">Search</label>
+  <input
     id="temporary-search"
-    class="search-input"
+    class="search-input toolbar__search"
     type="search"
     name="q"
     value="{{ search }}"
@@ -16,14 +18,20 @@
     hx-target="#temporary-list"
     hx-trigger="keyup changed delay:300ms, search"
     hx-push-url="true"
->
+  >
+</div>
 
-<div
-    id="temporary-list"
-    hx-get="{% url 'temporary_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-    hx-trigger="temporaryCreated from:body"
-    hx-swap="innerHTML"
->
-    {% include "schedule/partials/temporary_table.html" %}
+<div class="card card--table">
+  <div class="card__body">
+    <div
+      id="temporary-list"
+      class="data-table-wrap"
+      hx-get="{% url 'temporary_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+      hx-trigger="temporaryCreated from:body"
+      hx-swap="innerHTML"
+    >
+      {% include "schedule/partials/temporary_table.html" %}
+    </div>
+  </div>
 </div>
 {% endblock %}

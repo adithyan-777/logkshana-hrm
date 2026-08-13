@@ -1,18 +1,31 @@
 <form method="get" class="report-filters">
-    {% for field in form %}
-    <div class="field">
-        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-        {{ field }}
-        {% if field.errors %}
-        <p class="error">{{ field.errors|join:", " }}</p>
-        {% endif %}
+    <div class="report-filters__grid">
+        {% for field in form %}
+        <div class="form-field">
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+            <p class="form-error">{{ field.errors|join:", " }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
     </div>
-    {% endfor %}
-    <button type="submit">Apply filters</button>
+    <div class="report-filters__actions">
+        <button type="submit" class="btn btn--primary">
+            <i class="bx bx-filter admin-icon admin-icon--18"></i>
+            Apply filters
+        </button>
+        <a class="btn btn--ghost" href="{{ export_csv_url }}">
+            <i class="bx bx-file admin-icon admin-icon--18"></i>
+            CSV
+        </a>
+        <a class="btn btn--ghost" href="{{ export_xlsx_url }}">
+            <i class="bx bx-table admin-icon admin-icon--18"></i>
+            Excel
+        </a>
+        <a class="btn btn--ghost" href="{{ export_pdf_url }}">
+            <i class="bx bx-file admin-icon admin-icon--18"></i>
+            PDF
+        </a>
+    </div>
 </form>
-
-<div class="export-buttons">
-    <a href="{{ export_csv_url }}">Download CSV</a>
-    <a href="{{ export_xlsx_url }}">Download Excel</a>
-    <a href="{{ export_pdf_url }}">Download PDF</a>
-</div>

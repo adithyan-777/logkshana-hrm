@@ -1,10 +1,18 @@
 {% extends "layouts/app_shell.html" %}
 
 {% block title %}Add Attendance Rule{% endblock %}
-{% block page_title %}Add Rule{% endblock %}
 
 {% block page_content %}
-<div id="rule-form-container">
-    {% include "attendance/partials/rule_form.html" %}
+{% include "partials/tabs_attendance.html" %}
+
+<div class="card" style="max-width:720px;">
+  <div class="card__header">
+    <span class="card__title">Add rule</span>
+  </div>
+  <div class="card__body">
+    <div id="rule-form-container">
+      {% include "attendance/partials/rule_form.html" %}
+    </div>
+  </div>
 </div>
 {% endblock %}

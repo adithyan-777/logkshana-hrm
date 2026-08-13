@@ -1,13 +1,15 @@
 {% extends "layouts/app_shell.html" %}
 
 {% block title %}Leave Requests{% endblock %}
-{% block page_title %}Leave Requests{% endblock %}
 
 {% block page_content %}
-<label for="leave-request-search">Search</label>
-<input
+{% include "partials/tabs_leave.html" %}
+
+<div class="toolbar">
+  <label class="sr-only" for="leave-request-search">Search</label>
+  <input
     id="leave-request-search"
-    class="search-input"
+    class="search-input toolbar__search"
     type="search"
     name="q"
     value="{{ search }}"
@@ -16,14 +18,20 @@
     hx-target="#leave-request-list"
     hx-trigger="keyup changed delay:300ms, search"
     hx-push-url="true"
->
+  >
+</div>
 
-<div
-    id="leave-request-list"
-    hx-get="{% url 'leave_request_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-    hx-trigger="leaveRequestCreated from:body"
-    hx-swap="innerHTML"
->
-    {% include "leave/partials/leave_request_table.html" %}
+<div class="card card--table">
+  <div class="card__body">
+    <div
+      id="leave-request-list"
+      class="data-table-wrap"
+      hx-get="{% url 'leave_request_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+      hx-trigger="leaveRequestCreated from:body"
+      hx-swap="innerHTML"
+    >
+      {% include "leave/partials/leave_request_table.html" %}
+    </div>
+  </div>
 </div>
 {% endblock %}

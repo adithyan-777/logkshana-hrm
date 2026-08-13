@@ -1,18 +1,102 @@
 {% load static %}
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>{% block title %}Logkshana{% endblock %}</title>
-    <link rel="stylesheet" href="{% static 'css/app.css' %}">
-    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ page_heading|default:"Dashboard" }}{% endblock %} · Logkshana</title>
+  <script>
+    (function () {
+      const modeKey = "logkshana-theme-mode";
+      const prefsKey = "logkshana-ui-prefs";
+      const defaults = {
+        mode: "system",
+        layout: "compact",
+        scale: "md",
+        sidebarVariant: "inset",
+        sidebarMode: "default",
+      };
+      const prefs = { ...defaults };
+      try {
+        const mode = window.localStorage.getItem(modeKey);
+        if (mode === "system" || mode === "light" || mode === "dark") prefs.mode = mode;
+        const raw = window.localStorage.getItem(prefsKey);
+        if (raw) Object.assign(prefs, JSON.parse(raw));
+      } catch (_) {}
+
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const theme = prefs.mode === "dark" ? "dark" : prefs.mode === "light" ? "light" : prefersDark ? "dark" : "light";
+      const root = document.documentElement;
+      root.setAttribute("data-theme", theme);
+      root.setAttribute("data-layout", prefs.layout || defaults.layout);
+      root.setAttribute("data-scale", prefs.scale || defaults.scale);
+      root.setAttribute("data-sidebar-variant", prefs.sidebarVariant || defaults.sidebarVariant);
+      root.setAttribute("data-sidebar-mode", prefs.sidebarMode || defaults.sidebarMode);
+    })();
+  </script>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist@5.2.5/index.min.css" rel="stylesheet">
+  <link href="https://cdn.boxicons.com/3.0.8/fonts/basic/boxicons.min.css" rel="stylesheet">
+  <link href="https://cdn.boxicons.com/3.0.8/fonts/filled/boxicons-filled.min.css" rel="stylesheet">
+  <link href="https://cdn.boxicons.com/3.0.8/fonts/brands/boxicons-brands.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js"
+          integrity="sha384-H5SrcfygHmAuTDZphMHqBJLc3FhssKjG7w/CeCpFReSfwBWDTKpkzPP8c+cLsK+V"
+          crossorigin="anonymous" defer></script>
+  {% block extra_head %}{% endblock %}
 </head>
-<body class="{% block body_class %}{% endblock %}">
-    {% if messages %}
-        {% for message in messages %}
-            <p>{{ message }}</p>
-        {% endfor %}
-    {% endif %}
-    {% block content %}{% endblock %}
+<body class="app" hx-headers='{"x-csrftoken": "{{ csrf_token }}"}'>
+  <input type="checkbox" id="sidebar-collapsed" class="sidebar-state" aria-hidden="true">
+  <input type="checkbox" id="sidebar-mobile" class="sidebar-state" aria-hidden="true">
+  <script>
+    (function () {
+      try {
+        const raw = window.localStorage.getItem("logkshana-ui-prefs");
+        const mode = raw ? (JSON.parse(raw).sidebarMode || "default") : "default";
+        if (mode === "icon") document.getElementById("sidebar-collapsed").checked = true;
+      } catch (_) {}
+    })();
+  </script>
+
+  {% include "partials/sidebar.html" %}
+  <div class="main">
+    {% include "partials/topbar.html" %}
+    <div class="main-scroll">
+      <div class="page-content {% block page_class %}{% endblock %}">
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+  </div>
+  <label for="sidebar-mobile" class="backdrop" aria-hidden="true"></label>
+
+  <nav class="mobile-bottombar" aria-label="Mobile navigation">
+    <a class="mobile-bottombar__link" href="{% url 'dashboard' %}" aria-label="Dashboard">
+      <i class="bx bx-grid admin-icon admin-icon--20"></i>
+      <span>Home</span>
+    </a>
+    <a class="mobile-bottombar__link" href="{% url 'employee_list' %}" aria-label="Employees">
+      <i class="bx bx-user admin-icon admin-icon--20"></i>
+      <span>People</span>
+    </a>
+    <a class="mobile-bottombar__link" href="{% url 'daily_attendance_list' %}" aria-label="Attendance">
+      <i class="bx bx-calendar-check admin-icon admin-icon--20"></i>
+      <span>Attend</span>
+    </a>
+    <a class="mobile-bottombar__link" href="{% url 'report_hub' %}" aria-label="Reports">
+      <i class="bx bx-chart-bar-columns admin-icon admin-icon--20"></i>
+      <span>Reports</span>
+    </a>
+    <label for="sidebar-mobile" class="mobile-bottombar__menu btn-icon" aria-label="Open menu">
+      <i class="bx bx-menu admin-icon admin-icon--20"></i>
+    </label>
+  </nav>
+
+  <div class="toasts" id="toast-container"></div>
+  {% include "partials/modal.html" %}
+
+  <script src="{% static 'js/theme.js' %}"></script>
+  <script src="{% static 'js/dropdowns.js' %}"></script>
+  <script src="{% static 'js/toasts.js' %}"></script>
+  {% block extra_js %}{% endblock %}
 </body>
 </html>

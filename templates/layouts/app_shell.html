@@ -1,52 +1,17 @@
 {% extends "base.html" %}
-{% load static %}
-
-{% block body_class %}app-body{% endblock %}
 
 {% block content %}
-<div class="app-layout">
-    {% include "partials/sidebar.html" %}
-
-    <div class="app-main">
-        <header class="app-header">
-            <button
-                type="button"
-                class="sidebar-toggle"
-                id="sidebar-toggle"
-                aria-label="Toggle navigation"
-                aria-expanded="false"
-            >
-                <span aria-hidden="true">☰</span>
-            </button>
-
-            <div class="app-header-title">
-                {% include "partials/breadcrumbs.html" %}
-                <h1>{% block page_title %}Dashboard{% endblock %}</h1>
-            </div>
-
-            <div class="app-header-actions">
-                {% block page_actions %}
-                    {% if page_action %}
-                        <a href="{% url page_action.1 %}" class="btn btn-primary">{{ page_action.0 }}</a>
-                    {% endif %}
-                {% endblock %}
-            </div>
-
-            {% if user.is_authenticated %}
-            <div class="app-header-user">
-                <span class="app-header-username">{{ user.get_username }}</span>
-            </div>
-            {% endif %}
-        </header>
-
-        <main class="app-content">
-            {% block page_content %}{% endblock %}
-        </main>
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert {% if 'error' in message.tags %}alert--error{% elif 'success' in message.tags %}alert--success{% else %}alert--info{% endif %}">
+      {{ message }}
     </div>
-</div>
+  {% endfor %}
+{% endif %}
 
-<button type="button" class="sidebar-overlay" id="sidebar-overlay" aria-label="Close navigation" hidden></button>
+{% block page_head %}
+{% include "partials/page_head.html" %}
+{% endblock %}
 
-<script src="{% static 'js/app.js' %}"></script>
-{% block extra_js %}{% endblock %}
+{% block page_content %}{% endblock %}
 {% endblock %}

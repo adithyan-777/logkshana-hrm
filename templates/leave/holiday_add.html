@@ -1,10 +1,18 @@
 {% extends "layouts/app_shell.html" %}
 
 {% block title %}Add Holiday{% endblock %}
-{% block page_title %}Add Holiday{% endblock %}
 
 {% block page_content %}
-<div id="holiday-form-container">
-    {% include "leave/partials/holiday_form.html" %}
+{% include "partials/tabs_leave.html" %}
+
+<div class="card" style="max-width:720px;">
+  <div class="card__header">
+    <span class="card__title">Add holiday</span>
+  </div>
+  <div class="card__body">
+    <div id="holiday-form-container">
+      {% include "leave/partials/holiday_form.html" %}
+    </div>
+  </div>
 </div>
 {% endblock %}

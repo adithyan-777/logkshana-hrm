@@ -1,0 +1,19 @@
+<header class="topbar">
+  <div class="topbar__left">
+    <label for="sidebar-mobile" class="btn-icon topbar__open-sidebar" aria-label="Open menu">
+      <i class="bx bx-menu admin-icon admin-icon--20"></i>
+    </label>
+    {% include "partials/breadcrumbs.html" %}
+  </div>
+  <div class="topbar__right">
+    <div class="topbar__tools" role="toolbar" aria-label="Quick actions">
+      <button type="button" class="btn-icon" aria-label="Activity" title="Activity" data-toast="Activity feed coming soon">
+        <i class="bx bx-pulse admin-icon admin-icon--20"></i>
+      </button>
+      {% include "partials/notifications_menu.html" %}
+      {% include "partials/theme_customizer.html" %}
+    </div>
+
+    {% include "partials/profile_menu.html" %}
+  </div>
+</header>

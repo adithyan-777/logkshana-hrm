@@ -1,11 +1,27 @@
-{{ chart_data|json_script:"attendance-chart-data" }}
-<div class="dashboard-chart-card">
+<div class="card">
+  <div class="card__header">
+    <span class="card__title">Today’s attendance</span>
+    <button
+      type="button"
+      class="btn btn--ghost"
+      hx-get="{% url 'dashboard_attendance_chart_partial' %}"
+      hx-target="#attendance-chart-panel"
+      hx-swap="innerHTML"
+    >
+      Refresh
+    </button>
+  </div>
+  <div class="card__body">
+    {{ chart_data|json_script:"attendance-chart-data" }}
     <p class="dashboard-chart-empty empty-state" id="attendance-chart-empty" hidden>
-        No attendance records today.
+      No attendance records today.
     </p>
-    <canvas
+    <div class="chart-wrap chart-wrap--dash">
+      <canvas
         id="attendance-chart"
         role="img"
         aria-label="Attendance breakdown for today"
-    ></canvas>
+      ></canvas>
+    </div>
+  </div>
 </div>

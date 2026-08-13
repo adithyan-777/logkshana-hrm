@@ -1,10 +1,9 @@
 {% extends "layouts/app_shell.html" %}
 
 {% block title %}Reports{% endblock %}
-{% block page_title %}Reports{% endblock %}
 
 {% block page_content %}
-<p class="page-lead">Select a report to view attendance and HR data.</p>
+{% include "partials/tabs_reports.html" %}
 
 <ul class="report-link-list">
     <li><a href="{% url 'report_attendance_summary' %}">Attendance Summary</a></li>

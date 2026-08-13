@@ -1,10 +1,18 @@
 {% extends "layouts/app_shell.html" %}
 
 {% block title %}Add Leave Request{% endblock %}
-{% block page_title %}Add Leave Request{% endblock %}
 
 {% block page_content %}
-<div id="leave-request-form-container">
-    {% include "leave/partials/leave_request_form.html" %}
+{% include "partials/tabs_leave.html" %}
+
+<div class="card" style="max-width:720px;">
+  <div class="card__header">
+    <span class="card__title">Add leave request</span>
+  </div>
+  <div class="card__body">
+    <div id="leave-request-form-container">
+      {% include "leave/partials/leave_request_form.html" %}
+    </div>
+  </div>
 </div>
 {% endblock %}

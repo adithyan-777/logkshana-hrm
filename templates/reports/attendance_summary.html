@@ -1,11 +1,19 @@
 {% extends "layouts/app_shell.html" %}
 
 {% block title %}Attendance Summary Report{% endblock %}
-{% block page_title %}Attendance Summary{% endblock %}
 
 {% block page_content %}
-<p class="page-lead">Date range: {{ date_from }} to {{ date_to }}</p>
+{% include "partials/tabs_reports.html" %}
 
-{% include "reports/partials/filter_form.html" %}
-{% include "reports/partials/attendance_summary_table.html" %}
+<div class="report-toolbar">
+  {% include "reports/partials/filter_form.html" %}
+</div>
+
+<div class="card card--table">
+  <div class="card__body">
+    <div class="data-table-wrap">
+      {% include "reports/partials/attendance_summary_table.html" %}
+    </div>
+  </div>
+</div>
 {% endblock %}

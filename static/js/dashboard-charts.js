@@ -92,7 +92,7 @@
     });
 
     document.body.addEventListener("htmx:afterSwap", function (event) {
-        if (isChartPanel(event.detail.target)) {
+        if (isChartPanel(event.detail.target) || document.getElementById("attendance-chart")) {
             initAttendanceChart();
         }
     });

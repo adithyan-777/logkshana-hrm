@@ -1,10 +1,18 @@
 {% extends "layouts/app_shell.html" %}
 
 {% block title %}Add Daily Attendance{% endblock %}
-{% block page_title %}Add Daily Record{% endblock %}
 
 {% block page_content %}
-<div id="daily-form-container">
-    {% include "attendance/partials/daily_form.html" %}
+{% include "partials/tabs_attendance.html" %}
+
+<div class="card" style="max-width:720px;">
+  <div class="card__header">
+    <span class="card__title">Add daily record</span>
+  </div>
+  <div class="card__body">
+    <div id="daily-form-container">
+      {% include "attendance/partials/daily_form.html" %}
+    </div>
+  </div>
 </div>
 {% endblock %}

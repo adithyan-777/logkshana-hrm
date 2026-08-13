@@ -1,13 +1,15 @@
 {% extends "layouts/app_shell.html" %}
 
 {% block title %}Timetables{% endblock %}
-{% block page_title %}Timetables{% endblock %}
 
 {% block page_content %}
-<label for="timetable-search">Search</label>
-<input
+{% include "partials/tabs_schedule.html" %}
+
+<div class="toolbar">
+  <label class="sr-only" for="timetable-search">Search</label>
+  <input
     id="timetable-search"
-    class="search-input"
+    class="search-input toolbar__search"
     type="search"
     name="q"
     value="{{ search }}"
@@ -16,14 +18,20 @@
     hx-target="#timetable-list"
     hx-trigger="keyup changed delay:300ms, search"
     hx-push-url="true"
->
+  >
+</div>
 
-<div
-    id="timetable-list"
-    hx-get="{% url 'timetable_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-    hx-trigger="timetableCreated from:body"
-    hx-swap="innerHTML"
->
-    {% include "schedule/partials/timetable_table.html" %}
+<div class="card card--table">
+  <div class="card__body">
+    <div
+      id="timetable-list"
+      class="data-table-wrap"
+      hx-get="{% url 'timetable_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+      hx-trigger="timetableCreated from:body"
+      hx-swap="innerHTML"
+    >
+      {% include "schedule/partials/timetable_table.html" %}
+    </div>
+  </div>
 </div>
 {% endblock %}

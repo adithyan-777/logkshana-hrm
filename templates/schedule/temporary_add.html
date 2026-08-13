@@ -1,10 +1,18 @@
 {% extends "layouts/app_shell.html" %}
 
 {% block title %}Add Temporary Schedule{% endblock %}
-{% block page_title %}Add Temporary Schedule{% endblock %}
 
 {% block page_content %}
-<div id="temporary-form-container">
-    {% include "schedule/partials/temporary_form.html" %}
+{% include "partials/tabs_schedule.html" %}
+
+<div class="card" style="max-width:720px;">
+  <div class="card__header">
+    <span class="card__title">Add temporary schedule</span>
+  </div>
+  <div class="card__body">
+    <div id="temporary-form-container">
+      {% include "schedule/partials/temporary_form.html" %}
+    </div>
+  </div>
 </div>
 {% endblock %}

@@ -1,10 +1,18 @@
 {% extends "layouts/app_shell.html" %}
 
 {% block title %}Add Leave Policy{% endblock %}
-{% block page_title %}Add Leave Policy{% endblock %}
 
 {% block page_content %}
-<div id="leave-policy-form-container">
-    {% include "leave/partials/leave_policy_form.html" %}
+{% include "partials/tabs_leave.html" %}
+
+<div class="card" style="max-width:720px;">
+  <div class="card__header">
+    <span class="card__title">Add leave policy</span>
+  </div>
+  <div class="card__body">
+    <div id="leave-policy-form-container">
+      {% include "leave/partials/leave_policy_form.html" %}
+    </div>
+  </div>
 </div>
 {% endblock %}

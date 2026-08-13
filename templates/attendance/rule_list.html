@@ -1,13 +1,15 @@
 {% extends "layouts/app_shell.html" %}
 
 {% block title %}Attendance Rules{% endblock %}
-{% block page_title %}Attendance Rules{% endblock %}
 
 {% block page_content %}
-<label for="rule-search">Search</label>
-<input
+{% include "partials/tabs_attendance.html" %}
+
+<div class="toolbar">
+  <label class="sr-only" for="rule-search">Search</label>
+  <input
     id="rule-search"
-    class="search-input"
+    class="search-input toolbar__search"
     type="search"
     name="q"
     value="{{ search }}"
@@ -16,14 +18,20 @@
     hx-target="#rule-list"
     hx-trigger="keyup changed delay:300ms, search"
     hx-push-url="true"
->
+  >
+</div>
 
-<div
-    id="rule-list"
-    hx-get="{% url 'attendance_rule_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-    hx-trigger="attendanceRuleCreated from:body"
-    hx-swap="innerHTML"
->
-    {% include "attendance/partials/rule_table.html" %}
+<div class="card card--table">
+  <div class="card__body">
+    <div
+      id="rule-list"
+      class="data-table-wrap"
+      hx-get="{% url 'attendance_rule_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+      hx-trigger="attendanceRuleCreated from:body"
+      hx-swap="innerHTML"
+    >
+      {% include "attendance/partials/rule_table.html" %}
+    </div>
+  </div>
 </div>
 {% endblock %}

@@ -1,0 +1,23 @@
+<div class="tabs" role="tablist" aria-label="Report sections">
+  <a href="{% url 'report_attendance_summary' %}"
+     class="tab {% if request.resolver_match.url_name == 'report_attendance_summary' %}is-active{% endif %}"
+     role="tab">Attendance</a>
+  <a href="{% url 'report_individual_attendance' %}"
+     class="tab {% if request.resolver_match.url_name == 'report_individual_attendance' %}is-active{% endif %}"
+     role="tab">Individual</a>
+  <a href="{% url 'report_department_attendance' %}"
+     class="tab {% if request.resolver_match.url_name == 'report_department_attendance' %}is-active{% endif %}"
+     role="tab">Department</a>
+  <a href="{% url 'report_exceptions' %}"
+     class="tab {% if request.resolver_match.url_name == 'report_exceptions' %}is-active{% endif %}"
+     role="tab">Exceptions</a>
+  <a href="{% url 'report_punch_log' %}"
+     class="tab {% if request.resolver_match.url_name == 'report_punch_log' %}is-active{% endif %}"
+     role="tab">Punch log</a>
+  <a href="{% url 'report_overtime' %}"
+     class="tab {% if request.resolver_match.url_name == 'report_overtime' %}is-active{% endif %}"
+     role="tab">Overtime</a>
+  <a href="{% url 'report_leave' %}"
+     class="tab {% if request.resolver_match.url_name == 'report_leave' %}is-active{% endif %}"
+     role="tab">Leave</a>
+</div>

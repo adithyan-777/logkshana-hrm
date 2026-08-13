@@ -1,10 +1,18 @@
 {% extends "layouts/app_shell.html" %}
 
 {% block title %}Add Shift{% endblock %}
-{% block page_title %}Add Shift{% endblock %}
 
 {% block page_content %}
-<div id="shift-form-container">
-    {% include "schedule/partials/shift_form.html" %}
+{% include "partials/tabs_schedule.html" %}
+
+<div class="card" style="max-width:960px;">
+  <div class="card__header">
+    <span class="card__title">Add shift</span>
+  </div>
+  <div class="card__body">
+    <div id="shift-form-container">
+      {% include "schedule/partials/shift_form.html" %}
+    </div>
+  </div>
 </div>
 {% endblock %}

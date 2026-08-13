@@ -1,0 +1,399 @@
+/*
+  Map existing Pattika markup (.field, .badge, Django widgets) onto the
+  design-system primitives so forms and tables match without rewriting
+  every widget class.
+*/
+
+.field {
+  margin-bottom: var(--space-3);
+}
+
+.field > label,
+.field label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: var(--space-2);
+}
+
+.field input:not([type="checkbox"]):not([type="radio"]),
+.field select,
+.field textarea,
+.search-input,
+.report-filters input:not([type="checkbox"]):not([type="radio"]),
+.report-filters select,
+.form-field input:not([type="checkbox"]):not([type="radio"]):not(.form-input),
+.form-field select,
+.form-field textarea {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-height: var(--control-h);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--input);
+  border-radius: var(--r-md);
+  background: var(--bg-prompt);
+  color: var(--text);
+  font: inherit;
+  box-shadow: none;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: var(--motion-interactive);
+}
+
+.field input:not([type="checkbox"]):not([type="radio"]):focus,
+.field select:focus,
+.field textarea:focus,
+.search-input:focus,
+.report-filters input:focus,
+.report-filters select:focus,
+.login-card input:focus {
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: var(--shadow-focus);
+}
+
+.field.checkbox,
+.field.checkbox label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: 0;
+}
+
+.field.checkbox {
+  margin-bottom: var(--space-3);
+}
+
+.field.checkbox input {
+  width: auto;
+  min-height: auto;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-3);
+}
+
+.field .error,
+.error {
+  font-size: 12.5px;
+  color: var(--danger);
+  margin-top: 4px;
+}
+
+.help-text {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin: 0 0 var(--space-3);
+}
+
+form button[type="submit"]:not(.btn) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: var(--control-h);
+  padding: 0 var(--space-3);
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+  background: var(--accent);
+  color: #fff;
+  font-size: var(--control-font);
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: var(--space-3);
+}
+
+form button[type="submit"]:not(.btn):hover {
+  background: var(--accent-hover);
+}
+
+.form-section {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+  background: var(--bg-elevated);
+}
+
+.form-section legend {
+  font-weight: 600;
+  font-size: 14px;
+  padding: 0 var(--space-1);
+}
+
+.employee-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.employee-table th,
+.employee-table td {
+  padding: 12px 16px;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-header);
+}
+
+.employee-table th {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap;
+  height: 40px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.badge.active,
+.badge.status-approved,
+.badge.status-present,
+.badge.status-auto_approved {
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  color: var(--success);
+}
+
+.badge.inactive,
+.badge.status-cancelled,
+.badge.status-draft,
+.badge.status-day_off,
+.badge.status-holiday {
+  background: var(--bg-muted);
+  color: var(--text-muted);
+  border-color: var(--border);
+}
+
+.badge.status-pending {
+  background: color-mix(in srgb, var(--warning) 14%, transparent);
+  color: light-dark(#a16207, var(--warning));
+}
+
+.badge.status-rejected,
+.badge.status-absent,
+.badge.status-missing_punch {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+}
+
+.badge.status-late,
+.badge.status-early_out {
+  background: color-mix(in srgb, var(--warning) 18%, transparent);
+  color: light-dark(#9a7b00, var(--warning));
+}
+
+.badge.status-incomplete {
+  background: color-mix(in srgb, var(--text-dim) 12%, transparent);
+  color: var(--text-dim);
+}
+
+.badge.status-leave {
+  background: color-mix(in srgb, var(--info) 14%, transparent);
+  color: var(--info);
+}
+
+.badge.status-overtime,
+.badge.status-worked_holiday {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+.message {
+  padding: var(--space-3);
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  font-size: 14px;
+  margin-bottom: var(--space-3);
+}
+
+.message.success {
+  background: color-mix(in srgb, var(--success) 10%, var(--bg-elevated));
+  border-color: color-mix(in srgb, var(--success) 25%, var(--border));
+}
+
+.message.error {
+  background: color-mix(in srgb, var(--danger) 10%, var(--bg-elevated));
+  border-color: color-mix(in srgb, var(--danger) 25%, var(--border));
+}
+
+.message a {
+  color: var(--accent);
+  margin-left: var(--space-2);
+}
+
+.empty-state {
+  color: var(--text-muted);
+  padding: var(--space-4);
+  text-align: center;
+}
+
+.empty-state a {
+  color: var(--accent);
+}
+
+.card--table .pagination {
+  padding: var(--space-3) var(--space-4);
+  margin-top: 0;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.pagination-summary {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.pagination-links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.pagination-links a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: var(--r-md);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.pagination-links a:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.pagination-current {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.pagination-disabled {
+  opacity: 0.4;
+  font-size: 13px;
+}
+
+.search-input {
+  max-width: 320px;
+  margin-bottom: 0;
+}
+
+.toolbar .search-input {
+  width: 100%;
+}
+
+.invite-box {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.invite-box code {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-prompt);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  font-size: 13px;
+  overflow-x: auto;
+}
+
+.invite-box button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--control-h);
+  padding: 0 var(--space-3);
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+  background: var(--accent);
+  color: #fff;
+  font-size: var(--control-font);
+  font-weight: 500;
+  cursor: pointer;
+  width: fit-content;
+}
+
+.invite-box a {
+  color: var(--accent);
+}
+
+.export-buttons {
+  display: none;
+}
+
+.report-link-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.report-link-list a {
+  display: block;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  transition: var(--motion-interactive);
+}
+
+.report-link-list a:hover {
+  background: var(--hover);
+}
+
+.profile-details {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.profile-details dt {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.profile-details dd {
+  margin: 2px 0 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.login-card__form .errorlist {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--space-3);
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.login-card__form p {
+  margin-bottom: var(--space-3);
+}
+
+.login-card__form p label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: var(--space-2);
+}

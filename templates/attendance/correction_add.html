@@ -1,10 +1,18 @@
 {% extends "layouts/app_shell.html" %}
 
 {% block title %}Submit Correction{% endblock %}
-{% block page_title %}Submit Correction{% endblock %}
 
 {% block page_content %}
-<div id="correction-form-container">
-    {% include "attendance/partials/correction_form.html" %}
+{% include "partials/tabs_attendance.html" %}
+
+<div class="card" style="max-width:720px;">
+  <div class="card__header">
+    <span class="card__title">Submit correction</span>
+  </div>
+  <div class="card__body">
+    <div id="correction-form-container">
+      {% include "attendance/partials/correction_form.html" %}
+    </div>
+  </div>
 </div>
 {% endblock %}

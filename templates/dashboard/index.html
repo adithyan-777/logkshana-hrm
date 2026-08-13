@@ -2,68 +2,57 @@
 {% load static %}
 
 {% block title %}Dashboard{% endblock %}
-{% block page_title %}Dashboard{% endblock %}
+{% block page_head %}{% endblock %}
 
 {% block page_content %}
-<p class="page-lead">Overview for {{ summary.target_date }}</p>
-
-<section class="dashboard-kpis">
-    <div class="kpi-card">
-        <h2>Active Employees</h2>
-        <p class="kpi-value">{{ summary.active_employee_count }}</p>
-    </div>
-    <div class="kpi-card">
-        <h2>Present Today</h2>
-        <p class="kpi-value">{{ summary.today_present_count }}</p>
-        <p class="kpi-subtext">{{ summary.present_percentage }}% of active staff</p>
-    </div>
-    <div class="kpi-card">
-        <h2>Absent Today</h2>
-        <p class="kpi-value">{{ summary.today_absent_count }}</p>
-    </div>
-    <div class="kpi-card">
-        <h2>Late Today</h2>
-        <p class="kpi-value">{{ summary.today_late_count }}</p>
-    </div>
-    <div class="kpi-card">
-        <h2>On Leave Today</h2>
-        <p class="kpi-value">{{ summary.today_leave_count }}</p>
-    </div>
-    <div class="kpi-card">
-        <h2>Incomplete Today</h2>
-        <p class="kpi-value">{{ summary.today_incomplete_count }}</p>
-    </div>
-    <div class="kpi-card">
-        <h2>Missing Punch Today</h2>
-        <p class="kpi-value">{{ summary.today_missing_punch_count }}</p>
-    </div>
-    <div class="kpi-card kpi-card-alert">
-        <h2>Pending Leave</h2>
-        <p class="kpi-value">{{ summary.pending_leave_count }}</p>
-    </div>
-    <div class="kpi-card kpi-card-alert">
-        <h2>Pending Overtime</h2>
-        <p class="kpi-value">{{ summary.pending_overtime_count }}</p>
-    </div>
-    <div class="kpi-card kpi-card-alert">
-        <h2>Pending Corrections</h2>
-        <p class="kpi-value">{{ summary.pending_correction_count }}</p>
-    </div>
+<section class="dash-hero">
+  <div class="dash-hero__copy">
+    <p class="dash-hero__eyebrow">{{ summary.target_date }}</p>
+    <h1 class="dash-hero__title">
+      Hello, <span class="dash-hero__accent">{{ greeting_name }}</span>
+    </h1>
+    <p class="dash-hero__subtitle">Here’s today’s attendance pulse and what needs your attention.</p>
+  </div>
+  <div class="dash-hero__score" aria-label="Present rate">
+    <span class="dash-hero__score-value">{{ summary.present_percentage }}%</span>
+    <span class="dash-hero__score-label">Present rate</span>
+    <a class="btn btn--primary" href="{% url 'daily_attendance_list' %}">View daily</a>
+  </div>
 </section>
 
-<section class="dashboard-charts">
-    <div class="dashboard-chart-header">
-        <h2>Today's attendance</h2>
-        <button
-            type="button"
-            class="btn btn-secondary btn-sm"
-            hx-get="{% url 'dashboard_attendance_chart_partial' %}"
-            hx-target="#attendance-chart-panel"
-            hx-swap="innerHTML"
-        >
-            Refresh
-        </button>
-    </div>
+<section class="dash-metrics" aria-label="Today’s snapshot">
+  <a class="dash-metric" href="{% url 'daily_attendance_list' %}">
+    <span class="dash-metric__icon"><i class="bx bx-check-circle"></i></span>
+    <span class="dash-metric__meta">
+      <span class="dash-metric__label">Present</span>
+      <span class="dash-metric__value">{{ summary.today_present_count }}</span>
+    </span>
+  </a>
+  <a class="dash-metric" href="{% url 'report_exceptions' %}">
+    <span class="dash-metric__icon dash-metric__icon--danger"><i class="bx bx-x-circle"></i></span>
+    <span class="dash-metric__meta">
+      <span class="dash-metric__label">Absent</span>
+      <span class="dash-metric__value">{{ summary.today_absent_count }}</span>
+    </span>
+  </a>
+  <a class="dash-metric" href="{% url 'report_exceptions' %}">
+    <span class="dash-metric__icon dash-metric__icon--warn"><i class="bx bx-clock"></i></span>
+    <span class="dash-metric__meta">
+      <span class="dash-metric__label">Late</span>
+      <span class="dash-metric__value">{{ summary.today_late_count }}</span>
+    </span>
+  </a>
+  <a class="dash-metric" href="{% url 'leave_request_list' %}">
+    <span class="dash-metric__icon dash-metric__icon--info"><i class="bx bx-calendar-minus"></i></span>
+    <span class="dash-metric__meta">
+      <span class="dash-metric__label">On leave</span>
+      <span class="dash-metric__value">{{ summary.today_leave_count }}</span>
+    </span>
+  </a>
+</section>
+
+<section class="dash-grid">
+  <div class="dash-stack">
     <div
         id="attendance-chart-panel"
         hx-get="{% url 'dashboard_attendance_chart_partial' %}"
@@ -72,20 +61,92 @@
     >
         {% include "dashboard/partials/attendance_chart.html" %}
     </div>
-</section>
 
-<section class="dashboard-links">
-    <h2>Quick Actions</h2>
-    <ul>
-        <li><a href="{% url 'leave_request_list' %}">Review pending leave</a></li>
-        <li><a href="{% url 'attendance_correction_list' %}">Review pending corrections</a></li>
-        <li><a href="{% url 'report_exceptions' %}">Attendance exceptions</a></li>
-        <li><a href="{% url 'report_overtime' %}">Pending overtime</a></li>
-    </ul>
+    <div class="card">
+      <div class="card__header">
+        <span class="card__title">More today</span>
+      </div>
+      <div class="card__body dash-secondary">
+        <a class="dash-secondary__item" href="{% url 'employee_list' %}">
+          <span>Active employees</span>
+          <strong>{{ summary.active_employee_count }}</strong>
+        </a>
+        <a class="dash-secondary__item" href="{% url 'report_exceptions' %}">
+          <span>Incomplete</span>
+          <strong>{{ summary.today_incomplete_count }}</strong>
+        </a>
+        <a class="dash-secondary__item" href="{% url 'report_exceptions' %}">
+          <span>Missing punch</span>
+          <strong>{{ summary.today_missing_punch_count }}</strong>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <aside class="dash-aside">
+    <div class="card">
+      <div class="card__header">
+        <span class="card__title">Needs attention</span>
+        <span class="dash-badge">{{ summary.pending_leave_count|add:summary.pending_overtime_count|add:summary.pending_correction_count }}</span>
+      </div>
+      <div class="card__body dash-attention">
+        <a class="dash-attention__row" href="{% url 'leave_request_list' %}">
+          <span class="dash-attention__icon"><i class="bx bx-file"></i></span>
+          <span class="dash-attention__copy">
+            <span class="dash-attention__title">Leave requests</span>
+            <span class="dash-attention__text">Awaiting approval</span>
+          </span>
+          <span class="dash-attention__count">{{ summary.pending_leave_count }}</span>
+        </a>
+        <a class="dash-attention__row" href="{% url 'report_overtime' %}">
+          <span class="dash-attention__icon"><i class="bx bx-clock-5"></i></span>
+          <span class="dash-attention__copy">
+            <span class="dash-attention__title">Overtime</span>
+            <span class="dash-attention__text">Pending review</span>
+          </span>
+          <span class="dash-attention__count">{{ summary.pending_overtime_count }}</span>
+        </a>
+        <a class="dash-attention__row" href="{% url 'attendance_correction_list' %}">
+          <span class="dash-attention__icon"><i class="bx bx-edit-alt"></i></span>
+          <span class="dash-attention__copy">
+            <span class="dash-attention__title">Corrections</span>
+            <span class="dash-attention__text">Punch fixes</span>
+          </span>
+          <span class="dash-attention__count">{{ summary.pending_correction_count }}</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__header">
+        <span class="card__title">Quick actions</span>
+      </div>
+      <div class="card__body">
+        <div class="dash-actions">
+          <a class="dash-action" href="{% url 'attendance_transaction_add' %}">
+            <i class="bx bx-walking"></i>
+            <span>Record punch</span>
+          </a>
+          <a class="dash-action" href="{% url 'leave_request_list' %}">
+            <i class="bx bx-calendar-minus"></i>
+            <span>Leave requests</span>
+          </a>
+          <a class="dash-action" href="{% url 'report_exceptions' %}">
+            <i class="bx bx-alert-circle"></i>
+            <span>Exceptions</span>
+          </a>
+          <a class="dash-action" href="{% url 'employee_list' %}">
+            <i class="bx bx-user"></i>
+            <span>Employees</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </aside>
 </section>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
 <script src="{% static 'js/dashboard-charts.js' %}"></script>
 {% endblock %}

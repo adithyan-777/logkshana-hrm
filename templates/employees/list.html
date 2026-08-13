@@ -1,13 +1,14 @@
 {% extends "layouts/app_shell.html" %}
 
 {% block title %}Employees{% endblock %}
-{% block page_title %}Employees{% endblock %}
 
 {% block page_content %}
-<label for="employee-search">Search</label>
-<input
+
+<div class="toolbar">
+  <label class="sr-only" for="employee-search">Search</label>
+  <input
     id="employee-search"
-    class="search-input"
+    class="search-input toolbar__search"
     type="search"
     name="q"
     value="{{ search }}"
@@ -16,14 +17,20 @@
     hx-target="#employee-list"
     hx-trigger="keyup changed delay:300ms, search"
     hx-push-url="true"
->
+  >
+</div>
 
-<div
-    id="employee-list"
-    hx-get="{% url 'employee_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-    hx-trigger="employeeCreated from:body"
-    hx-swap="innerHTML"
->
-    {% include "employees/partials/employee_table.html" %}
+<div class="card card--table">
+  <div class="card__body">
+    <div
+      id="employee-list"
+      class="data-table-wrap"
+      hx-get="{% url 'employee_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+      hx-trigger="employeeCreated from:body"
+      hx-swap="innerHTML"
+    >
+      {% include "employees/partials/employee_table.html" %}
+    </div>
+  </div>
 </div>
 {% endblock %}

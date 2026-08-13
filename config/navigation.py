@@ -1,4 +1,5 @@
 from django.http import HttpRequest
+from django.urls import reverse
 
 SECTIONS = {
     "leave": "/leave/",
@@ -196,6 +197,113 @@ LIST_ACTIONS: dict[str, tuple[str, str]] = {
     "assignment_list": ("Add assignment", "assignment_add"),
     "temporary_list": ("Add temporary schedule", "temporary_add"),
 }
+
+
+PAGE_HEADINGS: dict[str, str] = {
+    "dashboard": "Dashboard",
+    "account_profile": "Profile",
+    "employee_list": "Employees",
+    "employee_add": "Add Employee",
+    "attendance_transaction_list": "Attendance",
+    "attendance_transaction_add": "Record Punch",
+    "daily_attendance_list": "Attendance",
+    "daily_attendance_add": "Add Daily Record",
+    "attendance_correction_list": "Attendance",
+    "attendance_correction_add": "Submit Correction",
+    "attendance_rule_list": "Attendance",
+    "attendance_rule_add": "Add Rule",
+    "leave_type_list": "Leave",
+    "leave_type_add": "Add Leave Type",
+    "leave_policy_list": "Leave",
+    "leave_policy_add": "Add Leave Policy",
+    "leave_request_list": "Leave",
+    "leave_request_add": "Add Leave Request",
+    "holiday_list": "Leave",
+    "holiday_add": "Add Holiday",
+    "timetable_list": "Schedule",
+    "timetable_add": "Add Timetable",
+    "shift_list": "Schedule",
+    "shift_add": "Add Shift",
+    "assignment_list": "Schedule",
+    "assignment_add": "Add Assignment",
+    "temporary_list": "Schedule",
+    "temporary_add": "Add Temporary Schedule",
+    "report_hub": "Reports",
+    "report_attendance_summary": "Reports",
+    "report_individual_attendance": "Reports",
+    "report_department_attendance": "Reports",
+    "report_exceptions": "Reports",
+    "report_punch_log": "Reports",
+    "report_overtime": "Reports",
+    "report_leave": "Reports",
+}
+
+PAGE_SUBTITLES: dict[str, str] = {
+    "account_profile": "Read-only account details.",
+    "employee_list": "Directory + active/inactive status.",
+    "employee_add": "Create an employee and send a password-setup invite.",
+    "attendance_transaction_list": "Punches, daily outcomes, corrections, and rules.",
+    "daily_attendance_list": "Punches, daily outcomes, corrections, and rules.",
+    "attendance_correction_list": "Punches, daily outcomes, corrections, and rules.",
+    "attendance_rule_list": "Punches, daily outcomes, corrections, and rules.",
+    "attendance_transaction_add": "Record a check-in or check-out.",
+    "daily_attendance_add": "Add a calculated daily attendance row.",
+    "attendance_correction_add": "Submit a punch correction for review.",
+    "attendance_rule_add": "Configure how attendance is calculated.",
+    "leave_type_list": "Types, policies, requests, and holidays.",
+    "leave_policy_list": "Types, policies, requests, and holidays.",
+    "leave_request_list": "Types, policies, requests, and holidays.",
+    "holiday_list": "Types, policies, requests, and holidays.",
+    "leave_type_add": "Add a leave category.",
+    "leave_policy_add": "Add entitlement and accrual rules.",
+    "leave_request_add": "Create a leave request.",
+    "holiday_add": "Add a company holiday.",
+    "timetable_list": "Timetables, shifts, assignments, and temporary overrides.",
+    "shift_list": "Timetables, shifts, assignments, and temporary overrides.",
+    "assignment_list": "Timetables, shifts, assignments, and temporary overrides.",
+    "temporary_list": "Timetables, shifts, assignments, and temporary overrides.",
+    "timetable_add": "Define check-in and check-out times.",
+    "shift_add": "Build a named rotation of timetables.",
+    "assignment_add": "Apply a shift to people or departments.",
+    "temporary_add": "Override one employee for one date.",
+    "report_hub": "Filtered analytics with CSV, Excel, and PDF export.",
+    "report_attendance_summary": "Filtered analytics with CSV, Excel, and PDF export.",
+    "report_individual_attendance": "Filtered analytics with CSV, Excel, and PDF export.",
+    "report_department_attendance": "Filtered analytics with CSV, Excel, and PDF export.",
+    "report_exceptions": "Filtered analytics with CSV, Excel, and PDF export.",
+    "report_punch_log": "Filtered analytics with CSV, Excel, and PDF export.",
+    "report_overtime": "Filtered analytics with CSV, Excel, and PDF export.",
+    "report_leave": "Filtered analytics with CSV, Excel, and PDF export.",
+}
+
+
+def _url_name(request: HttpRequest) -> str | None:
+    return getattr(getattr(request, "resolver_match", None), "url_name", None)
+
+
+def page_heading_for(request: HttpRequest) -> str:
+    url_name = _url_name(request)
+    if url_name and url_name in PAGE_HEADINGS:
+        return PAGE_HEADINGS[url_name]
+    crumbs = breadcrumbs_for(request)
+    if crumbs:
+        return crumbs[-1][0]
+    return "Dashboard"
+
+
+def page_subtitle_for(request: HttpRequest) -> str:
+    url_name = _url_name(request)
+    if not url_name:
+        return ""
+    return PAGE_SUBTITLES.get(url_name, "")
+
+
+def topbar_action_for(request: HttpRequest) -> dict[str, str] | None:
+    action = page_action_for(request)
+    if not action:
+        return None
+    label, url_name = action
+    return {"label": label, "url": reverse(url_name)}
 
 
 def active_section(request: HttpRequest) -> str | None:

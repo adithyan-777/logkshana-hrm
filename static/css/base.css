@@ -1,0 +1,105 @@
+/* Base reset & typography */
+.app *,
+.app *::before,
+.app *::after { box-sizing: border-box; margin: 0; padding: 0;}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+html:has(.app),
+body:has(.app) {
+  height: 100%;
+  margin: 0;
+  background: var(--bg-shell);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--text-body-sm);
+  font-weight: 400;
+  line-height: var(--text-body-sm-lh);
+  letter-spacing: var(--tracking-normal);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+.standalone-page *,
+.standalone-page *::before,
+.standalone-page *::after {
+  box-sizing: border-box;
+}
+
+.standalone-page {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--bg-shell);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm-lh);
+  letter-spacing: var(--tracking-normal);
+  -webkit-font-smoothing: antialiased;
+}
+
+.standalone-page input,
+.standalone-page textarea,
+.standalone-page select {
+  font: inherit;
+  color: inherit;
+}
+
+.app button {
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.app a { color: inherit; text-decoration: none; }
+
+.app input,
+.app textarea,
+.app select {
+  font: inherit;
+  color: inherit;
+}
+
+::selection {
+  background: light-dark(rgba(24, 24, 27, 0.12), rgba(250, 250, 250, 0.16));
+}
+
+.app :focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: light-dark(rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.08)) transparent;
+}
+
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: light-dark(rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.08));
+  border-radius: 999px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Browser extensions sometimes inject viewport-width junk (e.g. GiveFreely). */
+#give-freely-root,
+[id^="give-freely"] {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}

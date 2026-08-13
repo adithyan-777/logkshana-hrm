@@ -1,0 +1,163 @@
+/*
+  Design tokens — Promptly surfaces + peach accent (#e6987e).
+  Typography/layout scale can stay Promptly-inspired; brand color is warm peach.
+*/
+
+:root {
+  color-scheme: light dark;
+
+  /*
+    Dark:  sidebar/main-scroll #262626 · cards #1B1B1B · borders #3E3E38 · nav active #383838
+    Light: panels #FAF9F1 · elevated/shell #F3F0E7 · borders #ebebeb · nav active #E7E4DD
+  */
+  --canvas:             light-dark(#FAF9F1, #1B1B1B);
+  --bg-shell:           light-dark(#F3F0E7, #1B1B1B);
+  --bg:                 light-dark(#FAF9F1, #262626);
+  --bg-sidebar:         light-dark(#FAF9F1, #262626);
+  --bg-elevated:        light-dark(#FAF9F1, #1B1B1B);
+  --bg-prompt:          light-dark(#F3F0E7, #1B1B1B);
+  --bg-muted:           light-dark(#F3F0E7, #1B1B1B);
+  --bg-popover:         light-dark(#FAF9F1, #1B1B1B);
+  --surface:            var(--bg-elevated);
+  --surface-secondary:  light-dark(#E7E4DD, #383838);
+
+  /* Interaction / nav */
+  --nav-active:         light-dark(#E7E4DD, #383838);
+  --hover:              light-dark(#E7E4DD, #383838);
+  --hover-strong:       light-dark(#ddd9cf, #424242);
+  --hover-subtle:       light-dark(#f0ede5, rgba(56, 56, 56, 0.72));
+  --active-bg:          var(--nav-active);
+
+  /* Borders / focus */
+  --border:             light-dark(#ebebeb, #3E3E38);
+  --border-header:      light-dark(#ebebeb, #3E3E38);
+  --input:              light-dark(#ebebeb, #3E3E38);
+  --ring:               #e6987e;
+
+  /* Text */
+  --text:               light-dark(#3E3E38, #C3C1BA);
+  --text-muted:         #85837D;
+  --text-dim:           #85837D;
+  --text-faint:         #85837D;
+  --text-warm:          #e6987e;
+  --text-inverse:       #ffffff;
+
+  /* Brand — peach/orange */
+  --accent:             #e6987e;
+  --accent-hover:       #d4876c;
+  --accent-pressed:     #c4785e;
+  --accent-muted:       light-dark(
+                          color-mix(in srgb, #e6987e 14%, #FAF9F1),
+                          color-mix(in srgb, #e6987e 18%, #262626)
+                        );
+  --accent-warm:        #e6987e;
+  --accent-warm-hover:  #d4876c;
+
+  /* Semantic */
+  --success:            light-dark(#16a34a, #4ade80);
+  --warning:            light-dark(#ca8a04, #facc15);
+  --danger:             light-dark(#dc2626, #f87171);
+  --info:               light-dark(#2563eb, #60a5fa);
+
+  /* Layout */
+  --sidebar-w:          268px;
+  --sidebar-collapsed:  64px;
+  --header-h:           52px;
+  --content-max:        1200px;
+  --shell-gap:          12px;
+
+  /* Spacing — 8px grid */
+  --space-0:            0;
+  --space-1:            4px;
+  --space-2:            8px;
+  --space-3:            16px;
+  --space-4:            24px;
+  --space-5:            32px;
+  --space-6:            40px;
+  --space-7:            48px;
+  --space-8:            56px;
+  --space-9:            64px;
+
+  /* Type scale */
+  --font-sans:          "Geist Variable", "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --text-hero:          48px;
+  --text-hero-lh:       48px;
+  --text-h1:            36px;
+  --text-h1-lh:         40px;
+  --text-h2:            18px;
+  --text-h2-lh:         28px;
+  --text-body:          16px;
+  --text-body-lh:       24px;
+  --text-body-sm:       14px;
+  --text-body-sm-lh:    20px;
+  --text-micro:         12px;
+  --text-micro-lh:      16px;
+  --tracking-tight:     -0.02em;
+  --tracking-normal:    -0.011em;
+
+  /* Controls */
+  --control-h:          36px;
+  --control-px:         var(--space-3);
+  --control-font:       14px;
+  --control-radius:     var(--r-md);
+
+  /* Radii */
+  --r-sm:               8px;
+  --r-md:               10px;
+  --r-lg:               14px;
+  --r-card:             16px;
+  --r-shell:            20px;
+  --r-pill:             9999px;
+
+  /* Motion */
+  --ease:               cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out:           cubic-bezier(0, 0, 0.2, 1);
+  --ease-spring:        cubic-bezier(0.34, 1.2, 0.64, 1);
+  --t-instant:          80ms;
+  --t-micro:            120ms;
+  --t-fast:             150ms;
+  --t-base:             200ms;
+  --t-slow:             280ms;
+  --t-layout:           320ms;
+  --motion-fast:        transform var(--t-fast) var(--ease), opacity var(--t-fast) var(--ease);
+  --motion-base:        transform var(--t-base) var(--ease), opacity var(--t-base) var(--ease);
+  --motion-micro:       transform var(--t-micro) var(--ease), opacity var(--t-micro) var(--ease);
+  --motion-spring:      transform var(--t-slow) var(--ease-spring), opacity var(--t-slow) var(--ease-spring);
+  --motion-color:       color var(--t-micro) var(--ease),
+                        background-color var(--t-micro) var(--ease),
+                        border-color var(--t-micro) var(--ease),
+                        box-shadow var(--t-micro) var(--ease),
+                        opacity var(--t-micro) var(--ease);
+  --motion-interactive: var(--motion-color);
+  --motion-layout:      width var(--t-layout) var(--ease),
+                        max-width var(--t-layout) var(--ease),
+                        flex-basis var(--t-layout) var(--ease),
+                        padding var(--t-base) var(--ease),
+                        gap var(--t-base) var(--ease),
+                        max-height var(--t-layout) var(--ease);
+  --motion-sidebar:     opacity var(--sidebar-label-t) var(--sidebar-ease),
+                        transform var(--sidebar-label-t) var(--sidebar-ease);
+  --sidebar-t:          300ms;
+  --sidebar-ease:       cubic-bezier(0.22, 1, 0.36, 1);
+  --sidebar-label-t:    220ms;
+  --sidebar-label-delay: 90ms;
+  --sidebar-drawer-t:   320ms;
+
+  /* Shadows */
+  --shadow-card:        light-dark(0 1px 2px rgb(28 25 23 / 0.04), none);
+  --shadow-popover:     light-dark(
+                          0 8px 24px rgb(28 25 23 / 0.1),
+                          0 12px 28px rgb(0 0 0 / 0.45)
+                        );
+  --shadow-popover-lg:  0 10px 15px -3px rgb(0 0 0 / 0.1),
+                        0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-ring-soft:   0 0 0 1.8px rgb(0 0 0 / 0.08);
+  --shadow-focus:       0 0 0 2px var(--bg), 0 0 0 4px color-mix(in srgb, var(--accent) 45%, transparent);
+
+  /* Modal */
+  --modal-backdrop-bg:   rgba(0, 0, 0, 0.72);
+  --modal-backdrop-blur: 0px;
+}
+
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"]  { color-scheme: dark; }

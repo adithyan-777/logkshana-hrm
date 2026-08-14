@@ -100,6 +100,10 @@ class DashboardViewTests(BaseTenantTestCase):
         self.assertContains(response, 'id="attendance-chart-data"')
         self.assertContains(response, "chart.js@4.5.1")
         self.assertContains(response, "dashboard-charts.js")
+        self.assertContains(response, "alpinejs@3.14.9")
+        self.assertContains(response, "alpine-app.js")
+        self.assertContains(response, 'id="spa-view"')
+        self.assertContains(response, "command-palette")
         self.assertContains(response, 'hx-get="/partials/attendance-chart/"')
 
     def test_attendance_chart_partial_requires_login(self):

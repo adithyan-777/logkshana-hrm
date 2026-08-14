@@ -28,6 +28,7 @@
       class="data-table-wrap"
       hx-get="{% url 'leave_type_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
       hx-trigger="leaveTypeCreated from:body"
+      hx-target="this"
       hx-swap="innerHTML"
     >
       {% include "leave/partials/leave_type_table.html" %}

@@ -1,0 +1,62 @@
+{{ command_palette|json_script:"command-palette-data" }}
+<div
+  class="command-palette"
+  x-data="commandPalette"
+  @open-command-palette.window="open()"
+  x-show="$store.ui.commandOpen"
+  x-cloak
+  @keydown.escape.window="if ($store.ui.commandOpen) close()"
+>
+  <div class="command-palette__backdrop" @click="close()"></div>
+  <div
+    class="command-palette__dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Search"
+    @click.stop
+    @keydown.arrow-down.prevent="move(1)"
+    @keydown.arrow-up.prevent="move(-1)"
+    @keydown.enter.prevent="choose()"
+  >
+    <div class="command-palette__search">
+      <i class="bx bx-search admin-icon admin-icon--18"></i>
+      <input
+        type="search"
+        class="command-palette__input"
+        placeholder="Jump to a page…"
+        x-model="query"
+        x-ref="query"
+        @input="index = 0"
+        autocomplete="off"
+        spellcheck="false"
+      >
+      <kbd class="command-palette__esc">Esc</kbd>
+    </div>
+    <div class="command-palette__list" x-ref="list">
+      <template x-for="group in grouped" :key="group.name">
+        <section class="command-palette__group">
+          <h2 class="command-palette__group-title" x-text="group.name"></h2>
+          <template x-for="item in group.items" :key="item.url">
+            <button
+              type="button"
+              class="command-palette__item"
+              :data-active="items[index] && items[index].url === item.url"
+              :class="{ 'is-active': items[index] && items[index].url === item.url }"
+              @click="choose(item)"
+              @mouseenter="index = items.indexOf(item)"
+            >
+              <span class="command-palette__icon">
+                <i class="bx admin-icon admin-icon--18" :class="item.icon || 'bx-file'"></i>
+              </span>
+              <span class="command-palette__copy">
+                <span class="command-palette__title" x-text="item.title"></span>
+                <span class="command-palette__subtitle" x-text="item.subtitle"></span>
+              </span>
+            </button>
+          </template>
+        </section>
+      </template>
+      <p class="command-palette__empty" x-show="!items.length">No matching pages.</p>
+    </div>
+  </div>
+</div>

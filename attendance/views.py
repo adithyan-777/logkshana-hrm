@@ -22,6 +22,7 @@ from attendance.services import (
     attendance_transaction_create,
     daily_attendance_create,
 )
+from common.http import is_htmx_partial
 from common.pagination import list_pagination_context
 
 
@@ -84,7 +85,7 @@ def transaction_list_view(request: HttpRequest) -> HttpResponse:
         hx_target="#transaction-list",
     )
 
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return render(request, "attendance/partials/transaction_table.html", context)
 
     return render(request, "attendance/transaction_list.html", context)
@@ -112,7 +113,7 @@ def transaction_add(request: HttpRequest) -> HttpResponse:
 
     form = AttendanceTransactionForm()
     _configure_datetime_fields(form)
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return _render_transaction_form(request, form)
 
     return render(request, "attendance/transaction_add.html", {"form": form})
@@ -130,7 +131,7 @@ def daily_list_view(request: HttpRequest) -> HttpResponse:
         hx_target="#daily-list",
     )
 
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return render(request, "attendance/partials/daily_table.html", context)
 
     return render(request, "attendance/daily_list.html", context)
@@ -154,7 +155,7 @@ def daily_add(request: HttpRequest) -> HttpResponse:
         return _render_daily_form(request, form)
 
     form = DailyAttendanceForm()
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return _render_daily_form(request, form)
 
     return render(request, "attendance/daily_add.html", {"form": form})
@@ -172,7 +173,7 @@ def correction_list_view(request: HttpRequest) -> HttpResponse:
         hx_target="#correction-list",
     )
 
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return render(request, "attendance/partials/correction_table.html", context)
 
     return render(request, "attendance/correction_list.html", context)
@@ -203,7 +204,7 @@ def correction_add(request: HttpRequest) -> HttpResponse:
 
     form = AttendanceCorrectionForm()
     _configure_datetime_fields(form)
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return _render_correction_form(request, form)
 
     return render(request, "attendance/correction_add.html", {"form": form})
@@ -221,7 +222,7 @@ def rule_list_view(request: HttpRequest) -> HttpResponse:
         hx_target="#rule-list",
     )
 
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return render(request, "attendance/partials/rule_table.html", context)
 
     return render(request, "attendance/rule_list.html", context)
@@ -245,7 +246,7 @@ def rule_add(request: HttpRequest) -> HttpResponse:
         return _render_rule_form(request, form)
 
     form = AttendanceRuleForm()
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return _render_rule_form(request, form)
 
     return render(request, "attendance/rule_add.html", {"form": form})

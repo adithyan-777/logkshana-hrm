@@ -5,6 +5,7 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
+from common.http import is_htmx_partial
 from common.pagination import paginate_queryset
 from reports.exports import render_report_response
 from reports.forms import (
@@ -119,7 +120,7 @@ def attendance_summary_view(request: HttpRequest) -> HttpResponse:
         "date_to": date_to,
     }
 
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return render(request, "reports/partials/attendance_summary_table.html", context)
 
     return render(request, "reports/attendance_summary.html", context)
@@ -161,7 +162,7 @@ def individual_attendance_view(request: HttpRequest) -> HttpResponse:
         "employee_selected": employee_id is not None,
     }
 
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return render(request, "reports/partials/individual_table.html", context)
 
     return render(request, "reports/individual.html", context)
@@ -200,7 +201,7 @@ def department_attendance_view(request: HttpRequest) -> HttpResponse:
         "date_to": date_to,
     }
 
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return render(request, "reports/partials/department_table.html", context)
 
     return render(request, "reports/department.html", context)
@@ -245,7 +246,7 @@ def exception_report_view(request: HttpRequest) -> HttpResponse:
         "date_to": date_to,
     }
 
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return render(request, "reports/partials/exceptions_table.html", context)
 
     return render(request, "reports/exceptions.html", context)
@@ -287,7 +288,7 @@ def punch_log_view(request: HttpRequest) -> HttpResponse:
         "date_to": date_to,
     }
 
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return render(request, "reports/partials/punch_log_table.html", context)
 
     return render(request, "reports/punch_log.html", context)
@@ -332,7 +333,7 @@ def overtime_report_view(request: HttpRequest) -> HttpResponse:
         "date_to": date_to,
     }
 
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return render(request, "reports/partials/overtime_table.html", context)
 
     return render(request, "reports/overtime.html", context)
@@ -403,7 +404,7 @@ def leave_report_view(request: HttpRequest) -> HttpResponse:
         "year": year,
     }
 
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         if report_type == "balance":
             return render(request, "reports/partials/leave_balance_table.html", context)
         return render(request, "reports/partials/leave_requests_table.html", context)

@@ -27,6 +27,7 @@
       class="data-table-wrap"
       hx-get="{% url 'employee_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
       hx-trigger="employeeCreated from:body"
+      hx-target="this"
       hx-swap="innerHTML"
     >
       {% include "employees/partials/employee_table.html" %}

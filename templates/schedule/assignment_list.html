@@ -28,6 +28,7 @@
       class="data-table-wrap"
       hx-get="{% url 'assignment_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
       hx-trigger="assignmentCreated from:body"
+      hx-target="this"
       hx-swap="innerHTML"
     >
       {% include "schedule/partials/assignment_table.html" %}

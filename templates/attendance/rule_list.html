@@ -28,6 +28,7 @@
       class="data-table-wrap"
       hx-get="{% url 'attendance_rule_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
       hx-trigger="attendanceRuleCreated from:body"
+      hx-target="this"
       hx-swap="innerHTML"
     >
       {% include "attendance/partials/rule_table.html" %}

@@ -4,6 +4,7 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
+from common.http import is_htmx_partial
 from common.pagination import list_pagination_context
 from leave.forms import (
     HolidayForm,
@@ -77,7 +78,7 @@ def leave_type_list_view(request: HttpRequest) -> HttpResponse:
         hx_target="#leave-type-list",
     )
 
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return render(request, "leave/partials/leave_type_table.html", context)
 
     return render(request, "leave/leave_type_list.html", context)
@@ -101,7 +102,7 @@ def leave_type_add(request: HttpRequest) -> HttpResponse:
         return _render_leave_type_form(request, form)
 
     form = LeaveTypeForm()
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return _render_leave_type_form(request, form)
 
     return render(request, "leave/leave_type_add.html", {"form": form})
@@ -119,7 +120,7 @@ def leave_policy_list_view(request: HttpRequest) -> HttpResponse:
         hx_target="#leave-policy-list",
     )
 
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return render(request, "leave/partials/leave_policy_table.html", context)
 
     return render(request, "leave/leave_policy_list.html", context)
@@ -143,7 +144,7 @@ def leave_policy_add(request: HttpRequest) -> HttpResponse:
         return _render_leave_policy_form(request, form)
 
     form = LeavePolicyForm()
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return _render_leave_policy_form(request, form)
 
     return render(request, "leave/leave_policy_add.html", {"form": form})
@@ -161,7 +162,7 @@ def leave_request_list_view(request: HttpRequest) -> HttpResponse:
         hx_target="#leave-request-list",
     )
 
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return render(request, "leave/partials/leave_request_table.html", context)
 
     return render(request, "leave/leave_request_list.html", context)
@@ -185,7 +186,7 @@ def leave_request_add(request: HttpRequest) -> HttpResponse:
         return _render_leave_request_form(request, form)
 
     form = LeaveRequestForm()
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return _render_leave_request_form(request, form)
 
     return render(request, "leave/leave_request_add.html", {"form": form})
@@ -203,7 +204,7 @@ def holiday_list_view(request: HttpRequest) -> HttpResponse:
         hx_target="#holiday-list",
     )
 
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return render(request, "leave/partials/holiday_table.html", context)
 
     return render(request, "leave/holiday_list.html", context)
@@ -227,7 +228,7 @@ def holiday_add(request: HttpRequest) -> HttpResponse:
         return _render_holiday_form(request, form)
 
     form = HolidayForm()
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return _render_holiday_form(request, form)
 
     return render(request, "leave/holiday_add.html", {"form": form})

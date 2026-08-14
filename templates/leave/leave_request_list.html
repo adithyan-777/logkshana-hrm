@@ -28,6 +28,7 @@
       class="data-table-wrap"
       hx-get="{% url 'leave_request_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
       hx-trigger="leaveRequestCreated from:body"
+      hx-target="this"
       hx-swap="innerHTML"
     >
       {% include "leave/partials/leave_request_table.html" %}

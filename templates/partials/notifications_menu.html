@@ -1,11 +1,23 @@
-<details class="notify-menu">
-  <summary class="btn-icon topbar__notify" aria-label="Notifications" title="Notifications">
+<div
+  class="notify-menu"
+  :class="{ 'is-open': $store.ui.menu === 'notify' }"
+  @click.outside="$store.ui.menu === 'notify' && $store.ui.closeMenus()"
+>
+  <button
+    type="button"
+    class="btn-icon topbar__notify"
+    aria-label="Notifications"
+    title="Notifications"
+    aria-haspopup="dialog"
+    :aria-expanded="$store.ui.menu === 'notify'"
+    @click="$store.ui.toggleMenu('notify')"
+  >
     <i class="bx bx-bell admin-icon admin-icon--20"></i>
     {% if nav_alerts.pending_leave or nav_alerts.pending_corrections or nav_alerts.pending_overtime %}
     <span class="topbar__notify-dot" aria-hidden="true"></span>
     {% endif %}
-  </summary>
-  <div class="notify-menu__panel" role="dialog" aria-label="Notifications">
+  </button>
+  <div class="notify-menu__panel" role="dialog" aria-label="Notifications" x-cloak>
     <div class="notify-menu__head">
       <div>
         <div class="notify-menu__title">Notifications</div>
@@ -14,7 +26,7 @@
     </div>
 
     <div class="notify-menu__list">
-      <a class="notify-menu__item" href="{% url 'leave_request_list' %}">
+      <a class="notify-menu__item" href="{% url 'leave_request_list' %}" @click="$store.ui.closeMenus()">
         <span class="notify-menu__icon notify-menu__icon--warn">
           <i class="bx bx-calendar-minus admin-icon admin-icon--18"></i>
         </span>
@@ -24,7 +36,7 @@
         </span>
         <span class="notify-menu__count">{{ nav_alerts.pending_leave|default:0 }}</span>
       </a>
-      <a class="notify-menu__item" href="{% url 'attendance_correction_list' %}">
+      <a class="notify-menu__item" href="{% url 'attendance_correction_list' %}" @click="$store.ui.closeMenus()">
         <span class="notify-menu__icon notify-menu__icon--info">
           <i class="bx bx-edit admin-icon admin-icon--18"></i>
         </span>
@@ -34,7 +46,7 @@
         </span>
         <span class="notify-menu__count">{{ nav_alerts.pending_corrections|default:0 }}</span>
       </a>
-      <a class="notify-menu__item" href="{% url 'report_overtime' %}">
+      <a class="notify-menu__item" href="{% url 'report_overtime' %}" @click="$store.ui.closeMenus()">
         <span class="notify-menu__icon notify-menu__icon--accent">
           <i class="bx bx-time-five admin-icon admin-icon--18"></i>
         </span>
@@ -44,7 +56,7 @@
         </span>
         <span class="notify-menu__count">{{ nav_alerts.pending_overtime|default:0 }}</span>
       </a>
-      <a class="notify-menu__item" href="{% url 'report_exceptions' %}">
+      <a class="notify-menu__item" href="{% url 'report_exceptions' %}" @click="$store.ui.closeMenus()">
         <span class="notify-menu__icon notify-menu__icon--danger">
           <i class="bx bx-error-circle admin-icon admin-icon--18"></i>
         </span>
@@ -57,10 +69,10 @@
     </div>
 
     <div class="notify-menu__footer">
-      <a class="notify-menu__link" href="{% url 'daily_attendance_list' %}">
+      <a class="notify-menu__link" href="{% url 'daily_attendance_list' %}" @click="$store.ui.closeMenus()">
         View attendance
         <i class="bx bx-right-arrow-alt admin-icon admin-icon--18"></i>
       </a>
     </div>
   </div>
-</details>
+</div>

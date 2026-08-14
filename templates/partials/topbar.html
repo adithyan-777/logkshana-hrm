@@ -7,7 +7,7 @@
   </div>
   <div class="topbar__right">
     <div class="topbar__tools" role="toolbar" aria-label="Quick actions">
-      <button type="button" class="btn-icon" aria-label="Activity" title="Activity" data-toast="Activity feed coming soon">
+      <button type="button" class="btn-icon" aria-label="Activity" title="Activity" @click="$store.ui.toast('Activity feed coming soon', 'info')">
         <i class="bx bx-pulse admin-icon admin-icon--20"></i>
       </button>
       {% include "partials/notifications_menu.html" %}

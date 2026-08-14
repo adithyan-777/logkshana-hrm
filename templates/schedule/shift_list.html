@@ -28,6 +28,7 @@
       class="data-table-wrap"
       hx-get="{% url 'shift_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
       hx-trigger="shiftCreated from:body"
+      hx-target="this"
       hx-swap="innerHTML"
     >
       {% include "schedule/partials/shift_table.html" %}

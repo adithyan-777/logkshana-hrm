@@ -4,6 +4,7 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
+from common.http import is_htmx_partial
 from common.pagination import list_pagination_context
 from employees.forms import EmployeeForm
 from employees.selectors import employee_list
@@ -40,7 +41,7 @@ def employee_list_view(request: HttpRequest) -> HttpResponse:
         hx_target="#employee-list",
     )
 
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return render(request, "employees/partials/employee_table.html", context)
 
     return render(request, "employees/list.html", context)
@@ -62,7 +63,7 @@ def employee_add(request: HttpRequest) -> HttpResponse:
         return _render_form(request, form)
 
     form = EmployeeForm()
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return _render_form(request, form)
 
     return render(request, "employees/add.html", {"form": form})

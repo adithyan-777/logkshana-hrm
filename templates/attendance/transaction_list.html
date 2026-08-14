@@ -28,6 +28,7 @@
       class="data-table-wrap"
       hx-get="{% url 'attendance_transaction_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
       hx-trigger="attendanceTransactionCreated from:body"
+      hx-target="this"
       hx-swap="innerHTML"
     >
       {% include "attendance/partials/transaction_table.html" %}

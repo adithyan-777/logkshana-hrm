@@ -28,6 +28,7 @@
       class="data-table-wrap"
       hx-get="{% url 'holiday_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
       hx-trigger="holidayCreated from:body"
+      hx-target="this"
       hx-swap="innerHTML"
     >
       {% include "leave/partials/holiday_table.html" %}

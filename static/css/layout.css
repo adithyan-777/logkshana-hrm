@@ -25,6 +25,25 @@
   transition: var(--motion-layout);
 }
 
+.spa-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  z-index: 400;
+  pointer-events: none;
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: left center;
+  background: var(--accent);
+}
+
+.spa-progress.is-active {
+  opacity: 1;
+  animation: spaProgress 1.1s var(--ease) infinite;
+}
+
 .topbar {
   display: flex;
   align-items: center;
@@ -61,7 +80,9 @@
 
 .topbar__tools .btn-icon:hover,
 .theme-customizer[open] > .theme-customizer__trigger,
-.notify-menu[open] > .topbar__notify {
+.theme-customizer.is-open > .theme-customizer__trigger,
+.notify-menu[open] > .topbar__notify,
+.notify-menu.is-open > .topbar__notify {
   border-color: transparent;
   background: var(--hover);
   color: var(--text);
@@ -323,7 +344,8 @@
   transition: var(--motion-interactive);
 }
 
-.mobile-bottombar__link:hover {
+.mobile-bottombar__link:hover,
+.mobile-bottombar__link.is-active {
   background: var(--hover);
   color: var(--text);
 }

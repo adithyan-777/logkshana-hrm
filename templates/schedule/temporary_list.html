@@ -28,6 +28,7 @@
       class="data-table-wrap"
       hx-get="{% url 'temporary_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
       hx-trigger="temporaryCreated from:body"
+      hx-target="this"
       hx-swap="innerHTML"
     >
       {% include "schedule/partials/temporary_table.html" %}

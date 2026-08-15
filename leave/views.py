@@ -31,7 +31,7 @@ def _render_leave_type_form(
 ) -> HttpResponse:
     return render(
         request,
-        "leave/partials/leave_type_form.html",
+        "leave/leave_type_add.html#leave_type_form",
         {"form": form, "success_message": success_message},
     )
 
@@ -41,7 +41,7 @@ def _render_leave_policy_form(
 ) -> HttpResponse:
     return render(
         request,
-        "leave/partials/leave_policy_form.html",
+        "leave/leave_policy_add.html#leave_policy_form",
         {"form": form, "success_message": success_message},
     )
 
@@ -51,7 +51,7 @@ def _render_leave_request_form(
 ) -> HttpResponse:
     return render(
         request,
-        "leave/partials/leave_request_form.html",
+        "leave/leave_request_add.html#leave_request_form",
         {"form": form, "success_message": success_message},
     )
 
@@ -61,7 +61,7 @@ def _render_holiday_form(
 ) -> HttpResponse:
     return render(
         request,
-        "leave/partials/holiday_form.html",
+        "leave/holiday_add.html#holiday_form",
         {"form": form, "success_message": success_message},
     )
 
@@ -79,7 +79,7 @@ def leave_type_list_view(request: HttpRequest) -> HttpResponse:
     )
 
     if is_htmx_partial(request):
-        return render(request, "leave/partials/leave_type_table.html", context)
+        return render(request, "leave/leave_type_list.html#leave_type_table", context)
 
     return render(request, "leave/leave_type_list.html", context)
 
@@ -121,7 +121,7 @@ def leave_policy_list_view(request: HttpRequest) -> HttpResponse:
     )
 
     if is_htmx_partial(request):
-        return render(request, "leave/partials/leave_policy_table.html", context)
+        return render(request, "leave/leave_policy_list.html#leave_policy_table", context)
 
     return render(request, "leave/leave_policy_list.html", context)
 
@@ -163,7 +163,7 @@ def leave_request_list_view(request: HttpRequest) -> HttpResponse:
     )
 
     if is_htmx_partial(request):
-        return render(request, "leave/partials/leave_request_table.html", context)
+        return render(request, "leave/leave_request_list.html#leave_request_table", context)
 
     return render(request, "leave/leave_request_list.html", context)
 
@@ -205,7 +205,7 @@ def holiday_list_view(request: HttpRequest) -> HttpResponse:
     )
 
     if is_htmx_partial(request):
-        return render(request, "leave/partials/holiday_table.html", context)
+        return render(request, "leave/holiday_list.html#holiday_table", context)
 
     return render(request, "leave/holiday_list.html", context)
 

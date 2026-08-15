@@ -3,7 +3,7 @@
 {% block title %}Leave Policies{% endblock %}
 
 {% block page_content %}
-{% include "partials/tabs_leave.html" %}
+{% include "partials/tabs_leave.html#tabs_leave" %}
 
 <div class="toolbar">
   <label class="sr-only" for="leave-policy-search">Search</label>
@@ -31,7 +31,49 @@
       hx-target="this"
       hx-swap="innerHTML"
     >
-      {% include "leave/partials/leave_policy_table.html" %}
+      {% partialdef leave_policy_table inline %}
+{% if page_obj.paginator.count %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Leave type</th>
+            <th>Entitlement</th>
+            <th>Accrual</th>
+            <th>Carry forward</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for policy in page_obj %}
+        <tr>
+            <td>{{ policy.name }}</td>
+            <td>{{ policy.leave_type.name }}</td>
+            <td>{{ policy.entitlement_days }} days</td>
+            <td>{{ policy.get_accrual_type_display }}</td>
+            <td>{% if policy.carry_forward %}Yes{% else %}No{% endif %}</td>
+            <td>
+                {% if policy.is_active %}
+                <span class="badge active">Active</span>
+                {% else %}
+                <span class="badge inactive">Inactive</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/pagination.html#pagination" %}
+{% else %}
+<p class="empty-state">
+    {% if search %}
+    No leave policies match "{{ search }}".
+    {% else %}
+    No leave policies yet. <a href="{% url 'leave_policy_add' %}">Add the first policy</a>.
+    {% endif %}
+</p>
+{% endif %}
+{% endpartialdef leave_policy_table %}
     </div>
   </div>
 </div>

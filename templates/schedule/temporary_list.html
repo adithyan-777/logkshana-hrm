@@ -3,7 +3,7 @@
 {% block title %}Temporary Schedules{% endblock %}
 
 {% block page_content %}
-{% include "partials/tabs_schedule.html" %}
+{% include "partials/tabs_schedule.html#tabs_schedule" %}
 
 <div class="toolbar">
   <label class="sr-only" for="temporary-search">Search</label>
@@ -31,7 +31,41 @@
       hx-target="this"
       hx-swap="innerHTML"
     >
-      {% include "schedule/partials/temporary_table.html" %}
+      {% partialdef temporary_table inline %}
+{% if page_obj.paginator.count %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Employee</th>
+            <th>Timetable</th>
+            <th>Reason</th>
+            <th>Overrides</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in page_obj %}
+        <tr>
+            <td>{{ item.date }}</td>
+            <td>{{ item.employee.full_name }}</td>
+            <td>{{ item.timetable.name }}</td>
+            <td>{{ item.reason|default:"—" }}</td>
+            <td>{% if item.overrides_normal_schedule %}Yes{% else %}No{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/pagination.html#pagination" %}
+{% else %}
+<p class="empty-state">
+    {% if search %}
+    No temporary schedules match "{{ search }}".
+    {% else %}
+    No temporary schedules yet. <a href="{% url 'temporary_add' %}">Add the first override</a>.
+    {% endif %}
+</p>
+{% endif %}
+{% endpartialdef temporary_table %}
     </div>
   </div>
 </div>

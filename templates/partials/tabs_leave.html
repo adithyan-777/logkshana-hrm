@@ -1,3 +1,4 @@
+{% partialdef tabs_leave inline %}
 <div class="tabs" role="tablist" aria-label="Leave sections">
   <a href="{% url 'leave_type_list' %}"
      class="tab {% if request.resolver_match.url_name == 'leave_type_list' or request.resolver_match.url_name == 'leave_type_add' %}is-active{% endif %}"
@@ -12,3 +13,4 @@
      class="tab {% if request.resolver_match.url_name == 'holiday_list' or request.resolver_match.url_name == 'holiday_add' %}is-active{% endif %}"
      role="tab">Holidays</a>
 </div>
+{% endpartialdef tabs_leave %}

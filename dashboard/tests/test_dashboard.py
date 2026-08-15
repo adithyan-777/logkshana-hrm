@@ -118,7 +118,7 @@ class DashboardViewTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "dashboard/partials/attendance_chart.html")
+        self.assertTemplateUsed(response, "attendance_chart")
         self.assertContains(response, 'id="attendance-chart"')
         self.assertContains(response, 'id="attendance-chart-data"')
         self.assertNotContains(response, "sidebar")

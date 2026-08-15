@@ -3,7 +3,7 @@
 {% block title %}Daily Attendance{% endblock %}
 
 {% block page_content %}
-{% include "partials/tabs_attendance.html" %}
+{% include "partials/tabs_attendance.html#tabs_attendance" %}
 
 <div class="toolbar">
   <label class="sr-only" for="daily-search">Search</label>
@@ -31,7 +31,45 @@
       hx-target="this"
       hx-swap="innerHTML"
     >
-      {% include "attendance/partials/daily_table.html" %}
+      {% partialdef daily_table inline %}
+{% if page_obj.paginator.count %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Employee</th>
+            <th>Status</th>
+            <th>Scheduled</th>
+            <th>Worked</th>
+            <th>Late</th>
+            <th>OT</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in page_obj %}
+        <tr>
+            <td>{{ record.date }}</td>
+            <td>{{ record.employee.full_name }}</td>
+            <td><span class="badge status-{{ record.status }}">{{ record.get_status_display }}</span></td>
+            <td>{{ record.scheduled_minutes }}m</td>
+            <td>{{ record.worked_minutes }}m</td>
+            <td>{{ record.late_minutes }}m</td>
+            <td>{{ record.overtime_minutes }}m</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/pagination.html#pagination" %}
+{% else %}
+<p class="empty-state">
+    {% if search %}
+    No daily records match "{{ search }}".
+    {% else %}
+    No daily attendance yet. <a href="{% url 'daily_attendance_add' %}">Add the first record</a>.
+    {% endif %}
+</p>
+{% endif %}
+{% endpartialdef daily_table %}
     </div>
   </div>
 </div>

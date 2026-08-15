@@ -3,7 +3,7 @@
 {% block title %}Add Schedule Assignment{% endblock %}
 
 {% block page_content %}
-{% include "partials/tabs_schedule.html" %}
+{% include "partials/tabs_schedule.html#tabs_schedule" %}
 
 <div class="card" style="max-width:720px;">
   <div class="card__header">
@@ -11,7 +11,73 @@
   </div>
   <div class="card__body">
     <div id="assignment-form-container">
-      {% include "schedule/partials/assignment_form.html" %}
+      {% partialdef assignment_form inline %}
+{% if success_message %}
+<div id="form-messages" class="message success">
+    {{ success_message }}
+    <a href="{% url 'assignment_list' %}">View all assignments</a>
+</div>
+{% else %}
+<div id="form-messages"></div>
+{% endif %}
+
+<form
+    id="assignment-form"
+    hx-post="{% url 'assignment_add' %}"
+    hx-target="#assignment-form-container"
+    hx-swap="innerHTML"
+>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="message error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="field">
+        <label for="{{ form.assignment_type.id_for_label }}">Assignment type *</label>
+        {{ form.assignment_type }}
+        {% if form.assignment_type.errors %}<span class="error">{{ form.assignment_type.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.shift.id_for_label }}">Shift *</label>
+        {{ form.shift }}
+        {% if form.shift.errors %}<span class="error">{{ form.shift.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field-row">
+        <div class="field">
+            <label for="{{ form.start_date.id_for_label }}">Start date *</label>
+            {{ form.start_date }}
+            {% if form.start_date.errors %}<span class="error">{{ form.start_date.errors }}</span>{% endif %}
+        </div>
+        <div class="field">
+            <label for="{{ form.end_date.id_for_label }}">End date *</label>
+            {{ form.end_date }}
+            {% if form.end_date.errors %}<span class="error">{{ form.end_date.errors }}</span>{% endif %}
+        </div>
+    </div>
+
+    <div class="field">
+        <label for="{{ form.employee.id_for_label }}">Employee</label>
+        {{ form.employee }}
+        {% if form.employee.errors %}<span class="error">{{ form.employee.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.department.id_for_label }}">Department</label>
+        {{ form.department }}
+        {% if form.department.errors %}<span class="error">{{ form.department.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field checkbox">
+        {{ form.overwrite_existing }}
+        <label for="{{ form.overwrite_existing.id_for_label }}">Overwrite existing schedules</label>
+    </div>
+
+    <button type="submit">Add Assignment</button>
+</form>
+{% endpartialdef assignment_form %}
     </div>
   </div>
 </div>

@@ -121,7 +121,7 @@ def attendance_summary_view(request: HttpRequest) -> HttpResponse:
     }
 
     if is_htmx_partial(request):
-        return render(request, "reports/partials/attendance_summary_table.html", context)
+        return render(request, "reports/attendance_summary.html#attendance_summary_table", context)
 
     return render(request, "reports/attendance_summary.html", context)
 
@@ -163,7 +163,7 @@ def individual_attendance_view(request: HttpRequest) -> HttpResponse:
     }
 
     if is_htmx_partial(request):
-        return render(request, "reports/partials/individual_table.html", context)
+        return render(request, "reports/individual.html#individual_table", context)
 
     return render(request, "reports/individual.html", context)
 
@@ -202,7 +202,7 @@ def department_attendance_view(request: HttpRequest) -> HttpResponse:
     }
 
     if is_htmx_partial(request):
-        return render(request, "reports/partials/department_table.html", context)
+        return render(request, "reports/department.html#department_table", context)
 
     return render(request, "reports/department.html", context)
 
@@ -247,7 +247,7 @@ def exception_report_view(request: HttpRequest) -> HttpResponse:
     }
 
     if is_htmx_partial(request):
-        return render(request, "reports/partials/exceptions_table.html", context)
+        return render(request, "reports/exceptions.html#exceptions_table", context)
 
     return render(request, "reports/exceptions.html", context)
 
@@ -289,7 +289,7 @@ def punch_log_view(request: HttpRequest) -> HttpResponse:
     }
 
     if is_htmx_partial(request):
-        return render(request, "reports/partials/punch_log_table.html", context)
+        return render(request, "reports/punch_log.html#punch_log_table", context)
 
     return render(request, "reports/punch_log.html", context)
 
@@ -334,7 +334,7 @@ def overtime_report_view(request: HttpRequest) -> HttpResponse:
     }
 
     if is_htmx_partial(request):
-        return render(request, "reports/partials/overtime_table.html", context)
+        return render(request, "reports/overtime.html#overtime_table", context)
 
     return render(request, "reports/overtime.html", context)
 
@@ -406,7 +406,7 @@ def leave_report_view(request: HttpRequest) -> HttpResponse:
 
     if is_htmx_partial(request):
         if report_type == "balance":
-            return render(request, "reports/partials/leave_balance_table.html", context)
-        return render(request, "reports/partials/leave_requests_table.html", context)
+            return render(request, "reports/leave.html#leave_balance_table", context)
+        return render(request, "reports/leave.html#leave_requests_table", context)
 
     return render(request, "reports/leave.html", context)

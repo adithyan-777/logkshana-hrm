@@ -54,7 +54,7 @@ class EmployeeViewTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "employees/partials/employee_table.html")
+        self.assertTemplateUsed(response, "employee_table")
 
     def test_boosted_list_returns_full_page(self):
         response = self.client.get(
@@ -83,7 +83,7 @@ class EmployeeViewTests(BaseTenantTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get("HX-Trigger"), "employeeCreated")
-        self.assertTemplateUsed(response, "employees/partials/employee_invite.html")
+        self.assertTemplateUsed(response, "employee_invite")
         self.assertContains(response, "/accounts/password/reset/key/")
         self.assertTrue(Employee.objects.filter(emp_code=emp_code).exists())
 

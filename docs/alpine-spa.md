@@ -47,6 +47,8 @@ This change keeps the chrome alive and swaps only the page view, using the same 
 
 Existing HTMX islands keep their own `hx-target` (for example `#employee-list` or `this`). Those requests are **not** treated as page navigations.
 
+Boost target/select is applied in `static/js/alpine-app.js` **only for boosted link/form navigations**. It is not set on `<body>`, so add-forms, list search, pagination, and post-create table refreshes still receive the fragment HTML as-is. Putting `hx-select="#spa-view"` on `<body>` made those fragments swap to empty (no `#spa-view` in the partial).
+
 ### What must not be boosted
 
 | Action | How |

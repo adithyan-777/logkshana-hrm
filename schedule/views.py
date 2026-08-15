@@ -32,7 +32,7 @@ def _render_timetable_form(
 ) -> HttpResponse:
     return render(
         request,
-        "schedule/partials/timetable_form.html",
+        "schedule/timetable_add.html#timetable_form",
         {"form": form, "success_message": success_message},
     )
 
@@ -46,7 +46,7 @@ def _render_shift_form(
 ) -> HttpResponse:
     return render(
         request,
-        "schedule/partials/shift_form.html",
+        "schedule/shift_add.html#shift_form",
         {"form": form, "formset": formset, "success_message": success_message},
     )
 
@@ -59,7 +59,7 @@ def _render_assignment_form(
 ) -> HttpResponse:
     return render(
         request,
-        "schedule/partials/assignment_form.html",
+        "schedule/assignment_add.html#assignment_form",
         {"form": form, "success_message": success_message},
     )
 
@@ -72,7 +72,7 @@ def _render_temporary_form(
 ) -> HttpResponse:
     return render(
         request,
-        "schedule/partials/temporary_form.html",
+        "schedule/temporary_add.html#temporary_form",
         {"form": form, "success_message": success_message},
     )
 
@@ -90,7 +90,7 @@ def timetable_list_view(request: HttpRequest) -> HttpResponse:
     )
 
     if is_htmx_partial(request):
-        return render(request, "schedule/partials/timetable_table.html", context)
+        return render(request, "schedule/timetable_list.html#timetable_table", context)
 
     return render(request, "schedule/timetable_list.html", context)
 
@@ -132,7 +132,7 @@ def shift_list_view(request: HttpRequest) -> HttpResponse:
     )
 
     if is_htmx_partial(request):
-        return render(request, "schedule/partials/shift_table.html", context)
+        return render(request, "schedule/shift_list.html#shift_table", context)
 
     return render(request, "schedule/shift_list.html", context)
 
@@ -189,7 +189,7 @@ def assignment_list_view(request: HttpRequest) -> HttpResponse:
     )
 
     if is_htmx_partial(request):
-        return render(request, "schedule/partials/assignment_table.html", context)
+        return render(request, "schedule/assignment_list.html#assignment_table", context)
 
     return render(request, "schedule/assignment_list.html", context)
 
@@ -231,7 +231,7 @@ def temporary_list_view(request: HttpRequest) -> HttpResponse:
     )
 
     if is_htmx_partial(request):
-        return render(request, "schedule/partials/temporary_table.html", context)
+        return render(request, "schedule/temporary_list.html#temporary_table", context)
 
     return render(request, "schedule/temporary_list.html", context)
 

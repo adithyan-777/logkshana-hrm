@@ -3,7 +3,7 @@
 {% block title %}Add Timetable{% endblock %}
 
 {% block page_content %}
-{% include "partials/tabs_schedule.html" %}
+{% include "partials/tabs_schedule.html#tabs_schedule" %}
 
 <div class="card" style="max-width:720px;">
   <div class="card__header">
@@ -11,7 +11,180 @@
   </div>
   <div class="card__body">
     <div id="timetable-form-container">
-      {% include "schedule/partials/timetable_form.html" %}
+      {% partialdef timetable_form inline %}
+{% if success_message %}
+<div id="form-messages" class="message success">
+    {{ success_message }}
+    <a href="{% url 'timetable_list' %}">View all timetables</a>
+</div>
+{% else %}
+<div id="form-messages"></div>
+{% endif %}
+
+<form
+    id="timetable-form"
+    hx-post="{% url 'timetable_add' %}"
+    hx-target="#timetable-form-container"
+    hx-swap="innerHTML"
+>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="message error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <fieldset class="form-section">
+        <legend>Basic info</legend>
+
+        <div class="field">
+            <label for="{{ form.name.id_for_label }}">Name *</label>
+            {{ form.name }}
+            {% if form.name.errors %}<span class="error">{{ form.name.errors }}</span>{% endif %}
+        </div>
+
+        <div class="field">
+            <label for="{{ form.code.id_for_label }}">Code *</label>
+            {{ form.code }}
+            {% if form.code.errors %}<span class="error">{{ form.code.errors }}</span>{% endif %}
+        </div>
+
+        <div class="field-row">
+            <div class="field">
+                <label for="{{ form.type.id_for_label }}">Type</label>
+                {{ form.type }}
+                {% if form.type.errors %}<span class="error">{{ form.type.errors }}</span>{% endif %}
+            </div>
+
+            <div class="field">
+                <label for="{{ form.work_type.id_for_label }}">Work type</label>
+                {{ form.work_type }}
+                {% if form.work_type.errors %}<span class="error">{{ form.work_type.errors }}</span>{% endif %}
+            </div>
+
+            <div class="field">
+                <label for="{{ form.workday.id_for_label }}">Workday</label>
+                {{ form.workday }}
+                {% if form.workday.errors %}<span class="error">{{ form.workday.errors }}</span>{% endif %}
+            </div>
+        </div>
+
+        <div class="field">
+            <label for="{{ form.color.id_for_label }}">Color</label>
+            {{ form.color }}
+            {% if form.color.errors %}<span class="error">{{ form.color.errors }}</span>{% endif %}
+        </div>
+    </fieldset>
+
+    <fieldset class="form-section">
+        <legend>Working hours</legend>
+
+        <div class="field-row">
+            <div class="field">
+                <label for="{{ form.check_in.id_for_label }}">Check in</label>
+                {{ form.check_in }}
+                {% if form.check_in.errors %}<span class="error">{{ form.check_in.errors }}</span>{% endif %}
+            </div>
+
+            <div class="field">
+                <label for="{{ form.check_out.id_for_label }}">Check out</label>
+                {{ form.check_out }}
+                {% if form.check_out.errors %}<span class="error">{{ form.check_out.errors }}</span>{% endif %}
+            </div>
+
+            <div class="field">
+                <label for="{{ form.work_minutes.id_for_label }}">Work minutes (flexible)</label>
+                {{ form.work_minutes }}
+                {% if form.work_minutes.errors %}<span class="error">{{ form.work_minutes.errors }}</span>{% endif %}
+            </div>
+        </div>
+
+        <div class="field-row">
+            <div class="field">
+                <label for="{{ form.check_in_start.id_for_label }}">Check-in window start</label>
+                {{ form.check_in_start }}
+            </div>
+            <div class="field">
+                <label for="{{ form.check_in_end.id_for_label }}">Check-in window end</label>
+                {{ form.check_in_end }}
+            </div>
+        </div>
+
+        <div class="field-row">
+            <div class="field">
+                <label for="{{ form.check_out_start.id_for_label }}">Check-out window start</label>
+                {{ form.check_out_start }}
+            </div>
+            <div class="field">
+                <label for="{{ form.check_out_end.id_for_label }}">Check-out window end</label>
+                {{ form.check_out_end }}
+            </div>
+        </div>
+
+        <div class="field-row">
+            <div class="field">
+                <label for="{{ form.check_in_cross_days.id_for_label }}">Check-in cross days</label>
+                {{ form.check_in_cross_days }}
+            </div>
+            <div class="field">
+                <label for="{{ form.check_out_cross_days.id_for_label }}">Check-out cross days</label>
+                {{ form.check_out_cross_days }}
+            </div>
+            <div class="field">
+                <label for="{{ form.day_change_time.id_for_label }}">Day change time</label>
+                {{ form.day_change_time }}
+            </div>
+        </div>
+    </fieldset>
+
+    <fieldset class="form-section">
+        <legend>Attendance rules</legend>
+
+        <div class="field-row">
+            <div class="field checkbox">
+                {{ form.require_check_in }}
+                <label for="{{ form.require_check_in.id_for_label }}">Require check in</label>
+            </div>
+            <div class="field checkbox">
+                {{ form.require_check_out }}
+                <label for="{{ form.require_check_out.id_for_label }}">Require check out</label>
+            </div>
+            <div class="field checkbox">
+                {{ form.multiple_in_out }}
+                <label for="{{ form.multiple_in_out.id_for_label }}">Multiple in/out</label>
+            </div>
+        </div>
+
+        <div class="field-row">
+            <div class="field checkbox">
+                {{ form.allow_late_in }}
+                <label for="{{ form.allow_late_in.id_for_label }}">Allow late in</label>
+            </div>
+            <div class="field">
+                <label for="{{ form.late_in_grace_minutes.id_for_label }}">Late-in grace (min)</label>
+                {{ form.late_in_grace_minutes }}
+            </div>
+        </div>
+
+        <div class="field-row">
+            <div class="field checkbox">
+                {{ form.allow_early_out }}
+                <label for="{{ form.allow_early_out.id_for_label }}">Allow early out</label>
+            </div>
+            <div class="field">
+                <label for="{{ form.early_out_grace_minutes.id_for_label }}">Early-out grace (min)</label>
+                {{ form.early_out_grace_minutes }}
+            </div>
+        </div>
+
+        <div class="field checkbox">
+            {{ form.is_active }}
+            <label for="{{ form.is_active.id_for_label }}">Active</label>
+        </div>
+    </fieldset>
+
+    <button type="submit">Add Timetable</button>
+</form>
+{% endpartialdef timetable_form %}
     </div>
   </div>
 </div>

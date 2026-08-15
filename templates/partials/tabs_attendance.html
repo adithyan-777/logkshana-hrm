@@ -1,3 +1,4 @@
+{% partialdef tabs_attendance inline %}
 <div class="tabs" role="tablist" aria-label="Attendance sections">
   <a href="{% url 'attendance_transaction_list' %}"
      class="tab {% if request.resolver_match.url_name == 'attendance_transaction_list' or request.resolver_match.url_name == 'attendance_transaction_add' %}is-active{% endif %}"
@@ -12,3 +13,4 @@
      class="tab {% if request.resolver_match.url_name == 'attendance_rule_list' or request.resolver_match.url_name == 'attendance_rule_add' %}is-active{% endif %}"
      role="tab">Rules</a>
 </div>
+{% endpartialdef tabs_attendance %}

@@ -38,7 +38,7 @@ def _render_transaction_form(
 ) -> HttpResponse:
     return render(
         request,
-        "attendance/partials/transaction_form.html",
+        "attendance/transaction_add.html#transaction_form",
         {"form": form, "success_message": success_message},
     )
 
@@ -48,7 +48,7 @@ def _render_daily_form(
 ) -> HttpResponse:
     return render(
         request,
-        "attendance/partials/daily_form.html",
+        "attendance/daily_add.html#daily_form",
         {"form": form, "success_message": success_message},
     )
 
@@ -58,7 +58,7 @@ def _render_correction_form(
 ) -> HttpResponse:
     return render(
         request,
-        "attendance/partials/correction_form.html",
+        "attendance/correction_add.html#correction_form",
         {"form": form, "success_message": success_message},
     )
 
@@ -68,7 +68,7 @@ def _render_rule_form(
 ) -> HttpResponse:
     return render(
         request,
-        "attendance/partials/rule_form.html",
+        "attendance/rule_add.html#rule_form",
         {"form": form, "success_message": success_message},
     )
 
@@ -86,7 +86,7 @@ def transaction_list_view(request: HttpRequest) -> HttpResponse:
     )
 
     if is_htmx_partial(request):
-        return render(request, "attendance/partials/transaction_table.html", context)
+        return render(request, "attendance/transaction_list.html#transaction_table", context)
 
     return render(request, "attendance/transaction_list.html", context)
 
@@ -132,7 +132,7 @@ def daily_list_view(request: HttpRequest) -> HttpResponse:
     )
 
     if is_htmx_partial(request):
-        return render(request, "attendance/partials/daily_table.html", context)
+        return render(request, "attendance/daily_list.html#daily_table", context)
 
     return render(request, "attendance/daily_list.html", context)
 
@@ -174,7 +174,7 @@ def correction_list_view(request: HttpRequest) -> HttpResponse:
     )
 
     if is_htmx_partial(request):
-        return render(request, "attendance/partials/correction_table.html", context)
+        return render(request, "attendance/correction_list.html#correction_table", context)
 
     return render(request, "attendance/correction_list.html", context)
 
@@ -223,7 +223,7 @@ def rule_list_view(request: HttpRequest) -> HttpResponse:
     )
 
     if is_htmx_partial(request):
-        return render(request, "attendance/partials/rule_table.html", context)
+        return render(request, "attendance/rule_list.html#rule_table", context)
 
     return render(request, "attendance/rule_list.html", context)
 

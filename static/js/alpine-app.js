@@ -37,6 +37,45 @@
     return Boolean(target && target.id === "spa-view");
   }
 
+  function isBoosted(detail) {
+    return Boolean(
+      detail &&
+        (detail.boosted || (detail.requestConfig && detail.requestConfig.boosted))
+    );
+  }
+
+  function isSpaNav(detail) {
+    return isBoosted(detail) || isSpaTarget(detail);
+  }
+
+  function spaEl() {
+    return document.getElementById("spa-view");
+  }
+
+  function configureBoostedNav(detail) {
+    if (!isBoosted(detail)) return;
+    const spa = spaEl();
+    if (!spa) return;
+    detail.target = spa;
+    const config = detail.requestConfig;
+    if (!config) return;
+    config.target = spa;
+    config.select = "#spa-view";
+    config.swapStyle = "outerHTML";
+    config.swapOverride = "outerHTML show:none settle:120ms";
+  }
+
+  function extractSpaView(html) {
+    if (!html || html.indexOf("spa-view") === -1) return null;
+    try {
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      const next = doc.getElementById("spa-view");
+      return next ? next.outerHTML : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   function closeMobileSidebar() {
     const mobile = document.getElementById("sidebar-mobile");
     if (mobile) mobile.checked = false;
@@ -234,7 +273,8 @@
   });
 
   document.body.addEventListener("htmx:beforeRequest", (event) => {
-    if (!isSpaTarget(event.detail) || !window.Alpine) return;
+    configureBoostedNav(event.detail);
+    if (!isSpaNav(event.detail) || !window.Alpine) return;
     const spa = window.Alpine.store("spa");
     const ui = window.Alpine.store("ui");
     spa.loading = true;
@@ -259,7 +299,22 @@
   });
 
   document.body.addEventListener("htmx:beforeSwap", (event) => {
-    const target = event.detail && event.detail.target;
+    const detail = event.detail;
+    if (isBoosted(detail)) {
+      const spa = spaEl();
+      if (spa) detail.target = spa;
+      const extracted = extractSpaView(detail.serverResponse);
+      if (extracted) {
+        detail.serverResponse = extracted;
+        if (detail.requestConfig) detail.requestConfig.select = "";
+      }
+      if (window.Alpine && spa && typeof window.Alpine.destroyTree === "function") {
+        window.Alpine.destroyTree(spa);
+      }
+      return;
+    }
+
+    const target = detail && detail.target;
     if (window.Alpine && target && target.id === "spa-view" && typeof window.Alpine.destroyTree === "function") {
       window.Alpine.destroyTree(target);
     }
@@ -278,7 +333,7 @@
   document.body.addEventListener("htmx:afterSettle", (event) => {
     if (!window.Alpine) return;
     const spa = window.Alpine.store("spa");
-    if (isSpaTarget(event.detail)) {
+    if (isSpaNav(event.detail)) {
       spa.loading = false;
       spa.sync();
       const title = titleFromXhr(event.detail.xhr);
@@ -290,7 +345,7 @@
   document.body.addEventListener("htmx:responseError", (event) => {
     if (!window.Alpine) return;
     window.Alpine.store("spa").loading = false;
-    if (isSpaTarget(event.detail)) {
+    if (isSpaNav(event.detail)) {
       window.Alpine.store("ui").toast("Could not load that page", "error");
     }
   });

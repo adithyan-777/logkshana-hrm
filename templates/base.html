@@ -50,9 +50,6 @@
 <body
   class="app"
   hx-boost="true"
-  hx-target="#spa-view"
-  hx-select="#spa-view"
-  hx-swap="outerHTML show:none settle:120ms"
   hx-push-url="true"
   hx-headers='{"x-csrftoken": "{{ csrf_token }}"}'
   x-data
@@ -70,9 +67,9 @@
     })();
   </script>
 
-  {% include "partials/sidebar.html" %}
+  {% include "partials/sidebar.html#sidebar" %}
   <div class="main" id="spa-view" x-data>
-    {% include "partials/topbar.html" %}
+    {% include "partials/topbar.html#topbar" %}
     <div class="main-scroll">
       <div class="page-content {% block page_class %}{% endblock %}">
         {% block content %}{% endblock %}
@@ -109,8 +106,8 @@
       <div class="toast" :class="'toast--' + toast.type" x-text="toast.message"></div>
     </template>
   </div>
-  {% include "partials/modal.html" %}
-  {% include "partials/command_palette.html" %}
+  {% include "partials/modal.html#modal" %}
+  {% include "partials/command_palette.html#command_palette" %}
 
   <script src="{% static 'js/theme.js' %}"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>

@@ -3,16 +3,46 @@
 {% block title %}Overtime Summary Report{% endblock %}
 
 {% block page_content %}
-{% include "partials/tabs_reports.html" %}
+{% include "partials/tabs_reports.html#tabs_reports" %}
 
 <div class="report-toolbar">
-  {% include "reports/partials/filter_form.html" %}
+  {% include "reports/partials/filter_form.html#filter_form" %}
 </div>
 
 <div class="card card--table">
   <div class="card__body">
     <div class="data-table-wrap">
-      {% include "reports/partials/overtime_table.html" %}
+      {% partialdef overtime_table inline %}
+{% if page_obj.paginator.count %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Employee</th>
+            <th>Department</th>
+            <th>Minutes</th>
+            <th>Status</th>
+            <th>Reason</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in page_obj %}
+        <tr>
+            <td>{{ record.date }}</td>
+            <td>{{ record.employee.full_name }}</td>
+            <td>{{ record.employee.department|default:"—" }}</td>
+            <td>{{ record.minutes }}m</td>
+            <td><span class="badge status-{{ record.status }}">{{ record.get_status_display }}</span></td>
+            <td>{{ record.reason|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/pagination.html#pagination" %}
+{% else %}
+<p class="empty-state">No overtime records for the selected filters.</p>
+{% endif %}
+{% endpartialdef overtime_table %}
     </div>
   </div>
 </div>

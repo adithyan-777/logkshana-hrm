@@ -77,7 +77,7 @@ class LeaveTypeViewTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "leave/partials/leave_type_table.html")
+        self.assertTemplateUsed(response, "leave_type_table")
 
     def test_list_pagination(self):
         for index in range(26):

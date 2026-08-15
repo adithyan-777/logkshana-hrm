@@ -3,7 +3,7 @@
 {% block title %}Attendance Punches{% endblock %}
 
 {% block page_content %}
-{% include "partials/tabs_attendance.html" %}
+{% include "partials/tabs_attendance.html#tabs_attendance" %}
 
 <div class="toolbar">
   <label class="sr-only" for="transaction-search">Search</label>
@@ -31,7 +31,41 @@
       hx-target="this"
       hx-swap="innerHTML"
     >
-      {% include "attendance/partials/transaction_table.html" %}
+      {% partialdef transaction_table inline %}
+{% if page_obj.paginator.count %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Employee</th>
+            <th>Timestamp</th>
+            <th>Direction</th>
+            <th>Source</th>
+            <th>External ID</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for transaction in page_obj %}
+        <tr>
+            <td>{{ transaction.employee.full_name }}</td>
+            <td>{{ transaction.timestamp }}</td>
+            <td>{{ transaction.get_direction_display }}</td>
+            <td>{{ transaction.get_source_display }}</td>
+            <td>{{ transaction.external_id }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/pagination.html#pagination" %}
+{% else %}
+<p class="empty-state">
+    {% if search %}
+    No punches match "{{ search }}".
+    {% else %}
+    No punches yet. <a href="{% url 'attendance_transaction_add' %}">Record the first punch</a>.
+    {% endif %}
+</p>
+{% endif %}
+{% endpartialdef transaction_table %}
     </div>
   </div>
 </div>

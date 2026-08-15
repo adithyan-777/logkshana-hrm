@@ -1,3 +1,4 @@
+{% partialdef breadcrumbs inline %}
 {% if breadcrumbs %}
 <nav class="breadcrumbs" aria-label="Breadcrumb">
   {% for label, url_name in breadcrumbs %}
@@ -12,3 +13,4 @@
   {% endfor %}
 </nav>
 {% endif %}
+{% endpartialdef breadcrumbs %}

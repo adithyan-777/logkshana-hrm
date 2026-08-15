@@ -16,7 +16,7 @@ def _render_form(
 ) -> HttpResponse:
     return render(
         request,
-        "employees/partials/employee_form.html",
+        "employees/add.html#employee_form",
         {"form": form, "success_message": success_message},
     )
 
@@ -24,7 +24,7 @@ def _render_form(
 def _render_invite(request: HttpRequest, employee, invite_link: str) -> HttpResponse:
     return render(
         request,
-        "employees/partials/employee_invite.html",
+        "employees/add.html#employee_invite",
         {"employee": employee, "invite_link": invite_link},
     )
 
@@ -42,7 +42,7 @@ def employee_list_view(request: HttpRequest) -> HttpResponse:
     )
 
     if is_htmx_partial(request):
-        return render(request, "employees/partials/employee_table.html", context)
+        return render(request, "employees/list.html#employee_table", context)
 
     return render(request, "employees/list.html", context)
 

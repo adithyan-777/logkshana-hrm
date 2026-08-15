@@ -3,16 +3,46 @@
 {% block title %}Punch Log Report{% endblock %}
 
 {% block page_content %}
-{% include "partials/tabs_reports.html" %}
+{% include "partials/tabs_reports.html#tabs_reports" %}
 
 <div class="report-toolbar">
-  {% include "reports/partials/filter_form.html" %}
+  {% include "reports/partials/filter_form.html#filter_form" %}
 </div>
 
 <div class="card card--table">
   <div class="card__body">
     <div class="data-table-wrap">
-      {% include "reports/partials/punch_log_table.html" %}
+      {% partialdef punch_log_table inline %}
+{% if page_obj.paginator.count %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Timestamp</th>
+            <th>Employee</th>
+            <th>Department</th>
+            <th>Direction</th>
+            <th>Source</th>
+            <th>External ID</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for transaction in page_obj %}
+        <tr>
+            <td>{{ transaction.timestamp }}</td>
+            <td>{{ transaction.employee.full_name }}</td>
+            <td>{{ transaction.employee.department|default:"—" }}</td>
+            <td>{{ transaction.get_direction_display }}</td>
+            <td>{{ transaction.get_source_display }}</td>
+            <td>{{ transaction.external_id }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/pagination.html#pagination" %}
+{% else %}
+<p class="empty-state">No punch records for the selected filters.</p>
+{% endif %}
+{% endpartialdef punch_log_table %}
     </div>
   </div>
 </div>

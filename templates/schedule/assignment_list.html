@@ -3,7 +3,7 @@
 {% block title %}Schedule Assignments{% endblock %}
 
 {% block page_content %}
-{% include "partials/tabs_schedule.html" %}
+{% include "partials/tabs_schedule.html#tabs_schedule" %}
 
 <div class="toolbar">
   <label class="sr-only" for="assignment-search">Search</label>
@@ -31,7 +31,51 @@
       hx-target="this"
       hx-swap="innerHTML"
     >
-      {% include "schedule/partials/assignment_table.html" %}
+      {% partialdef assignment_table inline %}
+{% if page_obj.paginator.count %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Type</th>
+            <th>Target</th>
+            <th>Shift</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Overwrite</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for assignment in page_obj %}
+        <tr>
+            <td>{{ assignment.get_assignment_type_display }}</td>
+            <td>
+                {% if assignment.employee %}
+                {{ assignment.employee.full_name }}
+                {% elif assignment.department %}
+                {{ assignment.department.name }}
+                {% else %}
+                Group
+                {% endif %}
+            </td>
+            <td>{{ assignment.shift.name }}</td>
+            <td>{{ assignment.start_date }}</td>
+            <td>{{ assignment.end_date }}</td>
+            <td>{% if assignment.overwrite_existing %}Yes{% else %}No{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/pagination.html#pagination" %}
+{% else %}
+<p class="empty-state">
+    {% if search %}
+    No assignments match "{{ search }}".
+    {% else %}
+    No schedule assignments yet. <a href="{% url 'assignment_add' %}">Add the first assignment</a>.
+    {% endif %}
+</p>
+{% endif %}
+{% endpartialdef assignment_table %}
     </div>
   </div>
 </div>

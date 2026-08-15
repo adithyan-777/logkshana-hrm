@@ -85,6 +85,8 @@ class EmployeeViewTests(BaseTenantTestCase):
         self.assertEqual(response.headers.get("HX-Trigger"), "employeeCreated")
         self.assertTemplateUsed(response, "employee_invite")
         self.assertContains(response, "/accounts/password/reset/key/")
+        self.assertContains(response, 'data-invite-link="')
+        self.assertNotContains(response, "onclick=")
         self.assertTrue(Employee.objects.filter(emp_code=emp_code).exists())
 
     def test_list_shows_created_employee(self):

@@ -10,7 +10,9 @@
     <p><code>{{ invite_link }}</code></p>
     <button
       type="button"
-      onclick="navigator.clipboard.writeText('{{ invite_link }}')"
+      x-data
+      data-invite-link="{{ invite_link }}"
+      @click="navigator.clipboard.writeText($el.dataset.inviteLink)"
     >
       Copy link
     </button>

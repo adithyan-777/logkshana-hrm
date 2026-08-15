@@ -1,7 +1,7 @@
 (function () {
   const root = document.documentElement;
-  const modeKey = "htmx-template-theme-mode";
-  const prefsKey = "htmx-template-ui-prefs";
+  const modeKey = "logkshana-theme-mode";
+  const prefsKey = "logkshana-ui-prefs";
 
   const defaults = {
     mode: "system",
@@ -31,12 +31,12 @@
 
   function readPrefs() {
     const prefs = { ...defaults };
-    const legacyMode = safeGetItem(modeKey);
+    const legacyMode = safeGetItem(modeKey) || safeGetItem("htmx-template-theme-mode");
     if (legacyMode === "system" || legacyMode === "light" || legacyMode === "dark") {
       prefs.mode = legacyMode;
     }
     try {
-      const raw = safeGetItem(prefsKey);
+      const raw = safeGetItem(prefsKey) || safeGetItem("htmx-template-ui-prefs");
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === "object") {
@@ -129,26 +129,15 @@
     applyPrefs(prefs);
   }
 
-  function showStubToast(message) {
-    window.dispatchEvent(
-      new CustomEvent("showToast", { detail: { message, type: "info" } })
-    );
-    // Fallback if toast bus expects HX-style detail
-    if (typeof window.showToast === "function") {
-      window.showToast(message, "info");
-    } else {
-      const container = document.getElementById("toast-container");
-      if (!container) return;
-      const el = document.createElement("div");
-      el.className = "toast toast--success";
-      el.textContent = message;
-      container.appendChild(el);
-      setTimeout(() => {
-        el.classList.add("is-leaving");
-        setTimeout(() => el.remove(), 220);
-      }, 2200);
-    }
-  }
+  window.LogkshanaTheme = {
+    defaults,
+    readPrefs,
+    applyPrefs,
+    setPref,
+    resetPrefs,
+    quickToggleTheme,
+    resolveTheme,
+  };
 
   function initTheme() {
     const prefs = readPrefs();
@@ -162,6 +151,8 @@
       });
 
     document.addEventListener("click", (e) => {
+      if (window.Alpine) return;
+
       const setBtn = e.target.closest("[data-ui-set][data-ui-value]");
       if (setBtn) {
         e.preventDefault();
@@ -184,17 +175,9 @@
       const legacy = e.target.closest(".theme-toggle__btn[data-theme-set]");
       if (legacy) {
         setPref("mode", legacy.dataset.themeSet);
-        return;
-      }
-
-      const stub = e.target.closest("[data-toast]");
-      if (stub) {
-        e.preventDefault();
-        showStubToast(stub.getAttribute("data-toast") || "Coming soon");
       }
     });
 
-    // Keep prefs in sync when user collapses via sidebar control
     const collapsed = document.getElementById("sidebar-collapsed");
     if (collapsed) {
       collapsed.addEventListener("change", () => {
@@ -203,6 +186,7 @@
         if (prefs.sidebarMode !== nextMode) {
           prefs.sidebarMode = nextMode;
           applyPrefs(prefs);
+          if (window.Alpine) window.Alpine.store("theme").refresh();
         }
       });
     }

@@ -3,19 +3,93 @@
 {% block title %}Leave Reports{% endblock %}
 
 {% block page_content %}
-{% include "partials/tabs_reports.html" %}
+{% include "partials/tabs_reports.html#tabs_reports" %}
 
 <div class="report-toolbar">
-  {% include "reports/partials/filter_form.html" %}
+  {% include "reports/partials/filter_form.html#filter_form" %}
 </div>
+
+{% partialdef leave_balance_table %}
+{% if page_obj.paginator.count %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Employee</th>
+            <th>Department</th>
+            <th>Leave Type</th>
+            <th>Year</th>
+            <th>Entitled</th>
+            <th>Carried</th>
+            <th>Adjustment</th>
+            <th>Used</th>
+            <th>Pending</th>
+            <th>Available</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for balance in page_obj %}
+        <tr>
+            <td>{{ balance.employee.full_name }}</td>
+            <td>{{ balance.employee.department|default:"—" }}</td>
+            <td>{{ balance.leave_type.name }}</td>
+            <td>{{ balance.year }}</td>
+            <td>{{ balance.entitled_days }}</td>
+            <td>{{ balance.carried_forward_days }}</td>
+            <td>{{ balance.adjustment_days }}</td>
+            <td>{{ balance.used_days }}</td>
+            <td>{{ balance.pending_days }}</td>
+            <td>{{ balance.available_days }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/pagination.html#pagination" %}
+{% else %}
+<p class="empty-state">No leave balances for the selected filters.</p>
+{% endif %}
+{% endpartialdef leave_balance_table %}
+
+{% partialdef leave_requests_table %}
+{% if page_obj.paginator.count %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Employee</th>
+            <th>Department</th>
+            <th>Leave Type</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Days</th>
+            <th>Reason</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for leave_request in page_obj %}
+        <tr>
+            <td>{{ leave_request.employee.full_name }}</td>
+            <td>{{ leave_request.employee.department|default:"—" }}</td>
+            <td>{{ leave_request.leave_type.name }}</td>
+            <td>{{ leave_request.start_date }}</td>
+            <td>{{ leave_request.end_date }}</td>
+            <td>{{ leave_request.days }}</td>
+            <td>{{ leave_request.reason|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/pagination.html#pagination" %}
+{% else %}
+<p class="empty-state">No leave requests for the selected filters.</p>
+{% endif %}
+{% endpartialdef leave_requests_table %}
 
 <div class="card card--table">
   <div class="card__body">
     <div class="data-table-wrap">
       {% if report_type == "balance" %}
-        {% include "reports/partials/leave_balance_table.html" %}
+        {% partial leave_balance_table %}
       {% else %}
-        {% include "reports/partials/leave_requests_table.html" %}
+        {% partial leave_requests_table %}
       {% endif %}
     </div>
   </div>

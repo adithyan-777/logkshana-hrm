@@ -54,7 +54,19 @@ class EmployeeViewTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "employees/partials/employee_table.html")
+        self.assertTemplateUsed(response, "employee_table")
+
+    def test_boosted_list_returns_full_page(self):
+        response = self.client.get(
+            reverse("employee_list"),
+            HTTP_HX_REQUEST="true",
+            HTTP_HX_BOOSTED="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "employees/list.html")
+        self.assertContains(response, 'id="spa-view"')
+        self.assertContains(response, "alpine-app.js")
 
     def test_add_creates_employee_and_returns_invite(self):
         emp_code = f"E-{uuid4().hex[:6]}"
@@ -71,8 +83,10 @@ class EmployeeViewTests(BaseTenantTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get("HX-Trigger"), "employeeCreated")
-        self.assertTemplateUsed(response, "employees/partials/employee_invite.html")
+        self.assertTemplateUsed(response, "employee_invite")
         self.assertContains(response, "/accounts/password/reset/key/")
+        self.assertContains(response, 'data-invite-link="')
+        self.assertNotContains(response, "onclick=")
         self.assertTrue(Employee.objects.filter(emp_code=emp_code).exists())
 
     def test_list_shows_created_employee(self):

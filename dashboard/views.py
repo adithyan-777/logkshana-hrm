@@ -27,6 +27,6 @@ def dashboard_attendance_chart_partial(request: HttpRequest) -> HttpResponse:
     summary = dashboard_summary_get()
     return render(
         request,
-        "dashboard/partials/attendance_chart.html",
+        "dashboard/index.html#attendance_chart",
         {"chart_data": summary.attendance_chart_data()},
     )

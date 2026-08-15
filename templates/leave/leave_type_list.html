@@ -3,7 +3,7 @@
 {% block title %}Leave Types{% endblock %}
 
 {% block page_content %}
-{% include "partials/tabs_leave.html" %}
+{% include "partials/tabs_leave.html#tabs_leave" %}
 
 <div class="toolbar">
   <label class="sr-only" for="leave-type-search">Search</label>
@@ -28,9 +28,52 @@
       class="data-table-wrap"
       hx-get="{% url 'leave_type_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
       hx-trigger="leaveTypeCreated from:body"
+      hx-target="this"
       hx-swap="innerHTML"
     >
-      {% include "leave/partials/leave_type_table.html" %}
+      {% partialdef leave_type_table inline %}
+{% if page_obj.paginator.count %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Paid</th>
+            <th>Approval</th>
+            <th>Half day</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for leave_type in page_obj %}
+        <tr>
+            <td>{{ leave_type.code }}</td>
+            <td>{{ leave_type.name }}</td>
+            <td>{% if leave_type.paid %}Yes{% else %}No{% endif %}</td>
+            <td>{% if leave_type.requires_approval %}Required{% else %}No{% endif %}</td>
+            <td>{% if leave_type.allow_half_day %}Yes{% else %}No{% endif %}</td>
+            <td>
+                {% if leave_type.is_active %}
+                <span class="badge active">Active</span>
+                {% else %}
+                <span class="badge inactive">Inactive</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/pagination.html#pagination" %}
+{% else %}
+<p class="empty-state">
+    {% if search %}
+    No leave types match "{{ search }}".
+    {% else %}
+    No leave types yet. <a href="{% url 'leave_type_add' %}">Add the first leave type</a>.
+    {% endif %}
+</p>
+{% endif %}
+{% endpartialdef leave_type_table %}
     </div>
   </div>
 </div>

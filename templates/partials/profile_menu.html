@@ -1,24 +1,37 @@
-<details class="profile-menu profile-menu--topbar">
-  <summary class="profile profile--compact" aria-label="Account menu">
+{% partialdef profile_menu inline %}
+<div
+  class="profile-menu profile-menu--topbar"
+  :class="{ 'is-open': $store.ui.menu === 'profile' }"
+  @click.outside="$store.ui.menu === 'profile' && $store.ui.closeMenus()"
+>
+  <button
+    type="button"
+    class="profile profile--compact"
+    aria-label="Account menu"
+    aria-haspopup="menu"
+    :aria-expanded="$store.ui.menu === 'profile'"
+    @click="$store.ui.toggleMenu('profile')"
+  >
     <span class="profile__avatar-wrap">
       <span class="profile__avatar">{{ user.get_username|slice:":2"|upper }}</span>
       <span class="profile__status" aria-hidden="true"></span>
     </span>
-  </summary>
-  <div class="profile-menu__panel">
+  </button>
+  <div class="profile-menu__panel" role="menu" x-cloak>
     <div class="profile-menu__head">
       <span class="profile__name">{{ user.get_username }}</span>
       <span class="profile-menu__email">{{ user.email|default:"—" }}</span>
     </div>
     <hr class="profile-menu__divider">
-    <a href="{% url 'account_profile' %}" class="profile-menu__item">
+    <a href="{% url 'account_profile' %}" class="profile-menu__item" role="menuitem" @click="$store.ui.closeMenus()">
       <i class="bx bx-user admin-icon admin-icon--18"></i>
       Profile
     </a>
     <hr class="profile-menu__divider">
-    <a href="{% url 'account_logout' %}" class="profile-menu__item profile-menu__item--danger">
+    <a href="{% url 'account_logout' %}" class="profile-menu__item profile-menu__item--danger" role="menuitem" hx-boost="false">
       <i class="bx bx-arrow-from-right admin-icon admin-icon--18"></i>
       Log out
     </a>
   </div>
-</details>
+</div>
+{% endpartialdef profile_menu %}

@@ -3,6 +3,24 @@
 {% block title %}Add Employee{% endblock %}
 
 {% block page_content %}
+{% partialdef employee_invite %}
+<div class="alert alert--success invite-box">
+    <p><strong>{{ employee.first_name }} {{ employee.last_name }}</strong> was added.</p>
+    <p class="text-muted">Share this link with them to set their password:</p>
+    <p><code>{{ invite_link }}</code></p>
+    <button
+      type="button"
+      x-data
+      data-invite-link="{{ invite_link }}"
+      @click="navigator.clipboard.writeText($el.dataset.inviteLink)"
+    >
+      Copy link
+    </button>
+    <a href="{% url 'employee_add' %}" hx-get="{% url 'employee_add' %}" hx-target="this" hx-swap="outerHTML">
+      Add another employee
+    </a>
+</div>
+{% endpartialdef employee_invite %}
 
 <div class="card" style="max-width:720px;">
   <div class="card__header">
@@ -10,7 +28,88 @@
   </div>
   <div class="card__body">
     <div id="employee-form-container">
-      {% include "employees/partials/employee_form.html" %}
+      {% partialdef employee_form inline %}
+{% if success_message %}
+<div id="form-messages" class="message success">
+    {{ success_message }}
+    <a href="{% url 'employee_list' %}">View all employees</a>
+</div>
+{% else %}
+<div id="form-messages"></div>
+{% endif %}
+
+<form
+    id="employee-form"
+    hx-post="{% url 'employee_add' %}"
+    hx-target="#employee-form-container"
+    hx-swap="innerHTML"
+>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="message error">
+        {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+
+    <div class="field">
+        <label for="{{ form.first_name.id_for_label }}">First name *</label>
+        {{ form.first_name }}
+        {% if form.first_name.errors %}<span class="error">{{ form.first_name.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.last_name.id_for_label }}">Last name</label>
+        {{ form.last_name }}
+        {% if form.last_name.errors %}<span class="error">{{ form.last_name.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.emp_code.id_for_label }}">Employee code</label>
+        {{ form.emp_code }}
+        {% if form.emp_code.errors %}<span class="error">{{ form.emp_code.errors }}</span>{% endif %}
+    </div>
+
+
+    <div class="field">
+        <label for="{{ form.department.id_for_label }}">Department</label>
+        {{ form.department }}
+        {% if form.department.errors %}<span class="error">{{ form.department.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.position.id_for_label }}">Position</label>
+        {{ form.position }}
+        {% if form.position.errors %}<span class="error">{{ form.position.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.email.id_for_label }}">Email</label>
+        {{ form.email }}
+        {% if form.email.errors %}<span class="error">{{ form.email.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.mobile.id_for_label }}">Mobile</label>
+        {{ form.mobile }}
+        {% if form.mobile.errors %}<span class="error">{{ form.mobile.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.hire_date.id_for_label }}">Hire date</label>
+        {{ form.hire_date }}
+        {% if form.hire_date.errors %}<span class="error">{{ form.hire_date.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field checkbox">
+        {{ form.is_active }}
+        <label for="{{ form.is_active.id_for_label }}">Active</label>
+        {% if form.is_active.errors %}<span class="error">{{ form.is_active.errors }}</span>{% endif %}
+    </div>
+
+    <button type="submit">Add Employee</button>
+</form>
+{% endpartialdef employee_form %}
     </div>
   </div>
 </div>

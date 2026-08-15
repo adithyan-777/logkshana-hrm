@@ -1,19 +1,21 @@
+{% partialdef topbar inline %}
 <header class="topbar">
   <div class="topbar__left">
     <label for="sidebar-mobile" class="btn-icon topbar__open-sidebar" aria-label="Open menu">
       <i class="bx bx-menu admin-icon admin-icon--20"></i>
     </label>
-    {% include "partials/breadcrumbs.html" %}
+    {% include "partials/breadcrumbs.html#breadcrumbs" %}
   </div>
   <div class="topbar__right">
     <div class="topbar__tools" role="toolbar" aria-label="Quick actions">
-      <button type="button" class="btn-icon" aria-label="Activity" title="Activity" data-toast="Activity feed coming soon">
+      <button type="button" class="btn-icon" aria-label="Activity" title="Activity" @click="$store.ui.toast('Activity feed coming soon', 'info')">
         <i class="bx bx-pulse admin-icon admin-icon--20"></i>
       </button>
-      {% include "partials/notifications_menu.html" %}
-      {% include "partials/theme_customizer.html" %}
+      {% include "partials/notifications_menu.html#notifications_menu" %}
+      {% include "partials/theme_customizer.html#theme_customizer" %}
     </div>
 
-    {% include "partials/profile_menu.html" %}
+    {% include "partials/profile_menu.html#profile_menu" %}
   </div>
 </header>
+{% endpartialdef topbar %}

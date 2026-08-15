@@ -4,6 +4,7 @@ from django_tenants.utils import get_public_schema_name
 from config.navigation import (
     active_section,
     breadcrumbs_for,
+    command_palette_for,
     page_action_for,
     page_heading_for,
     page_subtitle_for,
@@ -25,12 +26,18 @@ def navigation(request):
             "pending_corrections": 0,
             "missing_punch": 0,
         },
+        "command_palette": [],
     }
 
     try:
         context["topbar_action"] = topbar_action_for(request)
     except NoReverseMatch:
         context["topbar_action"] = None
+
+    try:
+        context["command_palette"] = command_palette_for(request)
+    except NoReverseMatch:
+        context["command_palette"] = []
 
     tenant = getattr(request, "tenant", None)
     user = getattr(request, "user", None)

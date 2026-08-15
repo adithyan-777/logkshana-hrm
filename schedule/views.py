@@ -4,6 +4,7 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
+from common.http import is_htmx_partial
 from common.pagination import list_pagination_context
 from schedule.forms import (
     ScheduleAssignmentForm,
@@ -31,7 +32,7 @@ def _render_timetable_form(
 ) -> HttpResponse:
     return render(
         request,
-        "schedule/partials/timetable_form.html",
+        "schedule/timetable_add.html#timetable_form",
         {"form": form, "success_message": success_message},
     )
 
@@ -45,7 +46,7 @@ def _render_shift_form(
 ) -> HttpResponse:
     return render(
         request,
-        "schedule/partials/shift_form.html",
+        "schedule/shift_add.html#shift_form",
         {"form": form, "formset": formset, "success_message": success_message},
     )
 
@@ -58,7 +59,7 @@ def _render_assignment_form(
 ) -> HttpResponse:
     return render(
         request,
-        "schedule/partials/assignment_form.html",
+        "schedule/assignment_add.html#assignment_form",
         {"form": form, "success_message": success_message},
     )
 
@@ -71,7 +72,7 @@ def _render_temporary_form(
 ) -> HttpResponse:
     return render(
         request,
-        "schedule/partials/temporary_form.html",
+        "schedule/temporary_add.html#temporary_form",
         {"form": form, "success_message": success_message},
     )
 
@@ -88,8 +89,8 @@ def timetable_list_view(request: HttpRequest) -> HttpResponse:
         hx_target="#timetable-list",
     )
 
-    if request.headers.get("HX-Request"):
-        return render(request, "schedule/partials/timetable_table.html", context)
+    if is_htmx_partial(request):
+        return render(request, "schedule/timetable_list.html#timetable_table", context)
 
     return render(request, "schedule/timetable_list.html", context)
 
@@ -112,7 +113,7 @@ def timetable_add(request: HttpRequest) -> HttpResponse:
         return _render_timetable_form(request, form)
 
     form = TimetableForm()
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return _render_timetable_form(request, form)
 
     return render(request, "schedule/timetable_add.html", {"form": form})
@@ -130,8 +131,8 @@ def shift_list_view(request: HttpRequest) -> HttpResponse:
         hx_target="#shift-list",
     )
 
-    if request.headers.get("HX-Request"):
-        return render(request, "schedule/partials/shift_table.html", context)
+    if is_htmx_partial(request):
+        return render(request, "schedule/shift_list.html#shift_table", context)
 
     return render(request, "schedule/shift_list.html", context)
 
@@ -165,7 +166,7 @@ def shift_add(request: HttpRequest) -> HttpResponse:
 
     form = ShiftForm()
     formset = build_shift_day_formset()
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return _render_shift_form(request, form, formset)
 
     return render(
@@ -187,8 +188,8 @@ def assignment_list_view(request: HttpRequest) -> HttpResponse:
         hx_target="#assignment-list",
     )
 
-    if request.headers.get("HX-Request"):
-        return render(request, "schedule/partials/assignment_table.html", context)
+    if is_htmx_partial(request):
+        return render(request, "schedule/assignment_list.html#assignment_table", context)
 
     return render(request, "schedule/assignment_list.html", context)
 
@@ -211,7 +212,7 @@ def assignment_add(request: HttpRequest) -> HttpResponse:
         return _render_assignment_form(request, form)
 
     form = ScheduleAssignmentForm()
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return _render_assignment_form(request, form)
 
     return render(request, "schedule/assignment_add.html", {"form": form})
@@ -229,8 +230,8 @@ def temporary_list_view(request: HttpRequest) -> HttpResponse:
         hx_target="#temporary-list",
     )
 
-    if request.headers.get("HX-Request"):
-        return render(request, "schedule/partials/temporary_table.html", context)
+    if is_htmx_partial(request):
+        return render(request, "schedule/temporary_list.html#temporary_table", context)
 
     return render(request, "schedule/temporary_list.html", context)
 
@@ -253,7 +254,7 @@ def temporary_add(request: HttpRequest) -> HttpResponse:
         return _render_temporary_form(request, form)
 
     form = TemporaryScheduleForm()
-    if request.headers.get("HX-Request"):
+    if is_htmx_partial(request):
         return _render_temporary_form(request, form)
 
     return render(request, "schedule/temporary_add.html", {"form": form})

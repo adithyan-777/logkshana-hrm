@@ -94,6 +94,8 @@ body:has(.app) {
   }
 }
 
+[x-cloak] { display: none !important; }
+
 /* Browser extensions sometimes inject viewport-width junk (e.g. GiveFreely). */
 #give-freely-root,
 [id^="give-freely"] {

@@ -62,6 +62,9 @@ class NavigationHelpersTests(SimpleTestCase):
         self.assertEqual(context["nav_section"], "leave")
         self.assertEqual(len(context["breadcrumbs"]), 3)
         self.assertEqual(context["page_action"], LIST_ACTIONS["leave_request_list"])
+        self.assertTrue(context["command_palette"])
+        self.assertEqual(context["command_palette"][0]["title"], "Dashboard")
+        self.assertIn("url", context["command_palette"][0])
 
     def test_breadcrumb_map_covers_all_list_and_add_routes(self):
         expected = {

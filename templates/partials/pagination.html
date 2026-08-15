@@ -1,3 +1,4 @@
+{% partialdef pagination inline %}
 {% if page_obj.paginator.count %}
 <nav class="pagination" aria-label="Pagination">
     <p class="pagination-summary">
@@ -40,3 +41,4 @@
     {% endif %}
 </nav>
 {% endif %}
+{% endpartialdef pagination %}

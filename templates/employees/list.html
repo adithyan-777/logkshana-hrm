@@ -27,9 +27,54 @@
       class="data-table-wrap"
       hx-get="{% url 'employee_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
       hx-trigger="employeeCreated from:body"
+      hx-target="this"
       hx-swap="innerHTML"
     >
-      {% include "employees/partials/employee_table.html" %}
+      {% partialdef employee_table inline %}
+{% if page_obj.paginator.count %}
+<table class="data-table employee-table">
+    <thead>
+        <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Department</th>
+            <th>Position</th>
+            <th>Email</th>
+            <th>Username</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for employee in page_obj %}
+        <tr>
+            <td>{{ employee.emp_code|default:"—" }}</td>
+            <td>{{ employee.first_name }} {{ employee.last_name }}</td>
+            <td>{{ employee.department|default:"—" }}</td>
+            <td>{{ employee.position|default:"—" }}</td>
+            <td>{{ employee.email|default:"—" }}</td>
+            <td>{{ employee.user.username|default:"—" }}</td>
+            <td>
+                {% if employee.is_active %}
+                <span class="badge active">Active</span>
+                {% else %}
+                <span class="badge inactive">Inactive</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/pagination.html#pagination" %}
+{% else %}
+<p class="empty-state">
+    {% if search %}
+    No employees match "{{ search }}".
+    {% else %}
+    No employees yet. <a href="{% url 'employee_add' %}">Add the first employee</a>.
+    {% endif %}
+</p>
+{% endif %}
+{% endpartialdef employee_table %}
     </div>
   </div>
 </div>

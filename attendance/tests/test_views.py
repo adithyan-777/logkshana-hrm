@@ -66,7 +66,7 @@ class AttendanceTransactionViewTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "attendance/partials/transaction_table.html")
+        self.assertTemplateUsed(response, "transaction_table")
 
     def test_list_shows_created_transaction(self):
         employee = employee_factory(first_name="Visible", emp_code="AT-VIS")
@@ -146,7 +146,7 @@ class DailyAttendanceViewTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "attendance/partials/daily_table.html")
+        self.assertTemplateUsed(response, "daily_table")
 
     def test_list_shows_created_record(self):
         employee = employee_factory(first_name="DailyVis", emp_code="DA-VIS")
@@ -212,7 +212,7 @@ class AttendanceCorrectionViewTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "attendance/partials/correction_table.html")
+        self.assertTemplateUsed(response, "correction_table")
 
     def test_list_shows_created_correction(self):
         employee = employee_factory(first_name="CorrectVis", emp_code="AC-VIS")
@@ -302,7 +302,7 @@ class AttendanceRuleViewTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "attendance/partials/rule_table.html")
+        self.assertTemplateUsed(response, "rule_table")
 
     def test_list_shows_created_rule(self):
         attendance_rule_factory(name="Strict Grace Rule")

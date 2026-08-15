@@ -43,9 +43,18 @@
   <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js"
           integrity="sha384-H5SrcfygHmAuTDZphMHqBJLc3FhssKjG7w/CeCpFReSfwBWDTKpkzPP8c+cLsK+V"
           crossorigin="anonymous" defer></script>
+  <script src="{% static 'js/alpine-app.js' %}" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js" defer></script>
   {% block extra_head %}{% endblock %}
 </head>
-<body class="app" hx-headers='{"x-csrftoken": "{{ csrf_token }}"}'>
+<body
+  class="app"
+  hx-boost="true"
+  hx-push-url="true"
+  hx-headers='{"x-csrftoken": "{{ csrf_token }}"}'
+  x-data
+>
+  <div class="spa-progress" :class="{ 'is-active': $store.spa.loading }" aria-hidden="true"></div>
   <input type="checkbox" id="sidebar-collapsed" class="sidebar-state" aria-hidden="true">
   <input type="checkbox" id="sidebar-mobile" class="sidebar-state" aria-hidden="true">
   <script>
@@ -58,31 +67,32 @@
     })();
   </script>
 
-  {% include "partials/sidebar.html" %}
-  <div class="main">
-    {% include "partials/topbar.html" %}
+  {% include "partials/sidebar.html#sidebar" %}
+  <div class="main" id="spa-view" x-data>
+    {% include "partials/topbar.html#topbar" %}
     <div class="main-scroll">
       <div class="page-content {% block page_class %}{% endblock %}">
         {% block content %}{% endblock %}
       </div>
     </div>
+    {% block extra_js %}{% endblock %}
   </div>
   <label for="sidebar-mobile" class="backdrop" aria-hidden="true"></label>
 
   <nav class="mobile-bottombar" aria-label="Mobile navigation">
-    <a class="mobile-bottombar__link" href="{% url 'dashboard' %}" aria-label="Dashboard">
+    <a class="mobile-bottombar__link" href="{% url 'dashboard' %}" data-nav-match="dashboard" aria-label="Dashboard">
       <i class="bx bx-grid admin-icon admin-icon--20"></i>
       <span>Home</span>
     </a>
-    <a class="mobile-bottombar__link" href="{% url 'employee_list' %}" aria-label="Employees">
+    <a class="mobile-bottombar__link" href="{% url 'employee_list' %}" data-nav-match="employees" aria-label="Employees">
       <i class="bx bx-user admin-icon admin-icon--20"></i>
       <span>People</span>
     </a>
-    <a class="mobile-bottombar__link" href="{% url 'daily_attendance_list' %}" aria-label="Attendance">
+    <a class="mobile-bottombar__link" href="{% url 'daily_attendance_list' %}" data-nav-match="attendance" aria-label="Attendance">
       <i class="bx bx-calendar-check admin-icon admin-icon--20"></i>
       <span>Attend</span>
     </a>
-    <a class="mobile-bottombar__link" href="{% url 'report_hub' %}" aria-label="Reports">
+    <a class="mobile-bottombar__link" href="{% url 'report_hub' %}" data-nav-match="reports" aria-label="Reports">
       <i class="bx bx-chart-bar-columns admin-icon admin-icon--20"></i>
       <span>Reports</span>
     </a>
@@ -91,12 +101,16 @@
     </label>
   </nav>
 
-  <div class="toasts" id="toast-container"></div>
-  {% include "partials/modal.html" %}
+  <div class="toasts" id="toast-container" aria-live="polite" aria-relevant="additions">
+    <template x-for="toast in $store.ui.toasts" :key="toast.id">
+      <div class="toast" :class="'toast--' + toast.type" x-text="toast.message"></div>
+    </template>
+  </div>
+  {% include "partials/modal.html#modal" %}
+  {% include "partials/command_palette.html#command_palette" %}
 
   <script src="{% static 'js/theme.js' %}"></script>
-  <script src="{% static 'js/dropdowns.js' %}"></script>
-  <script src="{% static 'js/toasts.js' %}"></script>
-  {% block extra_js %}{% endblock %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+  <script src="{% static 'js/dashboard-charts.js' %}"></script>
 </body>
 </html>

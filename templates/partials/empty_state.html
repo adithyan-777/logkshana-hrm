@@ -1,3 +1,4 @@
+{% partialdef empty_state inline %}
 <div class="empty-stage">
   <div class="empty-stage__icon"><i class="bx bx-folder-open"></i></div>
   <div class="empty-stage__title">{{ title|default:"No data yet" }}</div>
@@ -8,3 +9,4 @@
   </div>
   {% endif %}
 </div>
+{% endpartialdef empty_state %}

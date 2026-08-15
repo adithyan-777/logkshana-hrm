@@ -83,10 +83,14 @@
         return target && target.id === CHART_PANEL_ID;
     }
 
-    document.addEventListener("DOMContentLoaded", initAttendanceChart);
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initAttendanceChart);
+    } else {
+        initAttendanceChart();
+    }
 
     document.body.addEventListener("htmx:beforeSwap", function (event) {
-        if (isChartPanel(event.detail.target)) {
+        if (isChartPanel(event.detail.target) || (event.detail.target && event.detail.target.id === "spa-view")) {
             destroyAttendanceChart();
         }
     });

@@ -29,7 +29,7 @@ class TimetableViewTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "schedule/partials/timetable_table.html")
+        self.assertTemplateUsed(response, "timetable_table")
 
     def test_list_pagination(self):
         for index in range(26):

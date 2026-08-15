@@ -1,12 +1,22 @@
-<div class="admin-modal" id="app-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-  <div class="admin-modal__backdrop"></div>
+{% partialdef modal inline %}
+<div
+  class="admin-modal"
+  id="app-modal"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="modal-title"
+  :class="{ 'is-open': $store.ui.modalOpen }"
+  x-cloak
+>
+  <div class="admin-modal__backdrop" @click="$store.ui.closeModal()"></div>
   <div class="admin-modal__dialog">
     <div class="admin-modal__head">
-      <h2 class="admin-modal__title" id="modal-title">Dialog</h2>
-      <button type="button" class="btn-icon" id="modal-close-btn" aria-label="Close">
+      <h2 class="admin-modal__title" id="modal-title" x-text="$store.ui.modalTitle">Dialog</h2>
+      <button type="button" class="btn-icon" aria-label="Close" @click="$store.ui.closeModal()">
         <i class="bx bx-x"></i>
       </button>
     </div>
     <div class="admin-modal__body" id="modal-body"></div>
   </div>
 </div>
+{% endpartialdef modal %}

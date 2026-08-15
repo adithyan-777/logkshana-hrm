@@ -3,16 +3,50 @@
 {% block title %}Department Attendance Report{% endblock %}
 
 {% block page_content %}
-{% include "partials/tabs_reports.html" %}
+{% include "partials/tabs_reports.html#tabs_reports" %}
 
 <div class="report-toolbar">
-  {% include "reports/partials/filter_form.html" %}
+  {% include "reports/partials/filter_form.html#filter_form" %}
 </div>
 
 <div class="card card--table">
   <div class="card__body">
     <div class="data-table-wrap">
-      {% include "reports/partials/department_table.html" %}
+      {% partialdef department_table inline %}
+{% if page_obj.paginator.count %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Department</th>
+            <th>Employees</th>
+            <th>Total Days</th>
+            <th>Present</th>
+            <th>Absent</th>
+            <th>Late</th>
+            <th>Late (min)</th>
+            <th>OT (min)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in page_obj %}
+        <tr>
+            <td>{{ row.employee__department__name|default:"Unassigned" }}</td>
+            <td>{{ row.employee_count }}</td>
+            <td>{{ row.total_days }}</td>
+            <td>{{ row.present_days }}</td>
+            <td>{{ row.absent_days }}</td>
+            <td>{{ row.late_days }}</td>
+            <td>{{ row.total_late_minutes|default:0 }}m</td>
+            <td>{{ row.total_overtime_minutes|default:0 }}m</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/pagination.html#pagination" %}
+{% else %}
+<p class="empty-state">No department attendance data for the selected filters.</p>
+{% endif %}
+{% endpartialdef department_table %}
     </div>
   </div>
 </div>

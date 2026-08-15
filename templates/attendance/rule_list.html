@@ -3,7 +3,7 @@
 {% block title %}Attendance Rules{% endblock %}
 
 {% block page_content %}
-{% include "partials/tabs_attendance.html" %}
+{% include "partials/tabs_attendance.html#tabs_attendance" %}
 
 <div class="toolbar">
   <label class="sr-only" for="rule-search">Search</label>
@@ -28,9 +28,50 @@
       class="data-table-wrap"
       hx-get="{% url 'attendance_rule_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
       hx-trigger="attendanceRuleCreated from:body"
+      hx-target="this"
       hx-swap="innerHTML"
     >
-      {% include "attendance/partials/rule_table.html" %}
+      {% partialdef rule_table inline %}
+{% if page_obj.paginator.count %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Late grace</th>
+            <th>Early grace</th>
+            <th>Multiple in/out</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for rule in page_obj %}
+        <tr>
+            <td>{{ rule.name }}</td>
+            <td>{{ rule.late_grace_minutes }}m</td>
+            <td>{{ rule.early_leave_grace_minutes }}m</td>
+            <td>{% if rule.allow_multiple_in_out %}Yes{% else %}No{% endif %}</td>
+            <td>
+                {% if rule.is_active %}
+                <span class="badge active">Active</span>
+                {% else %}
+                <span class="badge inactive">Inactive</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/pagination.html#pagination" %}
+{% else %}
+<p class="empty-state">
+    {% if search %}
+    No rules match "{{ search }}".
+    {% else %}
+    No attendance rules yet. <a href="{% url 'attendance_rule_add' %}">Add the first rule</a>.
+    {% endif %}
+</p>
+{% endif %}
+{% endpartialdef rule_table %}
     </div>
   </div>
 </div>

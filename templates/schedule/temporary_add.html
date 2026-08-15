@@ -3,7 +3,7 @@
 {% block title %}Add Temporary Schedule{% endblock %}
 
 {% block page_content %}
-{% include "partials/tabs_schedule.html" %}
+{% include "partials/tabs_schedule.html#tabs_schedule" %}
 
 <div class="card" style="max-width:720px;">
   <div class="card__header">
@@ -11,7 +11,60 @@
   </div>
   <div class="card__body">
     <div id="temporary-form-container">
-      {% include "schedule/partials/temporary_form.html" %}
+      {% partialdef temporary_form inline %}
+{% if success_message %}
+<div id="form-messages" class="message success">
+    {{ success_message }}
+    <a href="{% url 'temporary_list' %}">View all temporary schedules</a>
+</div>
+{% else %}
+<div id="form-messages"></div>
+{% endif %}
+
+<form
+    id="temporary-form"
+    hx-post="{% url 'temporary_add' %}"
+    hx-target="#temporary-form-container"
+    hx-swap="innerHTML"
+>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="message error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="field">
+        <label for="{{ form.employee.id_for_label }}">Employee *</label>
+        {{ form.employee }}
+        {% if form.employee.errors %}<span class="error">{{ form.employee.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.date.id_for_label }}">Date *</label>
+        {{ form.date }}
+        {% if form.date.errors %}<span class="error">{{ form.date.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.timetable.id_for_label }}">Timetable *</label>
+        {{ form.timetable }}
+        {% if form.timetable.errors %}<span class="error">{{ form.timetable.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.reason.id_for_label }}">Reason</label>
+        {{ form.reason }}
+        {% if form.reason.errors %}<span class="error">{{ form.reason.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field checkbox">
+        {{ form.overrides_normal_schedule }}
+        <label for="{{ form.overrides_normal_schedule.id_for_label }}">Overrides normal schedule</label>
+    </div>
+
+    <button type="submit">Add Temporary Schedule</button>
+</form>
+{% endpartialdef temporary_form %}
     </div>
   </div>
 </div>

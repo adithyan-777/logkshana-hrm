@@ -3,7 +3,7 @@
 {% block title %}Leave Requests{% endblock %}
 
 {% block page_content %}
-{% include "partials/tabs_leave.html" %}
+{% include "partials/tabs_leave.html#tabs_leave" %}
 
 <div class="toolbar">
   <label class="sr-only" for="leave-request-search">Search</label>
@@ -28,9 +28,48 @@
       class="data-table-wrap"
       hx-get="{% url 'leave_request_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
       hx-trigger="leaveRequestCreated from:body"
+      hx-target="this"
       hx-swap="innerHTML"
     >
-      {% include "leave/partials/leave_request_table.html" %}
+      {% partialdef leave_request_table inline %}
+{% if page_obj.paginator.count %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Employee</th>
+            <th>Leave type</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Days</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for request in page_obj %}
+        <tr>
+            <td>{{ request.employee.full_name }}</td>
+            <td>{{ request.leave_type.name }}</td>
+            <td>{{ request.start_date }}</td>
+            <td>{{ request.end_date }}</td>
+            <td>{{ request.days }}</td>
+            <td>
+                <span class="badge status-{{ request.status }}">{{ request.get_status_display }}</span>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/pagination.html#pagination" %}
+{% else %}
+<p class="empty-state">
+    {% if search %}
+    No leave requests match "{{ search }}".
+    {% else %}
+    No leave requests yet. <a href="{% url 'leave_request_add' %}">Add the first request</a>.
+    {% endif %}
+</p>
+{% endif %}
+{% endpartialdef leave_request_table %}
     </div>
   </div>
 </div>

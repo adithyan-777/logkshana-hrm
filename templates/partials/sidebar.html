@@ -1,3 +1,4 @@
+{% partialdef sidebar inline %}
 <aside class="sidebar" id="sidebar" aria-label="Primary">
   <div class="sidebar__top">
     <a href="{% url 'dashboard' %}" class="brand-mark" title="Logkshana" aria-label="Logkshana">
@@ -18,43 +19,55 @@
   </div>
 
   <div class="sidebar__body">
-    <div class="sidebar-search" role="search" aria-label="Search">
+    <button
+      type="button"
+      class="sidebar-search"
+      aria-label="Search pages"
+      @click="$dispatch('open-command-palette')"
+    >
       <i class="bx bx-search admin-icon admin-icon--18"></i>
       <span class="sidebar-search__text">Search…</span>
       <kbd class="sidebar-search__kbd">⌘ K</kbd>
-    </div>
+    </button>
 
     <nav class="quick-actions" aria-label="Logkshana">
       <a href="{% url 'dashboard' %}"
-         class="quick-action {% if request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}">
+         class="quick-action {% if request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}"
+         data-nav-match="dashboard">
         <span class="quick-action__icon"><i class="bx bx-grid admin-icon admin-icon--20"></i></span>
         <span class="quick-action__label">Dashboard</span>
       </a>
       <a href="{% url 'employee_list' %}"
-         class="quick-action {% if request.path|slice:':11' == '/employees/' %}is-active{% endif %}">
+         class="quick-action {% if request.path|slice:':11' == '/employees/' %}is-active{% endif %}"
+         data-nav-match="employees">
         <span class="quick-action__icon"><i class="bx bx-user admin-icon admin-icon--20"></i></span>
         <span class="quick-action__label">Employees</span>
       </a>
       <a href="{% url 'attendance_transaction_list' %}"
-         class="quick-action {% if request.path|slice:':12' == '/attendance/' %}is-active{% endif %}">
+         class="quick-action {% if request.path|slice:':12' == '/attendance/' %}is-active{% endif %}"
+         data-nav-match="attendance">
         <span class="quick-action__icon"><i class="bx bx-calendar-check admin-icon admin-icon--20"></i></span>
         <span class="quick-action__label">Attendance</span>
       </a>
       <a href="{% url 'leave_request_list' %}"
-         class="quick-action {% if request.path|slice:':7' == '/leave/' %}is-active{% endif %}">
+         class="quick-action {% if request.path|slice:':7' == '/leave/' %}is-active{% endif %}"
+         data-nav-match="leave">
         <span class="quick-action__icon"><i class="bx bx-calendar-minus admin-icon admin-icon--20"></i></span>
         <span class="quick-action__label">Leave</span>
       </a>
       <a href="{% url 'timetable_list' %}"
-         class="quick-action {% if request.path|slice:':10' == '/schedule/' %}is-active{% endif %}">
+         class="quick-action {% if request.path|slice:':10' == '/schedule/' %}is-active{% endif %}"
+         data-nav-match="schedule">
         <span class="quick-action__icon"><i class="bx bx-clock-5 admin-icon admin-icon--20"></i></span>
         <span class="quick-action__label">Schedule</span>
       </a>
       <a href="{% url 'report_hub' %}"
-         class="quick-action {% if request.path|slice:':9' == '/reports/' %}is-active{% endif %}">
+         class="quick-action {% if request.path|slice:':9' == '/reports/' %}is-active{% endif %}"
+         data-nav-match="reports">
         <span class="quick-action__icon"><i class="bx bx-chart-bar-big-columns admin-icon admin-icon--20"></i></span>
         <span class="quick-action__label">Reports</span>
       </a>
     </nav>
   </div>
 </aside>
+{% endpartialdef sidebar %}

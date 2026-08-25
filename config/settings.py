@@ -49,6 +49,8 @@ SHARED_APPS = [
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
+    "django_celery_beat",
+    "django_celery_results",
 ]
 
 TENANT_APPS = ("employees", "schedule", "leave", "attendance", "reports", "dashboard")
@@ -142,13 +144,23 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+## Celery settings
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = 'django-db'  # uses django_celery_results
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = os.getenv("TIMEZONE", "Asia/Qatar")  # match your Django TIME_ZONE
+
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = os.getenv("TIME_ZONE", "Asia/Qatar")
 
 USE_I18N = True
 

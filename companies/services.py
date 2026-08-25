@@ -1,6 +1,14 @@
+from datetime import datetime
+
+from django.core.exceptions import ValidationError
 from django_tenants.utils import get_public_schema_name, schema_context
 
+from attendance.models import AttendanceTransaction
+from attendance.services import attendance_transaction_create
 from companies.models import Branch, Company
+from companies.selectors import device_get_by_serial_number
+from employees.models import Employee
+from employees.selectors import employee_get_by_emp_code
 
 PRIMARY_BRANCH_NAME = "primary"
 PRIMARY_BRANCH_CODE = "PRIMARY"
@@ -30,8 +38,6 @@ def company_primary_branch_get_or_create(*, company: Company) -> tuple[Branch, b
 
 def companies_ensure_primary_branches(*, companies=None) -> list[dict]:
     """Create a 'primary' branch for each company and assign it to employees without one."""
-    from employees.models import Employee
-
     if companies is None:
         companies = Company.objects.exclude(schema_name=get_public_schema_name())
 
@@ -55,3 +61,39 @@ def companies_ensure_primary_branches(*, companies=None) -> list[dict]:
         )
 
     return results
+
+
+def attendance_log_create(
+    *, serial_number: str, employee_id: str, timestamp: datetime
+) -> AttendanceTransaction:
+    device = device_get_by_serial_number(serial_number=serial_number)
+    if device is None:
+        raise ValidationError({"serial_number": "Unknown device serial number."})
+    if not device.is_active:
+        raise ValidationError({"serial_number": "Device is inactive."})
+
+    with schema_context(device.company.schema_name):
+        employee = employee_get_by_emp_code(emp_code=employee_id)
+        if employee is None:
+            if Employee.objects.filter(emp_code=employee_id, is_active=False).exists():
+                raise ValidationError({"employee_id": "Employee is inactive."})
+            raise ValidationError({"employee_id": "Unknown employee id."})
+
+        external_id = f"device:{serial_number}:{employee_id}:{timestamp.isoformat()}"
+        existing = AttendanceTransaction.objects.filter(external_id=external_id).first()
+        if existing is not None:
+            return existing
+
+        return attendance_transaction_create(
+            employee=employee,
+            external_id=external_id,
+            timestamp=timestamp,
+            direction=AttendanceTransaction.Direction.UNKNOWN,
+            source=AttendanceTransaction.Source.BIOMETRIC,
+            external_employee_id=employee_id,
+            raw_data={
+                "serial_number": serial_number,
+                "employee_id": employee_id,
+                "timestamp": timestamp.isoformat(),
+            },
+        )

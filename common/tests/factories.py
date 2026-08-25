@@ -6,6 +6,29 @@ from schedule.models import Timetable
 from schedule.services import shift_create, timetable_create
 
 
+def device_factory(*, serial_number="ZK-001", company, branch=None, **kwargs):
+    from companies.models import Device
+    from companies.services import company_primary_branch_get_or_create
+
+    if branch is None:
+        branch, _ = company_primary_branch_get_or_create(company=company)
+
+    defaults = {
+        "name": "Clock",
+        "is_active": True,
+    }
+    defaults.update(kwargs)
+    device = Device(
+        serial_number=serial_number,
+        company=company,
+        branch=branch,
+        **defaults,
+    )
+    device.full_clean()
+    device.save()
+    return device
+
+
 def timetable_factory(*, name="Morning Shift", code="MORN", **kwargs) -> Timetable:
     defaults = {
         "type": Timetable.Type.NORMAL,

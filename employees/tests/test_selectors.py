@@ -1,7 +1,9 @@
+from django.core.exceptions import ValidationError
+
 from common.tests.base import BaseTenantTestCase
-from common.tests.factories import department_factory, employee_factory
+from common.tests.factories import employee_factory
 from employees.models import Employee
-from employees.selectors import employee_list
+from employees.selectors import employee_get_by_emp_code, employee_list
 
 
 class EmployeeListTests(BaseTenantTestCase):
@@ -47,3 +49,29 @@ class EmployeeListTests(BaseTenantTestCase):
 
         self.assertEqual(employee_list().count(), 0)
         self.assertEqual(Employee.all_objects.count(), 1)
+
+
+class EmployeeGetByEmpCodeTests(BaseTenantTestCase):
+    def test_returns_active_employee(self):
+        employee = employee_factory(first_name="Punch", emp_code="E001")
+
+        found = employee_get_by_emp_code(emp_code="E001")
+
+        self.assertEqual(found, employee)
+
+    def test_returns_none_for_unknown_code(self):
+        self.assertIsNone(employee_get_by_emp_code(emp_code="MISSING"))
+
+    def test_returns_none_for_inactive_employee(self):
+        employee_factory(first_name="Gone", emp_code="E002", is_active=False)
+
+        self.assertIsNone(employee_get_by_emp_code(emp_code="E002"))
+
+    def test_raises_when_duplicate_active_codes(self):
+        employee_factory(first_name="One", last_name="Dup", emp_code="DUP")
+        employee_factory(first_name="Two", last_name="Dup", emp_code="DUP")
+
+        with self.assertRaises(ValidationError) as ctx:
+            employee_get_by_emp_code(emp_code="DUP")
+
+        self.assertIn("employee_id", ctx.exception.message_dict)

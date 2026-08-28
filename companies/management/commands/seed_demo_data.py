@@ -4,6 +4,9 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 from django_tenants.utils import get_tenant_model, schema_context
 
+from companies.models import Company, Domain
+from companies.services import company_primary_branch_get_or_create
+
 from attendance.models import (
     AttendanceCorrection,
     AttendanceRule,
@@ -64,12 +67,16 @@ def _get_or_create_employee(
     position=None,
     email: str = "",
     hire_date=None,
+    branch=None,
 ) -> Employee:
     employee = Employee.objects.filter(emp_code=emp_code).first()
     if employee:
+        if branch is not None and employee.branch_id is None:
+            employee.branch = branch
+            employee.save(update_fields=["branch"])
         return employee
 
-    return employee_create(
+    employee = employee_create(
         first_name=first_name,
         last_name=last_name,
         emp_code=emp_code,
@@ -77,7 +84,12 @@ def _get_or_create_employee(
         position=position,
         email=email,
         hire_date=hire_date,
+        sync_to_device=False,
     )
+    if branch is not None:
+        employee.branch = branch
+        employee.save(update_fields=["branch"])
+    return employee
 
 
 def _get_or_create_timetable(*, name: str, code: str, **kwargs) -> Timetable:
@@ -113,7 +125,7 @@ def _get_or_create_shift(*, name: str, code: str, shift_days: list[dict]) -> Shi
     )
 
 
-def seed_demo_data() -> dict[str, int]:
+def seed_demo_data(*, branch=None) -> dict[str, int]:
     """Populate the current tenant schema with demo HR data."""
     created = {
         "departments": 0,
@@ -161,6 +173,7 @@ def seed_demo_data() -> dict[str, int]:
         position=developer,
         email="ahmed.demo@example.com",
         hire_date=hire_date,
+        branch=branch,
     )
     fatima = _get_or_create_employee(
         first_name="Fatima",
@@ -170,6 +183,7 @@ def seed_demo_data() -> dict[str, int]:
         position=hr_manager,
         email="fatima.demo@example.com",
         hire_date=hire_date,
+        branch=branch,
     )
     omar = _get_or_create_employee(
         first_name="Omar",
@@ -179,6 +193,7 @@ def seed_demo_data() -> dict[str, int]:
         position=accountant,
         email="omar.demo@example.com",
         hire_date=hire_date,
+        branch=branch,
     )
     sara = _get_or_create_employee(
         first_name="Sara",
@@ -188,6 +203,7 @@ def seed_demo_data() -> dict[str, int]:
         position=developer,
         email="sara.demo@example.com",
         hire_date=date(2025, 3, 1),
+        branch=branch,
     )
     count_if_new(before, Employee.objects.count(), "employees")
 
@@ -446,10 +462,16 @@ class Command(BaseCommand):
             "--schema",
             help="Tenant schema name. Defaults to the only tenant, if exactly one exists.",
         )
+        parser.add_argument(
+            "--domain",
+            default="localhost",
+            help="Primary domain used when creating a demo tenant (default: localhost).",
+        )
 
     def handle(self, *args, **options):
         tenant_model = get_tenant_model()
         schema_name = options.get("schema")
+        created_tenant = False
 
         if schema_name:
             try:
@@ -459,18 +481,24 @@ class Command(BaseCommand):
         else:
             tenants = list(tenant_model.objects.exclude(schema_name="public"))
             if not tenants:
-                raise CommandError("No tenants found. Create a company/tenant first.")
-            if len(tenants) > 1:
+                tenant = self._create_demo_tenant(domain=options["domain"])
+                created_tenant = True
+            elif len(tenants) > 1:
                 names = ", ".join(t.schema_name for t in tenants)
                 raise CommandError(
                     f"Multiple tenants found ({names}). Pass --schema to choose one."
                 )
-            tenant = tenants[0]
+            else:
+                tenant = tenants[0]
 
         self.stdout.write(f"Seeding demo data in tenant: {tenant.name} ({tenant.schema_name})")
+        if created_tenant:
+            self.stdout.write(f"Created demo tenant with domain {options['domain']}")
+
+        branch, _ = company_primary_branch_get_or_create(company=tenant)
 
         with schema_context(tenant.schema_name):
-            created = seed_demo_data()
+            created = seed_demo_data(branch=branch)
 
         self.stdout.write(self.style.SUCCESS("Demo data ready."))
         for label, count in created.items():
@@ -480,3 +508,18 @@ class Command(BaseCommand):
         self.stdout.write("")
         self.stdout.write("Sample logins use employee usernames like ahmed.al-rashid")
         self.stdout.write("Demo employee codes: DEMO-001 .. DEMO-004")
+
+    def _create_demo_tenant(self, *, domain: str) -> Company:
+        if Domain.objects.filter(domain=domain).exists():
+            raise CommandError(
+                f"Domain '{domain}' is already registered. Pass --domain with a free hostname."
+            )
+        company = Company(
+            schema_name="demo",
+            name="Demo Company",
+            paid_until=date(2099, 1, 1),
+            on_trial=True,
+        )
+        company.save()
+        Domain.objects.create(domain=domain, tenant=company, is_primary=True)
+        return company

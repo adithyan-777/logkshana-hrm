@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from django.core.exceptions import ValidationError
-from django_tenants.utils import get_public_schema_name, schema_context
 
 from attendance.models import AttendanceTransaction
 from attendance.services import attendance_transaction_create
@@ -39,17 +38,14 @@ def company_primary_branch_get_or_create(*, company: Company) -> tuple[Branch, b
 def companies_ensure_primary_branches(*, companies=None) -> list[dict]:
     """Create a 'primary' branch for each company and assign it to employees without one."""
     if companies is None:
-        companies = Company.objects.exclude(schema_name=get_public_schema_name())
+        companies = Company.objects.all()
 
     results = []
     for company in companies:
         branch, created = company_primary_branch_get_or_create(company=company)
-        employees_updated = 0
-        if company.schema_name != get_public_schema_name():
-            with schema_context(company.schema_name):
-                employees_updated = Employee.objects.filter(branch__isnull=True).update(
-                    branch=branch
-                )
+        employees_updated = Employee.objects.filter(branch__isnull=True).update(
+            branch=branch
+        )
 
         results.append(
             {
@@ -72,28 +68,27 @@ def attendance_log_create(
     if not device.is_active:
         raise ValidationError({"serial_number": "Device is inactive."})
 
-    with schema_context(device.company.schema_name):
-        employee = employee_get_by_emp_code(emp_code=employee_id)
-        if employee is None:
-            if Employee.objects.filter(emp_code=employee_id, is_active=False).exists():
-                raise ValidationError({"employee_id": "Employee is inactive."})
-            raise ValidationError({"employee_id": "Unknown employee id."})
+    employee = employee_get_by_emp_code(emp_code=employee_id)
+    if employee is None:
+        if Employee.objects.filter(emp_code=employee_id, is_active=False).exists():
+            raise ValidationError({"employee_id": "Employee is inactive."})
+        raise ValidationError({"employee_id": "Unknown employee id."})
 
-        external_id = f"device:{serial_number}:{employee_id}:{timestamp.isoformat()}"
-        existing = AttendanceTransaction.objects.filter(external_id=external_id).first()
-        if existing is not None:
-            return existing
+    external_id = f"device:{serial_number}:{employee_id}:{timestamp.isoformat()}"
+    existing = AttendanceTransaction.objects.filter(external_id=external_id).first()
+    if existing is not None:
+        return existing
 
-        return attendance_transaction_create(
-            employee=employee,
-            external_id=external_id,
-            timestamp=timestamp,
-            direction=AttendanceTransaction.Direction.UNKNOWN,
-            source=AttendanceTransaction.Source.BIOMETRIC,
-            external_employee_id=employee_id,
-            raw_data={
-                "serial_number": serial_number,
-                "employee_id": employee_id,
-                "timestamp": timestamp.isoformat(),
-            },
-        )
+    return attendance_transaction_create(
+        employee=employee,
+        external_id=external_id,
+        timestamp=timestamp,
+        direction=AttendanceTransaction.Direction.UNKNOWN,
+        source=AttendanceTransaction.Source.BIOMETRIC,
+        external_employee_id=employee_id,
+        raw_data={
+            "serial_number": serial_number,
+            "employee_id": employee_id,
+            "timestamp": timestamp.isoformat(),
+        },
+    )

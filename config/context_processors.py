@@ -1,5 +1,4 @@
 from django.urls import NoReverseMatch
-from django_tenants.utils import get_public_schema_name
 
 from config.navigation import (
     active_section,
@@ -39,14 +38,8 @@ def navigation(request):
     except NoReverseMatch:
         context["command_palette"] = []
 
-    tenant = getattr(request, "tenant", None)
     user = getattr(request, "user", None)
-    if (
-        tenant is not None
-        and getattr(tenant, "schema_name", None) != get_public_schema_name()
-        and user is not None
-        and user.is_authenticated
-    ):
+    if user is not None and user.is_authenticated:
         from dashboard.selectors import dashboard_summary_get
 
         summary = dashboard_summary_get()

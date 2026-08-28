@@ -1,7 +1,7 @@
 from uuid import uuid4
 
+from django.test import Client
 from django.urls import reverse
-from django_tenants.test.client import TenantClient
 
 from common.tests.base import BaseTenantTestCase
 from common.tests.factories import department_factory, employee_factory
@@ -35,7 +35,7 @@ class EmployeeFormTests(BaseTenantTestCase):
 
 class EmployeeViewTests(BaseTenantTestCase):
     def test_list_requires_login(self):
-        client = TenantClient(self.tenant)
+        client = Client()
         response = client.get(reverse("employee_list"))
 
         self.assertEqual(response.status_code, 302)

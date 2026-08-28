@@ -35,32 +35,29 @@ ALLOWED_HOSTS = []
 
 # Application definition
 
-
-SHARED_APPS = [
+INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "django_tenants",
     "rest_framework",
-    "companies",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
     "django_celery_beat",
     "django_celery_results",
-]
-
-TENANT_APPS = ("employees", "schedule", "leave", "attendance", "reports", "dashboard")
-
-INSTALLED_APPS = list(SHARED_APPS) + [
-    app for app in TENANT_APPS if app not in SHARED_APPS
+    "companies",
+    "employees",
+    "schedule",
+    "leave",
+    "attendance",
+    "reports",
+    "dashboard",
 ]
 
 MIDDLEWARE = [
-    "django_tenants.middleware.main.TenantMainMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -111,7 +108,7 @@ LOGIN_REDIRECT_URL = "dashboard"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django_tenants.postgresql_backend",
+        "ENGINE": "django.db.backends.postgresql",
         "NAME": os.getenv("DB_NAME"),
         "USER": os.getenv("DB_USER"),
         "PASSWORD": os.getenv("DB_PASSWORD"),
@@ -119,12 +116,6 @@ DATABASES = {
         "PORT": os.getenv("DB_PORT"),
     }
 }
-
-DATABASE_ROUTERS = ("django_tenants.routers.TenantSyncRouter",)
-
-TENANT_MODEL = "companies.Company"  # app.Model
-
-TENANT_DOMAIN_MODEL = "companies.Domain"  # app.Model
 
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators

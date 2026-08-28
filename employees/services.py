@@ -1,25 +1,20 @@
-from django.db import transaction
-
-from employees.models import Employee
-
 import json
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
-from django.conf import settings
-from django.core.exceptions import ValidationError
-from companies.selectors import device_get_by_serial_number
-
-from django.contrib.auth import get_user_model
-from django.db import transaction, connection
-from django.utils.text import slugify
 
 from allauth.account.forms import default_token_generator
 from allauth.account.utils import user_pk_to_url_str
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.urls import reverse
+from django.utils.text import slugify
+
 from companies.models import Device
-
+from companies.selectors import device_get_by_serial_number
+from employees.models import Employee
 from employees.tasks import device_user_create_task
-
 
 User = get_user_model()
 
@@ -71,19 +66,16 @@ def employee_create(
         mobile=mobile,
         hire_date=hire_date,
         is_active=is_active,
-
     )
     employee.full_clean()
     employee.save()
 
     if sync_to_device and employee.emp_code:
         employee_id = employee.id
-        serials = list(
-            Device.objects.filter(
-                company__schema_name=connection.schema_name,
-                is_active=True,
-            ).values_list("serial_number", flat=True)
-        )
+        devices = Device.objects.filter(is_active=True)
+        if employee.branch_id:
+            devices = devices.filter(branch_id=employee.branch_id)
+        serials = list(devices.values_list("serial_number", flat=True))
         transaction.on_commit(
             lambda: [
                 device_user_create_task.delay(employee_id, serial)

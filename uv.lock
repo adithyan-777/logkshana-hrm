@@ -396,31 +396,6 @@ wheels = [
 ]
 
 [[package]]
-name = "django-tenant-users"
-version = "2.2.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "django" },
-    { name = "django-tenants" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a0/d8/be99ef976b75525f047aef7d4f93996599dd0dc08623b03b8cfe4cafb42c/django_tenant_users-2.2.1.tar.gz", hash = "sha256:1fac19d52625aaa250681a1d7a052eac1d4bbe876d79963c3e7d3dd67f7e712d", size = 16904, upload-time = "2025-10-08T02:01:06.794Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/14/58/8a6daa6c6ffac6bc580b059c09590778caa796e49f6b9e29de7945ededcc/django_tenant_users-2.2.1-py3-none-any.whl", hash = "sha256:09d36ba33a1ecbd8fab83e88f94397334a29245f984b2caf0f0f704044a5c28c", size = 22412, upload-time = "2025-10-08T02:01:05.602Z" },
-]
-
-[[package]]
-name = "django-tenants"
-version = "3.14.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "django" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a3/44/f78ed75c27e019be3ba915d88484bf57355cc7dd92745ff27d23431fe61c/django_tenants-3.14.0.tar.gz", hash = "sha256:55dc64bcd4293a03fab7108f4c4e1724c2f53ef09a1c7f9e5f75a136fccc3146", size = 168058, upload-time = "2026-08-05T15:19:37.753Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/7c/a2/c4d45511b0c1c3868fafa9e745b6089c0e0b30959b8191ac4a5643bac9ae/django_tenants-3.14.0-py3-none-any.whl", hash = "sha256:f2c17b05d03c8b8d79c8e190ca2da14fdc36d52553d216b1dbb09c4adbda2eb6", size = 127095, upload-time = "2026-08-05T15:19:36.478Z" },
-]
-
-[[package]]
 name = "django-timezone-field"
 version = "7.2.2"
 source = { registry = "https://pypi.org/simple" }
@@ -517,8 +492,6 @@ dependencies = [
     { name = "django-allauth", extra = ["socialaccount"] },
     { name = "django-celery-beat" },
     { name = "django-celery-results" },
-    { name = "django-tenant-users" },
-    { name = "django-tenants" },
     { name = "djangorestframework" },
     { name = "openpyxl" },
     { name = "psycopg", extra = ["binary"] },
@@ -526,7 +499,6 @@ dependencies = [
     { name = "redis" },
     { name = "reportlab" },
     { name = "ruff" },
-    { name = "tenant-schemas-celery" },
 ]
 
 [package.metadata]
@@ -536,8 +508,6 @@ requires-dist = [
     { name = "django-allauth", extras = ["socialaccount"], specifier = ">=65.19.0" },
     { name = "django-celery-beat", specifier = "==2.9.0" },
     { name = "django-celery-results", specifier = ">=2.6.0" },
-    { name = "django-tenant-users", specifier = ">=2.2.1" },
-    { name = "django-tenants", specifier = ">=3.14.0" },
     { name = "djangorestframework", specifier = ">=3.18.0" },
     { name = "openpyxl", specifier = ">=3.1.5" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
@@ -545,7 +515,6 @@ requires-dist = [
     { name = "redis", specifier = ">=8.1.0" },
     { name = "reportlab", specifier = ">=5.0.0" },
     { name = "ruff", specifier = ">=0.16.2" },
-    { name = "tenant-schemas-celery", specifier = ">=5.0.0" },
 ]
 
 [[package]]
@@ -776,18 +745,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/5f/d3/3f06a1006f2261d1342aefb3c71eed02f5d4ca5bdbecd86ebc12ad38306e/sqlparse-0.6.0.tar.gz", hash = "sha256:113c35c75365ab9cc9c7231d68c6428fb11c085fc8e9eb1ad659b7ddbf6cd2b9", size = 178477, upload-time = "2026-08-13T19:16:06.396Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d9/50/f00935da0ec7cbf325f8dc4f772ae46fbc7b672dd62876e73f0a94adda57/sqlparse-0.6.0-py3-none-any.whl", hash = "sha256:b861c0288ce2fa56209a9a6412d2e066ac664b3873b89c26c9d8415e8e32996f", size = 50070, upload-time = "2026-08-13T19:16:04.062Z" },
-]
-
-[[package]]
-name = "tenant-schemas-celery"
-version = "5.0.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "celery" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/fd/39/f6d48532a084de8f4588a3fbacf9efc4d7d255896fd5e3406e6cc74dad43/tenant_schemas_celery-5.0.0.tar.gz", hash = "sha256:139d9fd7795f207f60706caa0c4a041b583c88eeb427c0927d49804c23988f70", size = 19618, upload-time = "2026-08-01T13:14:49.327Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/5d/d4/41ffd3d00438ecfda200a9df0133210d2c671ee4b0e28c8ac6f93307bcdc/tenant_schemas_celery-5.0.0-py3-none-any.whl", hash = "sha256:1f4fc7f587293b7032d1d73eb1562d2c1d18285cb13efff2e925067b23ecb8c6", size = 22045, upload-time = "2026-08-01T13:14:48.212Z" },
 ]
 
 [[package]]

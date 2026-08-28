@@ -3,12 +3,11 @@ import os
 from celery import Celery
 
 from django.conf import settings
-from tenant_schemas_celery.app import CeleryApp as TenantAwareCeleryApp
 
 # set the default Django settings module for the 'celery' program.
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
-app = TenantAwareCeleryApp('config')
+app = Celery("config")
 
 # Using a string here means the worker don't have to serialize
 # the configuration object to child processes.

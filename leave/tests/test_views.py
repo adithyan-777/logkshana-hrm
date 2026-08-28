@@ -1,8 +1,8 @@
 from datetime import date
 from uuid import uuid4
 
+from django.test import Client
 from django.urls import reverse
-from django_tenants.test.client import TenantClient
 
 from common.tests.base import BaseTenantTestCase
 from common.tests.factories import employee_factory, leave_type_factory
@@ -58,7 +58,7 @@ class HolidayFormTests(BaseTenantTestCase):
 
 class LeaveTypeViewTests(BaseTenantTestCase):
     def test_list_requires_login(self):
-        client = TenantClient(self.tenant)
+        client = Client()
         response = client.get(reverse("leave_type_list"))
 
         self.assertEqual(response.status_code, 302)

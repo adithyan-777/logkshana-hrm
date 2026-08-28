@@ -1,9 +1,9 @@
 from datetime import date
 from uuid import uuid4
 
+from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
-from django_tenants.test.client import TenantClient
 
 from common.tests.base import BaseTenantTestCase
 from common.tests.factories import (
@@ -47,7 +47,7 @@ class AttendanceCorrectionFormTests(BaseTenantTestCase):
 
 class AttendanceTransactionViewTests(BaseTenantTestCase):
     def test_list_requires_login(self):
-        client = TenantClient(self.tenant)
+        client = Client()
         response = client.get(reverse("attendance_transaction_list"))
 
         self.assertEqual(response.status_code, 302)
@@ -127,7 +127,7 @@ class AttendanceTransactionViewTests(BaseTenantTestCase):
 
 class DailyAttendanceViewTests(BaseTenantTestCase):
     def test_list_requires_login(self):
-        client = TenantClient(self.tenant)
+        client = Client()
         response = client.get(reverse("daily_attendance_list"))
 
         self.assertEqual(response.status_code, 302)
@@ -193,7 +193,7 @@ class DailyAttendanceViewTests(BaseTenantTestCase):
 
 class AttendanceCorrectionViewTests(BaseTenantTestCase):
     def test_list_requires_login(self):
-        client = TenantClient(self.tenant)
+        client = Client()
         response = client.get(reverse("attendance_correction_list"))
 
         self.assertEqual(response.status_code, 302)
@@ -283,7 +283,7 @@ class AttendanceCorrectionViewTests(BaseTenantTestCase):
 
 class AttendanceRuleViewTests(BaseTenantTestCase):
     def test_list_requires_login(self):
-        client = TenantClient(self.tenant)
+        client = Client()
         response = client.get(reverse("attendance_rule_list"))
 
         self.assertEqual(response.status_code, 302)

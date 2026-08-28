@@ -1,5 +1,5 @@
+from django.test import Client
 from django.urls import reverse
-from django_tenants.test.client import TenantClient
 
 from attendance.models import AttendanceTransaction
 from common.tests.base import BaseTenantTestCase
@@ -14,7 +14,7 @@ class AttendanceLogCreateApiTests(BaseTenantTestCase):
     def test_creates_punch_without_login(self):
         device_factory(serial_number="ZK-001", company=self.tenant)
         employee_factory(first_name="Alice", emp_code="E001")
-        client = TenantClient(self.tenant)
+        client = Client()
 
         response = client.post(
             self.url,
@@ -34,7 +34,7 @@ class AttendanceLogCreateApiTests(BaseTenantTestCase):
         self.assertEqual(AttendanceTransaction.objects.count(), 1)
 
     def test_rejects_missing_fields(self):
-        client = TenantClient(self.tenant)
+        client = Client()
 
         response = client.post(
             self.url,
@@ -50,7 +50,7 @@ class AttendanceLogCreateApiTests(BaseTenantTestCase):
 
     def test_rejects_unknown_device(self):
         employee_factory(first_name="Alice", emp_code="E001")
-        client = TenantClient(self.tenant)
+        client = Client()
 
         response = client.post(
             self.url,
@@ -68,7 +68,7 @@ class AttendanceLogCreateApiTests(BaseTenantTestCase):
 
     def test_rejects_unknown_employee(self):
         device_factory(serial_number="ZK-001", company=self.tenant)
-        client = TenantClient(self.tenant)
+        client = Client()
 
         response = client.post(
             self.url,
@@ -87,7 +87,7 @@ class AttendanceLogCreateApiTests(BaseTenantTestCase):
     def test_replay_is_idempotent(self):
         device_factory(serial_number="ZK-001", company=self.tenant)
         employee_factory(first_name="Alice", emp_code="E001")
-        client = TenantClient(self.tenant)
+        client = Client()
         payload = {
             "serial_number": "ZK-001",
             "employee_id": "E001",

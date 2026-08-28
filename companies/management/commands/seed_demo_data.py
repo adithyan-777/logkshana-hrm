@@ -2,7 +2,8 @@ from datetime import date, datetime, time, timedelta
 
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
-from django_tenants.utils import get_tenant_model, schema_context
+
+from companies.models import Company
 
 from attendance.models import (
     AttendanceCorrection,
@@ -439,38 +440,36 @@ def seed_demo_data() -> dict[str, int]:
 
 
 class Command(BaseCommand):
-    help = "Seed demo employees, schedule, leave, and attendance data into a tenant."
+    help = "Seed demo employees, schedule, leave, and attendance data."
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--schema",
-            help="Tenant schema name. Defaults to the only tenant, if exactly one exists.",
+            "--company",
+            help="Company name. Defaults to the only company, if exactly one exists.",
         )
 
     def handle(self, *args, **options):
-        tenant_model = get_tenant_model()
-        schema_name = options.get("schema")
+        company_name = options.get("company")
 
-        if schema_name:
+        if company_name:
             try:
-                tenant = tenant_model.objects.get(schema_name=schema_name)
-            except tenant_model.DoesNotExist as exc:
-                raise CommandError(f"No tenant with schema '{schema_name}'.") from exc
+                company = Company.objects.get(name=company_name)
+            except Company.DoesNotExist as exc:
+                raise CommandError(f"No company named '{company_name}'.") from exc
         else:
-            tenants = list(tenant_model.objects.exclude(schema_name="public"))
-            if not tenants:
-                raise CommandError("No tenants found. Create a company/tenant first.")
-            if len(tenants) > 1:
-                names = ", ".join(t.schema_name for t in tenants)
+            companies = list(Company.objects.all())
+            if not companies:
+                raise CommandError("No companies found. Create a company first.")
+            if len(companies) > 1:
+                names = ", ".join(c.name for c in companies)
                 raise CommandError(
-                    f"Multiple tenants found ({names}). Pass --schema to choose one."
+                    f"Multiple companies found ({names}). Pass --company to choose one."
                 )
-            tenant = tenants[0]
+            company = companies[0]
 
-        self.stdout.write(f"Seeding demo data in tenant: {tenant.name} ({tenant.schema_name})")
+        self.stdout.write(f"Seeding demo data for {company.name}")
 
-        with schema_context(tenant.schema_name):
-            created = seed_demo_data()
+        created = seed_demo_data()
 
         self.stdout.write(self.style.SUCCESS("Demo data ready."))
         for label, count in created.items():

@@ -1,7 +1,7 @@
 from datetime import date
 
 from django.contrib.auth import get_user_model
-from django_tenants.test.client import TenantRequestFactory
+from django.test import RequestFactory
 
 from common.tests.base import BaseTenantTestCase
 from common.tests.factories import (
@@ -46,7 +46,7 @@ class EmployeeCreateTests(BaseTenantTestCase):
 
     def test_employee_invite_link_contains_reset_path(self):
         employee = employee_factory(first_name="Invite", last_name="User", emp_code="E020")
-        request = TenantRequestFactory(self.tenant).get("/employees/add/")
+        request = RequestFactory().get("/employees/add/")
 
         invite_link = employee_invite_link(employee=employee, request=request)
 

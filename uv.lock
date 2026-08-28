@@ -396,6 +396,19 @@ wheels = [
 ]
 
 [[package]]
+name = "django-tenant-users"
+version = "2.2.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "django-tenants" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a0/d8/be99ef976b75525f047aef7d4f93996599dd0dc08623b03b8cfe4cafb42c/django_tenant_users-2.2.1.tar.gz", hash = "sha256:1fac19d52625aaa250681a1d7a052eac1d4bbe876d79963c3e7d3dd67f7e712d", size = 16904, upload-time = "2025-10-08T02:01:06.794Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/14/58/8a6daa6c6ffac6bc580b059c09590778caa796e49f6b9e29de7945ededcc/django_tenant_users-2.2.1-py3-none-any.whl", hash = "sha256:09d36ba33a1ecbd8fab83e88f94397334a29245f984b2caf0f0f704044a5c28c", size = 22412, upload-time = "2025-10-08T02:01:05.602Z" },
+]
+
+[[package]]
 name = "django-tenants"
 version = "3.14.0"
 source = { registry = "https://pypi.org/simple" }
@@ -504,6 +517,7 @@ dependencies = [
     { name = "django-allauth", extra = ["socialaccount"] },
     { name = "django-celery-beat" },
     { name = "django-celery-results" },
+    { name = "django-tenant-users" },
     { name = "django-tenants" },
     { name = "djangorestframework" },
     { name = "openpyxl" },
@@ -522,6 +536,7 @@ requires-dist = [
     { name = "django-allauth", extras = ["socialaccount"], specifier = ">=65.19.0" },
     { name = "django-celery-beat", specifier = "==2.9.0" },
     { name = "django-celery-results", specifier = ">=2.6.0" },
+    { name = "django-tenant-users", specifier = ">=2.2.1" },
     { name = "django-tenants", specifier = ">=3.14.0" },
     { name = "djangorestframework", specifier = ">=3.18.0" },
     { name = "openpyxl", specifier = ">=3.1.5" },

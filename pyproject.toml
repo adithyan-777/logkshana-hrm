@@ -10,6 +10,7 @@ dependencies = [
     "django-allauth[socialaccount]>=65.19.0",
     "django-celery-beat==2.9.0",
     "django-celery-results>=2.6.0",
+    "django-tenant-users>=2.2.1",
     "django-tenants>=3.14.0",
     "djangorestframework>=3.18.0",
     "openpyxl>=3.1.5",

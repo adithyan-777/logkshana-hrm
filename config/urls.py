@@ -20,6 +20,12 @@ from django.urls import path, include
 
 from config import views
 
+from django.urls import path
+
+def trigger_error(request):
+    division_by_zero = 1 / 0
+
+
 urlpatterns = [
     path("", include("dashboard.urls")),
     path("admin/", admin.site.urls),
@@ -31,4 +37,5 @@ urlpatterns = [
     path("attendance/", include("attendance.urls")),
     path("reports/", include("reports.urls")),
     path("api/", include("companies.urls")),
+    path('sentry-debug/', trigger_error),
 ]

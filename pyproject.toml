@@ -19,5 +19,6 @@ dependencies = [
     "redis>=8.1.0",
     "reportlab>=5.0.0",
     "ruff>=0.16.2",
+    "sentry-sdk>=2.68.1",
     "tenant-schemas-celery>=5.0.0",
 ]

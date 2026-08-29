@@ -21,4 +21,5 @@ dependencies = [
     "ruff>=0.16.2",
     "sentry-sdk>=2.68.1",
     "tenant-schemas-celery>=5.0.0",
+    "whitenoise>=6.12.0",
 ]

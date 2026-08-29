@@ -103,6 +103,7 @@ uv run manage.py runserver
 | `uv run manage.py migrate --tenant` | Migrate only tenant schemas |
 | `uv run manage.py create_tenant` | Interactively create a new company tenant |
 | `uv run manage.py list_tenants` | List all registered tenants |
+| `uv run manage.py collectstatic` | Collect CSS/JS into `staticfiles/` for production |
 
 ## How multi-tenancy works
 

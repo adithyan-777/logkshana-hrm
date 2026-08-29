@@ -104,6 +104,7 @@ uv run manage.py runserver
 | `uv run manage.py create_tenant` | Interactively create a new company tenant |
 | `uv run manage.py list_tenants` | List all registered tenants |
 | `uv run manage.py collectstatic` | Collect CSS/JS into `staticfiles/` for production |
+| `uv run manage.py seed_demo_data` | Seed demo HR data into a company tenant (never public) |
 
 ## How multi-tenancy works
 

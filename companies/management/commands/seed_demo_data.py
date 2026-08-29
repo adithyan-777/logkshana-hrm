@@ -1,8 +1,15 @@
 from datetime import date, datetime, time, timedelta
 
+from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
+from django.db import connection
 from django.utils import timezone
-from django_tenants.utils import get_tenant_model, schema_context
+from django_tenants.utils import (
+    get_public_schema_name,
+    get_tenant_model,
+    schema_context,
+    schema_exists,
+)
 
 from companies.models import Company, Domain
 from companies.services import company_primary_branch_get_or_create
@@ -455,50 +462,57 @@ def seed_demo_data(*, branch=None) -> dict[str, int]:
 
 
 class Command(BaseCommand):
-    help = "Seed demo employees, schedule, leave, and attendance data into a tenant."
+    help = (
+        "Seed demo employees, schedule, leave, and attendance data into a "
+        "company tenant schema (never public)."
+    )
 
     def add_arguments(self, parser):
         parser.add_argument(
             "--schema",
-            help="Tenant schema name. Defaults to the only tenant, if exactly one exists.",
+            help=(
+                "Tenant schema name. Defaults to the only non-public tenant, "
+                "or creates schema 'demo' if none exist."
+            ),
         )
         parser.add_argument(
             "--domain",
             default="localhost",
-            help="Primary domain used when creating a demo tenant (default: localhost).",
+            help=(
+                "Hostname to attach to the seeded tenant. If it currently "
+                "belongs to the public tenant, it is moved. Default: localhost."
+            ),
         )
 
     def handle(self, *args, **options):
-        tenant_model = get_tenant_model()
-        schema_name = options.get("schema")
-        created_tenant = False
+        public_schema = get_public_schema_name()
+        domain = options["domain"]
+        verbosity = options.get("verbosity", 1)
 
-        if schema_name:
-            try:
-                tenant = tenant_model.objects.get(schema_name=schema_name)
-            except tenant_model.DoesNotExist as exc:
-                raise CommandError(f"No tenant with schema '{schema_name}'.") from exc
-        else:
-            tenants = list(tenant_model.objects.exclude(schema_name="public"))
-            if not tenants:
-                tenant = self._create_demo_tenant(domain=options["domain"])
-                created_tenant = True
-            elif len(tenants) > 1:
-                names = ", ".join(t.schema_name for t in tenants)
-                raise CommandError(
-                    f"Multiple tenants found ({names}). Pass --schema to choose one."
-                )
-            else:
-                tenant = tenants[0]
+        with schema_context(public_schema):
+            tenant, created_tenant = self._resolve_tenant(
+                schema_name=options.get("schema"),
+            )
 
-        self.stdout.write(f"Seeding demo data in tenant: {tenant.name} ({tenant.schema_name})")
+        self.stdout.write(
+            f"Seeding demo data in tenant: {tenant.name} ({tenant.schema_name})"
+        )
         if created_tenant:
-            self.stdout.write(f"Created demo tenant with domain {options['domain']}")
+            self.stdout.write(f"Created tenant '{tenant.schema_name}'")
 
-        branch, _ = company_primary_branch_get_or_create(company=tenant)
+        self._ensure_tenant_schema(tenant=tenant, verbosity=verbosity)
+
+        with schema_context(public_schema):
+            for hostname in self._hostnames_for(domain=domain):
+                message = self._ensure_domain(tenant=tenant, domain=hostname)
+                if message:
+                    self.stdout.write(message)
+            branch, _ = company_primary_branch_get_or_create(company=tenant)
 
         with schema_context(tenant.schema_name):
             created = seed_demo_data(branch=branch)
+
+        connection.set_tenant(tenant)
 
         self.stdout.write(self.style.SUCCESS("Demo data ready."))
         for label, count in created.items():
@@ -506,14 +520,37 @@ class Command(BaseCommand):
                 self.stdout.write(f"  created {count} {label.replace('_', ' ')}")
 
         self.stdout.write("")
+        self.stdout.write(f"Open the app on {domain} (must resolve to this tenant).")
         self.stdout.write("Sample logins use employee usernames like ahmed.al-rashid")
         self.stdout.write("Demo employee codes: DEMO-001 .. DEMO-004")
 
-    def _create_demo_tenant(self, *, domain: str) -> Company:
-        if Domain.objects.filter(domain=domain).exists():
+    def _resolve_tenant(self, *, schema_name: str | None) -> tuple[Company, bool]:
+        tenant_model = get_tenant_model()
+        public_schema = get_public_schema_name()
+
+        if schema_name:
+            if schema_name == public_schema:
+                raise CommandError(
+                    "Cannot seed demo data into the public schema. "
+                    "Public has no employees tables. Pass a company tenant "
+                    "with --schema (for example tenant1)."
+                )
+            try:
+                return tenant_model.objects.get(schema_name=schema_name), False
+            except tenant_model.DoesNotExist as exc:
+                raise CommandError(f"No tenant with schema '{schema_name}'.") from exc
+
+        tenants = list(tenant_model.objects.exclude(schema_name=public_schema))
+        if not tenants:
+            return self._create_demo_tenant(), True
+        if len(tenants) > 1:
+            names = ", ".join(t.schema_name for t in tenants)
             raise CommandError(
-                f"Domain '{domain}' is already registered. Pass --domain with a free hostname."
+                f"Multiple tenants found ({names}). Pass --schema to choose one."
             )
+        return tenants[0], False
+
+    def _create_demo_tenant(self) -> Company:
         company = Company(
             schema_name="demo",
             name="Demo Company",
@@ -521,5 +558,52 @@ class Command(BaseCommand):
             on_trial=True,
         )
         company.save()
-        Domain.objects.create(domain=domain, tenant=company, is_primary=True)
         return company
+
+    def _ensure_tenant_schema(self, *, tenant: Company, verbosity: int) -> None:
+        if tenant.schema_name == get_public_schema_name():
+            raise CommandError("Refusing to migrate or seed the public schema.")
+
+        if not schema_exists(tenant.schema_name):
+            self.stdout.write(f"Creating missing schema '{tenant.schema_name}'")
+            tenant.create_schema(check_if_exists=True, verbosity=verbosity)
+            return
+
+        call_command(
+            "migrate_schemas",
+            schema_name=tenant.schema_name,
+            interactive=False,
+            verbosity=verbosity,
+        )
+
+    def _hostnames_for(self, *, domain: str) -> list[str]:
+        if domain == "localhost":
+            return ["localhost", "127.0.0.1"]
+        return [domain]
+
+    def _ensure_domain(self, *, tenant: Company, domain: str) -> str | None:
+        existing = Domain.objects.filter(domain=domain).select_related("tenant").first()
+        has_primary = Domain.objects.filter(tenant=tenant, is_primary=True).exists()
+
+        if existing is None:
+            Domain.objects.create(
+                domain=domain,
+                tenant=tenant,
+                is_primary=not has_primary,
+            )
+            return f"Attached domain {domain} to {tenant.schema_name}"
+
+        if existing.tenant_id == tenant.pk:
+            return None
+
+        if existing.tenant.schema_name == get_public_schema_name():
+            existing.tenant = tenant
+            if not has_primary:
+                existing.is_primary = True
+            existing.save(update_fields=["tenant", "is_primary"])
+            return f"Moved domain {domain} from public to {tenant.schema_name}"
+
+        raise CommandError(
+            f"Domain '{domain}' already belongs to tenant "
+            f"'{existing.tenant.schema_name}'."
+        )

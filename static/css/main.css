@@ -11,6 +11,10 @@
 
   Naming: BEM-ish — .block / .block__element / .block--modifier
   Prefer tokens over hard-coded colors.
+
+  Loaded individually from templates/partials/stylesheets.html. Do not use this
+  file as the only production stylesheet: CSS @import is often not applied
+  when served through WhiteNoise, so the UI looks unstyled.
 */
 @import url('tokens.css');
 @import url('base.css');

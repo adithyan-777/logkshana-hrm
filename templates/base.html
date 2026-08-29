@@ -39,12 +39,10 @@
   <link href="https://cdn.boxicons.com/3.0.8/fonts/basic/boxicons.min.css" rel="stylesheet">
   <link href="https://cdn.boxicons.com/3.0.8/fonts/filled/boxicons-filled.min.css" rel="stylesheet">
   <link href="https://cdn.boxicons.com/3.0.8/fonts/brands/boxicons-brands.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/main.css' %}">
-  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js"
-          integrity="sha384-H5SrcfygHmAuTDZphMHqBJLc3FhssKjG7w/CeCpFReSfwBWDTKpkzPP8c+cLsK+V"
-          crossorigin="anonymous" defer></script>
+  {% include "partials/stylesheets.html" %}
+  <script src="{% static 'js/vendor/htmx.min.js' %}" defer></script>
   <script src="{% static 'js/alpine-app.js' %}" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js" defer></script>
+  <script src="{% static 'js/vendor/alpine.min.js' %}" defer></script>
   {% block extra_head %}{% endblock %}
 </head>
 <body
@@ -110,7 +108,7 @@
   {% include "partials/command_palette.html#command_palette" %}
 
   <script src="{% static 'js/theme.js' %}"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+  <script src="{% static 'js/vendor/chart.umd.min.js' %}"></script>
   <script src="{% static 'js/dashboard-charts.js' %}"></script>
 </body>
 </html>

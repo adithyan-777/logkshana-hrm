@@ -36,7 +36,7 @@ class CompanyModelTests(TestCase):
             self.assertEqual(domain.tenant, company)
             self.assertEqual(company.get_primary_domain().domain, "testco.test.com")
 
-            company.delete(force_drop=True)
+            company.delete()
 
     def test_auto_create_schema_creates_postgres_schema(self):
         with schema_context(get_public_schema_name()):
@@ -64,7 +64,7 @@ class CompanyModelTests(TestCase):
             self.assertIsNotNone(cursor.fetchone())
 
         with schema_context(get_public_schema_name()):
-            company.delete(force_drop=True)
+            company.delete()
 
 
 class CompanyQueryTests(TestCase):
@@ -103,4 +103,4 @@ class CompanyQueryTests(TestCase):
             for company in get_tenant_model().objects.filter(
                 schema_name__in=["alpha", "beta"]
             ):
-                company.delete(force_drop=True)
+                company.delete()

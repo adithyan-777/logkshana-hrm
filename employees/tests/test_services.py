@@ -36,6 +36,8 @@ class EmployeeCreateTests(BaseTenantTestCase):
         self.assertEqual(employee.position, position)
         self.assertIsNotNone(employee.user)
         self.assertFalse(employee.user.has_usable_password())
+        self.assertEqual(employee.user.username, "janedoe")
+        self.assertEqual(employee.user.email, "jane@example.com")
 
     def test_generates_unique_username_for_same_name(self):
         first = employee_create(first_name="John", last_name="Smith", emp_code="E010")
@@ -43,6 +45,25 @@ class EmployeeCreateTests(BaseTenantTestCase):
 
         self.assertNotEqual(first.user.username, second.user.username)
         self.assertTrue(first.user.username.startswith("johnsmith"))
+
+    def test_same_name_with_emails_still_unique_usernames(self):
+        first = employee_create(
+            first_name="John",
+            last_name="Smith",
+            emp_code="E012",
+            email="js1@example.com",
+        )
+        second = employee_create(
+            first_name="John",
+            last_name="Smith",
+            emp_code="E013",
+            email="js2@example.com",
+        )
+
+        self.assertNotEqual(first.user.username, second.user.username)
+        self.assertTrue(first.user.username.startswith("johnsmith"))
+        self.assertEqual(first.user.email, "js1@example.com")
+        self.assertEqual(second.user.email, "js2@example.com")
 
     def test_employee_invite_link_contains_reset_path(self):
         employee = employee_factory(first_name="Invite", last_name="User", emp_code="E020")

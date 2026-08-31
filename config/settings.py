@@ -45,16 +45,30 @@ SHARED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "tenant_users.permissions",
+    "tenant_users.tenants",
     "rest_framework",
     "companies",
+    "users",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
     "django_celery_beat",
     "django_celery_results",
+    "waffle",
 ]
 
-TENANT_APPS = ("employees", "schedule", "leave", "attendance", "reports", "dashboard")
+TENANT_APPS = [
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "tenant_users.permissions",
+    "employees",
+    "schedule",
+    "leave",
+    "attendance",
+    "reports",
+    "dashboard",
+]
 
 INSTALLED_APPS = list(SHARED_APPS) + [
     app for app in TENANT_APPS if app not in SHARED_APPS
@@ -71,6 +85,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    "tenant_users.tenants.middleware.TenantAccessMiddleware",
+    "waffle.middleware.WaffleMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -87,23 +103,34 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "config.context_processors.navigation",
             ],
+            'extensions': [
+                "waffle.jinja.WaffleExtension",
+                ],
+            },
         },
-    },
-]
+    ]
 
 AUTHENTICATION_BACKENDS = [
-    # Needed to login by username in Django admin, regardless of `allauth`
-    "django.contrib.auth.backends.ModelBackend",
-    # `allauth` specific authentication methods, such as login by email
+    "tenant_users.permissions.backend.UserBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
+
+TENANT_USERS_DOMAIN = os.getenv("TENANT_USERS_DOMAIN")
+
+# Tenant users settings
+AUTH_USER_MODEL = "users.TenantUser"
+TENANT_USERS_PERMS_QUERYSET = (
+    "tenant_users.permissions.utils.get_optimized_tenant_perms_queryset"
+)
+TENANT_USERS_ACCESS_ERROR_MESSAGE = "Access denied. Please contact your administrator."
 
 WSGI_APPLICATION = "config.wsgi.application"
 
 ACCOUNT_EMAIL_VERIFICATION = "optional"
 
-ACCOUNT_LOGIN_METHODS = {"username"}
-ACCOUNT_SIGNUP_FIELDS = ["username*", "password1*", "password2*"]
+ACCOUNT_LOGIN_METHODS = {"email", "username"}
+ACCOUNT_USER_MODEL_USERNAME_FIELD = "username"
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
 
 LOGIN_REDIRECT_URL = "dashboard"
 
@@ -207,21 +234,21 @@ REST_FRAMEWORK = {
 }
 
 # Sentry settings
-sentry_sdk.init(
-    dsn="https://8821592c9a560dba26b15f4c5eae26c9@o4511992195317760.ingest.de.sentry.io/4511992206131280",
-    # Add data like request headers and IP for users,
-    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
-    send_default_pii=True,
-    # Enable sending logs to Sentry
-    enable_logs=True,
-    # Set traces_sample_rate to 1.0 to capture 100%
-    # of transactions for tracing.
-    traces_sample_rate=1.0,
-    # Set profile_session_sample_rate to 1.0 to profile 100%
-    # of profile sessions.
-    profile_session_sample_rate=1.0,
-    # Set profile_lifecycle to "trace" to automatically
-    # run the profiler on when there is an active transaction
-    profile_lifecycle="trace",
-)
+# sentry_sdk.init(
+#     dsn="https://8821592c9a560dba26b15f4c5eae26c9@o4511992195317760.ingest.de.sentry.io/4511992206131280",
+#     # Add data like request headers and IP for users,
+#     # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+#     send_default_pii=True,
+#     # Enable sending logs to Sentry
+#     enable_logs=True,
+#     # Set traces_sample_rate to 1.0 to capture 100%
+#     # of transactions for tracing.
+#     traces_sample_rate=1.0,
+#     # Set profile_session_sample_rate to 1.0 to profile 100%
+#     # of profile sessions.
+#     profile_session_sample_rate=1.0,
+#     # Set profile_lifecycle to "trace" to automatically
+#     # run the profiler on when there is an active transaction
+#     profile_lifecycle="trace",
+# )
 

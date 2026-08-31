@@ -55,8 +55,9 @@ def employee_create(
     to the employee. Never store it.
     """
     username = _generate_username(first_name=first_name, last_name=last_name)
+    user_email = email or f"{username}@users.invalid"
 
-    user = User(username=username, email=email)
+    user = User(username=username, email=user_email)
     user.set_unusable_password()
     user.save()
 

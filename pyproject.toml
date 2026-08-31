@@ -12,6 +12,7 @@ dependencies = [
     "django-celery-results>=2.6.0",
     "django-tenant-users>=2.2.1",
     "django-tenants>=3.14.0",
+    "django-waffle>=5.0.0",
     "djangorestframework>=3.18.0",
     "gunicorn>=26.2.0",
     "openpyxl>=3.1.5",

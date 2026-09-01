@@ -103,9 +103,6 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "config.context_processors.navigation",
             ],
-            'extensions': [
-                "waffle.jinja.WaffleExtension",
-                ],
             },
         },
     ]
@@ -234,21 +231,21 @@ REST_FRAMEWORK = {
 }
 
 # Sentry settings
-# sentry_sdk.init(
-#     dsn="https://8821592c9a560dba26b15f4c5eae26c9@o4511992195317760.ingest.de.sentry.io/4511992206131280",
-#     # Add data like request headers and IP for users,
-#     # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
-#     send_default_pii=True,
-#     # Enable sending logs to Sentry
-#     enable_logs=True,
-#     # Set traces_sample_rate to 1.0 to capture 100%
-#     # of transactions for tracing.
-#     traces_sample_rate=1.0,
-#     # Set profile_session_sample_rate to 1.0 to profile 100%
-#     # of profile sessions.
-#     profile_session_sample_rate=1.0,
-#     # Set profile_lifecycle to "trace" to automatically
-#     # run the profiler on when there is an active transaction
-#     profile_lifecycle="trace",
-# )
+sentry_sdk.init(
+    dsn="https://8821592c9a560dba26b15f4c5eae26c9@o4511992195317760.ingest.de.sentry.io/4511992206131280",
+    # Add data like request headers and IP for users,
+    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+    send_default_pii=True,
+    # Enable sending logs to Sentry
+    enable_logs=True,
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for tracing.
+    traces_sample_rate=1.0,
+    # Set profile_session_sample_rate to 1.0 to profile 100%
+    # of profile sessions.
+    profile_session_sample_rate=1.0,
+    # Set profile_lifecycle to "trace" to automatically
+    # run the profiler on when there is an active transaction
+    profile_lifecycle="trace",
+)
 

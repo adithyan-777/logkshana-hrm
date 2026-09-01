@@ -1,0 +1,27 @@
+{% extends "standalone.html" %}
+
+{% block title %}Company workspace required{% endblock %}
+
+{% block content %}
+<div class="login-card">
+  <div class="login-card__brand">
+    <span class="login-card__logo"><i class="bx bx-buildings"></i></span>
+    <h1 class="login-card__title">Company workspace required</h1>
+    <p class="login-card__subtitle">
+      This is the public site. Attendance and employee data are available from a company domain.
+    </p>
+  </div>
+
+  <div class="alert alert--info">
+    Create a tenant with <code>uv run manage.py create_tenant</code>, then open the domain assigned to it.
+  </div>
+
+  {% if request.user.is_staff %}
+  <div class="form-actions" style="margin-top: var(--space-3);">
+    <a class="btn btn--primary" href="{% url 'admin:index' %}" style="width:100%; justify-content:center;">
+      Open administration
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

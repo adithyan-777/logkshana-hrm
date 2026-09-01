@@ -1,5 +1,9 @@
 from datetime import date
+from types import SimpleNamespace
+from unittest.mock import patch
 
+from django.http import HttpResponse
+from django.test import RequestFactory, SimpleTestCase
 from django.urls import reverse
 
 from attendance.models import AttendanceCorrection, DailyAttendance, OvertimeRecord
@@ -12,6 +16,28 @@ from common.tests.factories import (
 )
 from dashboard.selectors import dashboard_summary_get
 from leave.models import LeaveRequest
+
+
+class PublicDashboardViewTests(SimpleTestCase):
+    def setUp(self):
+        self.request = RequestFactory().get("/")
+        self.request.user = SimpleNamespace(is_authenticated=True)
+        self.request.tenant = SimpleNamespace(schema_name="public")
+
+    @patch("dashboard.views.dashboard_summary_get")
+    @patch("dashboard.views.render", return_value=HttpResponse())
+    def test_public_dashboard_does_not_query_tenant_tables(
+        self,
+        render_mock,
+        summary_get_mock,
+    ):
+        from dashboard.views import dashboard_view
+
+        response = dashboard_view(self.request)
+
+        self.assertEqual(response.status_code, 200)
+        render_mock.assert_called_once_with(self.request, "dashboard/public.html")
+        summary_get_mock.assert_not_called()
 
 
 class DashboardSummaryTests(BaseTenantTestCase):

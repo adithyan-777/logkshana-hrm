@@ -1,11 +1,12 @@
 from django.db import models
 
 from django_tenants.models import TenantMixin, DomainMixin
+from tenant_users.tenants.models import TenantBase
 
 from common.models import BaseModel
 
 
-class Company(TenantMixin):
+class Company(TenantBase):
     name = models.CharField(max_length=100)
     paid_until = models.DateField()
     on_trial = models.BooleanField()

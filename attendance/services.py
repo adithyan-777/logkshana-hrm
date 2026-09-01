@@ -131,5 +131,9 @@ def attendance_rule_create(
 
 
 def _validate_attendance_correction(correction: AttendanceCorrection) -> None:
-    if correction.check_in and correction.check_out and correction.check_out < correction.check_in:
+    if (
+        correction.check_in
+        and correction.check_out
+        and correction.check_out < correction.check_in
+    ):
         raise ValidationError("Check-out must be on or after check-in.")

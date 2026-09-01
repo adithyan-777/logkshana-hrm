@@ -28,9 +28,9 @@ def leave_policy_list(*, search: str = "") -> QuerySet[LeavePolicy]:
 
 
 def leave_request_list(*, search: str = "") -> QuerySet[LeaveRequest]:
-    queryset = LeaveRequest.objects.select_related(
-        "employee", "leave_type"
-    ).order_by("-start_date")
+    queryset = LeaveRequest.objects.select_related("employee", "leave_type").order_by(
+        "-start_date"
+    )
 
     if search:
         queryset = queryset.filter(

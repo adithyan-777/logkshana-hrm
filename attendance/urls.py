@@ -3,7 +3,9 @@ from django.urls import path
 from attendance import views
 
 urlpatterns = [
-    path("transactions/", views.transaction_list_view, name="attendance_transaction_list"),
+    path(
+        "transactions/", views.transaction_list_view, name="attendance_transaction_list"
+    ),
     path("transactions/add/", views.transaction_add, name="attendance_transaction_add"),
     path("daily/", views.daily_list_view, name="daily_attendance_list"),
     path("daily/add/", views.daily_add, name="daily_attendance_add"),

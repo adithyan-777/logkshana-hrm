@@ -66,7 +66,9 @@ class EmployeeCreateTests(BaseTenantTestCase):
         self.assertEqual(second.user.email, "js2@example.com")
 
     def test_employee_invite_link_contains_reset_path(self):
-        employee = employee_factory(first_name="Invite", last_name="User", emp_code="E020")
+        employee = employee_factory(
+            first_name="Invite", last_name="User", emp_code="E020"
+        )
         request = TenantRequestFactory(self.tenant).get("/employees/add/")
 
         invite_link = employee_invite_link(employee=employee, request=request)

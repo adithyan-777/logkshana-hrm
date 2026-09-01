@@ -143,7 +143,9 @@ def punch_log_report_data(transactions) -> ReportData:
             [
                 format_datetime(transaction.timestamp),
                 transaction.employee.full_name,
-                transaction.employee.department.name if transaction.employee.department else "",
+                transaction.employee.department.name
+                if transaction.employee.department
+                else "",
                 transaction.get_direction_display(),
                 transaction.get_source_display(),
                 transaction.external_id,

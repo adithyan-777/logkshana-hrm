@@ -94,8 +94,14 @@ def attendance_summary_view(request: HttpRequest) -> HttpResponse:
 
     if form.is_valid():
         date_from, date_to = form.cleaned_date_range()
-        department_id = form.cleaned_data["department"].pk if form.cleaned_data["department"] else None
-        employee_id = form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
+        department_id = (
+            form.cleaned_data["department"].pk
+            if form.cleaned_data["department"]
+            else None
+        )
+        employee_id = (
+            form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
+        )
 
     queryset = attendance_summary_list(
         date_from=date_from,
@@ -121,7 +127,9 @@ def attendance_summary_view(request: HttpRequest) -> HttpResponse:
     }
 
     if is_htmx_partial(request):
-        return render(request, "reports/attendance_summary.html#attendance_summary_table", context)
+        return render(
+            request, "reports/attendance_summary.html#attendance_summary_table", context
+        )
 
     return render(request, "reports/attendance_summary.html", context)
 
@@ -155,7 +163,9 @@ def individual_attendance_view(request: HttpRequest) -> HttpResponse:
 
     page_obj = paginate_queryset(request, queryset)
     context = {
-        **_filter_context(request, form, report_url_name="report_individual_attendance"),
+        **_filter_context(
+            request, form, report_url_name="report_individual_attendance"
+        ),
         **report_pagination_context(request, page_obj),
         "date_from": date_from,
         "date_to": date_to,
@@ -177,7 +187,11 @@ def department_attendance_view(request: HttpRequest) -> HttpResponse:
 
     if form.is_valid():
         date_from, date_to = form.cleaned_date_range()
-        department_id = form.cleaned_data["department"].pk if form.cleaned_data["department"] else None
+        department_id = (
+            form.cleaned_data["department"].pk
+            if form.cleaned_data["department"]
+            else None
+        )
 
     queryset = department_attendance_list(
         date_from=date_from,
@@ -195,7 +209,9 @@ def department_attendance_view(request: HttpRequest) -> HttpResponse:
 
     page_obj = paginate_queryset(request, queryset)
     context = {
-        **_filter_context(request, form, report_url_name="report_department_attendance"),
+        **_filter_context(
+            request, form, report_url_name="report_department_attendance"
+        ),
         **report_pagination_context(request, page_obj),
         "date_from": date_from,
         "date_to": date_to,
@@ -218,8 +234,14 @@ def exception_report_view(request: HttpRequest) -> HttpResponse:
 
     if form.is_valid():
         date_from, date_to = form.cleaned_date_range()
-        department_id = form.cleaned_data["department"].pk if form.cleaned_data["department"] else None
-        employee_id = form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
+        department_id = (
+            form.cleaned_data["department"].pk
+            if form.cleaned_data["department"]
+            else None
+        )
+        employee_id = (
+            form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
+        )
         exception_type = form.cleaned_data.get("exception_type") or ""
 
     queryset = exception_report_list(
@@ -262,8 +284,14 @@ def punch_log_view(request: HttpRequest) -> HttpResponse:
 
     if form.is_valid():
         date_from, date_to = form.cleaned_date_range()
-        department_id = form.cleaned_data["department"].pk if form.cleaned_data["department"] else None
-        employee_id = form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
+        department_id = (
+            form.cleaned_data["department"].pk
+            if form.cleaned_data["department"]
+            else None
+        )
+        employee_id = (
+            form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
+        )
 
     queryset = punch_log_list(
         date_from=date_from,
@@ -305,8 +333,14 @@ def overtime_report_view(request: HttpRequest) -> HttpResponse:
 
     if form.is_valid():
         date_from, date_to = form.cleaned_date_range()
-        department_id = form.cleaned_data["department"].pk if form.cleaned_data["department"] else None
-        employee_id = form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
+        department_id = (
+            form.cleaned_data["department"].pk
+            if form.cleaned_data["department"]
+            else None
+        )
+        employee_id = (
+            form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
+        )
         status = form.cleaned_data.get("status") or ""
 
     queryset = overtime_report_list(
@@ -354,8 +388,14 @@ def leave_report_view(request: HttpRequest) -> HttpResponse:
         report_type = form.cleaned_data.get("report_type") or "balance"
         date_from, date_to = form.cleaned_date_range()
         year = form.cleaned_year()
-        department_id = form.cleaned_data["department"].pk if form.cleaned_data["department"] else None
-        employee_id = form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
+        department_id = (
+            form.cleaned_data["department"].pk
+            if form.cleaned_data["department"]
+            else None
+        )
+        employee_id = (
+            form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
+        )
 
     if report_type == "balance":
         queryset = leave_balance_list(

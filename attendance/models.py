@@ -8,6 +8,7 @@ from common.models import BaseModel
 # ATTENDANCE TRANSACTION
 # ============================================================
 
+
 class AttendanceTransaction(BaseModel):
     """
     Normalized/raw attendance punch.
@@ -59,7 +60,6 @@ class AttendanceTransaction(BaseModel):
         default=Source.BIOMETRIC,
     )
 
-
     # Optional provider/user information.
     external_employee_id = models.CharField(
         max_length=255,
@@ -88,6 +88,7 @@ class AttendanceTransaction(BaseModel):
 # ============================================================
 # ATTENDANCE PERIOD
 # ============================================================
+
 
 class AttendancePeriod(BaseModel):
     """
@@ -139,8 +140,8 @@ class AttendancePeriod(BaseModel):
 # DAILY ATTENDANCE
 # ============================================================
 
-class DailyAttendance(BaseModel):
 
+class DailyAttendance(BaseModel):
     class Status(models.TextChoices):
         PRESENT = "present", "Present"
         ABSENT = "absent", "Absent"
@@ -307,8 +308,8 @@ class DailyAttendance(BaseModel):
 # ATTENDANCE CORRECTION
 # ============================================================
 
-class AttendanceCorrection(BaseModel):
 
+class AttendanceCorrection(BaseModel):
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
         APPROVED = "approved", "Approved"
@@ -367,8 +368,8 @@ class AttendanceCorrection(BaseModel):
 # OVERTIME
 # ============================================================
 
-class OvertimeRecord(BaseModel):
 
+class OvertimeRecord(BaseModel):
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
         APPROVED = "approved", "Approved"
@@ -439,8 +440,8 @@ class OvertimeRecord(BaseModel):
 # ATTENDANCE RULES
 # ============================================================
 
-class AttendanceRule(BaseModel):
 
+class AttendanceRule(BaseModel):
     name = models.CharField(
         max_length=100,
     )
@@ -506,8 +507,8 @@ class AttendanceRule(BaseModel):
 # CALCULATION RUN
 # ============================================================
 
-class AttendanceCalculationRun(BaseModel):
 
+class AttendanceCalculationRun(BaseModel):
     class Status(models.TextChoices):
         RUNNING = "running", "Running"
         COMPLETED = "completed", "Completed"

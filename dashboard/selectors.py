@@ -56,7 +56,9 @@ def dashboard_summary_get(*, target_date: date | None = None) -> DashboardSummar
         absent_count=Count("id", filter=Q(status=DailyAttendance.Status.ABSENT)),
         late_count=Count("id", filter=Q(status=DailyAttendance.Status.LATE)),
         leave_count=Count("id", filter=Q(status=DailyAttendance.Status.LEAVE)),
-        incomplete_count=Count("id", filter=Q(status=DailyAttendance.Status.INCOMPLETE)),
+        incomplete_count=Count(
+            "id", filter=Q(status=DailyAttendance.Status.INCOMPLETE)
+        ),
         missing_punch_count=Count(
             "id",
             filter=Q(has_check_in=False) | Q(has_check_out=False),
@@ -65,7 +67,9 @@ def dashboard_summary_get(*, target_date: date | None = None) -> DashboardSummar
 
     today_present_count = today_stats["present_count"] or 0
     if active_employee_count:
-        present_percentage = round((today_present_count / active_employee_count) * 100, 1)
+        present_percentage = round(
+            (today_present_count / active_employee_count) * 100, 1
+        )
     else:
         present_percentage = 0.0
 

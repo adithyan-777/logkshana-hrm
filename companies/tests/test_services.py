@@ -35,20 +35,26 @@ class CompanyPrimaryBranchTests(BaseTenantTestCase):
 
     def test_returns_existing_primary_branch(self):
         first, created_first = company_primary_branch_get_or_create(company=self.tenant)
-        second, created_second = company_primary_branch_get_or_create(company=self.tenant)
+        second, created_second = company_primary_branch_get_or_create(
+            company=self.tenant
+        )
 
         self.assertTrue(created_first)
         self.assertFalse(created_second)
         self.assertEqual(first.id, second.id)
         self.assertEqual(
-            Branch.objects.filter(company=self.tenant, name=PRIMARY_BRANCH_NAME).count(),
+            Branch.objects.filter(
+                company=self.tenant, name=PRIMARY_BRANCH_NAME
+            ).count(),
             1,
         )
 
 
 class CompaniesEnsurePrimaryBranchesTests(BaseTenantTestCase):
     def test_assigns_primary_branch_to_employees_without_one(self):
-        employee = employee_factory(first_name="No", last_name="Branch", emp_code="NB001")
+        employee = employee_factory(
+            first_name="No", last_name="Branch", emp_code="NB001"
+        )
         self.assertIsNone(employee.branch_id)
 
         results = companies_ensure_primary_branches(companies=[self.tenant])
@@ -61,7 +67,9 @@ class CompaniesEnsurePrimaryBranchesTests(BaseTenantTestCase):
 
     def test_does_not_overwrite_existing_employee_branch(self):
         other_branch = branch_create(name="other", company=self.tenant, code="OTHER")
-        employee = employee_factory(first_name="Has", last_name="Branch", emp_code="HB001")
+        employee = employee_factory(
+            first_name="Has", last_name="Branch", emp_code="HB001"
+        )
         employee.branch = other_branch
         employee.save(update_fields=["branch"])
 
@@ -82,7 +90,9 @@ class CompaniesEnsurePrimaryBranchesTests(BaseTenantTestCase):
         self.assertEqual(first[0]["employees_updated"], 1)
         self.assertEqual(second[0]["employees_updated"], 0)
         self.assertEqual(
-            Branch.objects.filter(company=self.tenant, name=PRIMARY_BRANCH_NAME).count(),
+            Branch.objects.filter(
+                company=self.tenant, name=PRIMARY_BRANCH_NAME
+            ).count(),
             1,
         )
 

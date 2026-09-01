@@ -2,7 +2,11 @@ from datetime import date
 
 from django.db import connection
 from django.test import TestCase
-from django_tenants.utils import get_public_schema_name, get_tenant_model, schema_context
+from django_tenants.utils import (
+    get_public_schema_name,
+    get_tenant_model,
+    schema_context,
+)
 
 from companies.models import Company, Domain
 

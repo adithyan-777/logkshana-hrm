@@ -1,5 +1,9 @@
 from django.core.management.base import BaseCommand, CommandError
-from django_tenants.utils import get_public_schema_name, get_tenant_model, schema_context
+from django_tenants.utils import (
+    get_public_schema_name,
+    get_tenant_model,
+    schema_context,
+)
 
 from companies.services import companies_ensure_primary_branches
 
@@ -25,7 +29,9 @@ class Command(BaseCommand):
                 try:
                     companies = [tenant_model.objects.get(schema_name=schema_name)]
                 except tenant_model.DoesNotExist as exc:
-                    raise CommandError(f"No tenant with schema '{schema_name}'.") from exc
+                    raise CommandError(
+                        f"No tenant with schema '{schema_name}'."
+                    ) from exc
             else:
                 companies = list(
                     tenant_model.objects.exclude(schema_name=get_public_schema_name())

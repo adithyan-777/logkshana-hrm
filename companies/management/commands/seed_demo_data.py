@@ -244,7 +244,10 @@ def seed_demo_data(*, branch=None) -> dict[str, int]:
         name="Demo Standard Week",
         code="DEMO-WEEK",
         shift_days=[
-            {"day_number": day_number, "timetable": morning if day_number <= 5 else day_off}
+            {
+                "day_number": day_number,
+                "timetable": morning if day_number <= 5 else day_off,
+            }
             for day_number in range(1, 8)
         ],
     )
@@ -290,7 +293,10 @@ def seed_demo_data(*, branch=None) -> dict[str, int]:
             name="Demo Evening Week",
             code="DEMO-EVE-WEEK",
             shift_days=[
-                {"day_number": day_number, "timetable": evening if day_number <= 5 else day_off}
+                {
+                    "day_number": day_number,
+                    "timetable": evening if day_number <= 5 else day_off,
+                }
                 for day_number in range(1, 8)
             ],
         )
@@ -416,7 +422,9 @@ def seed_demo_data(*, branch=None) -> dict[str, int]:
                 direction=AttendanceTransaction.Direction.OUT,
                 source=AttendanceTransaction.Source.BIOMETRIC,
             )
-    count_if_new(before, AttendanceTransaction.objects.count(), "attendance_transactions")
+    count_if_new(
+        before, AttendanceTransaction.objects.count(), "attendance_transactions"
+    )
 
     before = DailyAttendance.objects.count()
     for employee, record_date, status, late in (
@@ -425,7 +433,9 @@ def seed_demo_data(*, branch=None) -> dict[str, int]:
         (omar, yesterday, DailyAttendance.Status.PRESENT, 0),
         (fatima, yesterday, DailyAttendance.Status.EARLY_OUT, 0),
     ):
-        if not DailyAttendance.objects.filter(employee=employee, date=record_date).exists():
+        if not DailyAttendance.objects.filter(
+            employee=employee, date=record_date
+        ).exists():
             daily_attendance_create(
                 employee=employee,
                 date=record_date,
@@ -433,9 +443,13 @@ def seed_demo_data(*, branch=None) -> dict[str, int]:
                 shift=standard_week,
                 timetable=morning,
                 scheduled_minutes=480,
-                worked_minutes=465 if status == DailyAttendance.Status.EARLY_OUT else 480,
+                worked_minutes=465
+                if status == DailyAttendance.Status.EARLY_OUT
+                else 480,
                 late_minutes=late,
-                early_leave_minutes=15 if status == DailyAttendance.Status.EARLY_OUT else 0,
+                early_leave_minutes=15
+                if status == DailyAttendance.Status.EARLY_OUT
+                else 0,
                 has_check_in=True,
                 has_check_out=True,
             )

@@ -4,7 +4,9 @@ from django.http import HttpRequest
 DEFAULT_PAGE_SIZE = 25
 
 
-def paginate_queryset(request: HttpRequest, queryset, *, per_page: int = DEFAULT_PAGE_SIZE):
+def paginate_queryset(
+    request: HttpRequest, queryset, *, per_page: int = DEFAULT_PAGE_SIZE
+):
     paginator = Paginator(queryset, per_page)
     page_number = request.GET.get("page", 1)
     try:

@@ -86,7 +86,9 @@ def transaction_list_view(request: HttpRequest) -> HttpResponse:
     )
 
     if is_htmx_partial(request):
-        return render(request, "attendance/transaction_list.html#transaction_table", context)
+        return render(
+            request, "attendance/transaction_list.html#transaction_table", context
+        )
 
     return render(request, "attendance/transaction_list.html", context)
 
@@ -174,7 +176,9 @@ def correction_list_view(request: HttpRequest) -> HttpResponse:
     )
 
     if is_htmx_partial(request):
-        return render(request, "attendance/correction_list.html#correction_table", context)
+        return render(
+            request, "attendance/correction_list.html#correction_table", context
+        )
 
     return render(request, "attendance/correction_list.html", context)
 

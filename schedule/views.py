@@ -189,7 +189,9 @@ def assignment_list_view(request: HttpRequest) -> HttpResponse:
     )
 
     if is_htmx_partial(request):
-        return render(request, "schedule/assignment_list.html#assignment_table", context)
+        return render(
+            request, "schedule/assignment_list.html#assignment_table", context
+        )
 
     return render(request, "schedule/assignment_list.html", context)
 

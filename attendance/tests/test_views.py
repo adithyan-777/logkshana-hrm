@@ -119,7 +119,9 @@ class AttendanceTransactionViewTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers.get("HX-Trigger"), "attendanceTransactionCreated")
+        self.assertEqual(
+            response.headers.get("HX-Trigger"), "attendanceTransactionCreated"
+        )
         self.assertTrue(
             AttendanceTransaction.objects.filter(external_id=external_id).exists()
         )
@@ -245,7 +247,9 @@ class AttendanceCorrectionViewTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers.get("HX-Trigger"), "attendanceCorrectionCreated")
+        self.assertEqual(
+            response.headers.get("HX-Trigger"), "attendanceCorrectionCreated"
+        )
         self.assertTrue(
             AttendanceCorrection.objects.filter(
                 employee=employee,

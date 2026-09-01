@@ -72,7 +72,6 @@ def employee_create(
         mobile=mobile,
         hire_date=hire_date,
         is_active=is_active,
-
     )
     employee.full_clean()
     employee.save()
@@ -87,8 +86,7 @@ def employee_create(
         )
         transaction.on_commit(
             lambda: [
-                device_user_create_task.delay(employee_id, serial)
-                for serial in serials
+                device_user_create_task.delay(employee_id, serial) for serial in serials
             ]
         )
     return employee

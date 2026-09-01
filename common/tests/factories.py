@@ -97,7 +97,9 @@ def leave_policy_factory(*, name="Standard Annual", leave_type=None, **kwargs):
     from leave.services import leave_policy_create
 
     if leave_type is None:
-        leave_type = leave_type_factory(name="Policy Leave", code=f"PL-{name[:4].upper()}")
+        leave_type = leave_type_factory(
+            name="Policy Leave", code=f"PL-{name[:4].upper()}"
+        )
 
     defaults = {
         "entitlement_days": 30,

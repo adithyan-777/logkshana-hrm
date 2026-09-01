@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/6.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
+
 import sentry_sdk
 from pathlib import Path
 import os
@@ -31,7 +32,7 @@ SECRET_KEY = "django-insecure-uro!dm%+1*_ndwhmsv_k1g9^-(e)js1csd^3koe_hx_ih^i*@h
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -103,9 +104,9 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "config.context_processors.navigation",
             ],
-            },
         },
-    ]
+    },
+]
 
 AUTHENTICATION_BACKENDS = [
     "tenant_users.permissions.backend.UserBackend",
@@ -172,13 +173,13 @@ AUTH_PASSWORD_VALIDATORS = [
 
 ## Celery settings
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = 'django-db'  # uses django_celery_results
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
+CELERY_RESULT_BACKEND = "django-db"  # uses django_celery_results
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = os.getenv("TIMEZONE", "Asia/Qatar")  # match your Django TIME_ZONE
 
-CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
 
 # Internationalization
@@ -248,4 +249,3 @@ sentry_sdk.init(
     # run the profiler on when there is an active transaction
     profile_lifecycle="trace",
 )
-

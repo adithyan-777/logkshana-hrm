@@ -1,6 +1,6 @@
 from django.db import models
 
-from django_tenants.models import TenantMixin, DomainMixin
+from django_tenants.models import DomainMixin
 from tenant_users.tenants.models import TenantBase
 
 from common.models import BaseModel
@@ -18,6 +18,7 @@ class Company(TenantBase):
     def __str__(self):
         return self.name
 
+
 class Branch(BaseModel):
     name = models.CharField(max_length=100)
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
@@ -25,7 +26,7 @@ class Branch(BaseModel):
 
     class Meta:
         ordering = ["-id"]
-    
+
     def __str__(self):
         return f"{self.name} - {self.company.name}"
 
@@ -41,36 +42,44 @@ class DeviceBrand(BaseModel):
 
     class Meta:
         ordering = ["-id"]
-    
+
     def __str__(self):
         return self.name
 
+
 class DeviceType(BaseModel):
-    brand = models.ForeignKey(DeviceBrand, on_delete=models.CASCADE, related_name="device_types")
+    brand = models.ForeignKey(
+        DeviceBrand, on_delete=models.CASCADE, related_name="device_types"
+    )
     model_name = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
 
     class Meta:
         ordering = ["-id"]
-    
+
     def __str__(self):
         return f"{self.brand_name} - {self.model_name}"
-    
+
 
 class Device(BaseModel):
     serial_number = models.CharField(max_length=100, unique=True)
     name = models.CharField(max_length=100, blank=True, null=True)
-    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="devices")
+    company = models.ForeignKey(
+        Company, on_delete=models.CASCADE, related_name="devices"
+    )
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="devices")
-    device_type = models.ForeignKey(DeviceType, on_delete=models.CASCADE, related_name="devices", null=True, blank=True)
+    device_type = models.ForeignKey(
+        DeviceType,
+        on_delete=models.CASCADE,
+        related_name="devices",
+        null=True,
+        blank=True,
+    )
     is_active = models.BooleanField(default=True)
 
     class Meta:
         ordering = ["-id"]
-    
+
     def __str__(self):
         return f"{self.serial_number} - {self.company.name} - {self.branch.name}"
-    
-
-

@@ -18,6 +18,7 @@ class Department(BaseModel):
     def __str__(self):
         return self.name
 
+
 class Position(BaseModel):
     title = models.CharField(max_length=100)
     code = models.CharField(max_length=50, blank=True, null=True)
@@ -32,8 +33,11 @@ class Position(BaseModel):
     def __str__(self):
         return self.title
 
+
 class Permission(BaseModel):
-    codename = models.CharField(max_length=100, unique=True)  # "view_department_employees"
+    codename = models.CharField(
+        max_length=100, unique=True
+    )  # "view_department_employees"
     name = models.CharField(max_length=150)
     description = models.TextField(blank=True)
 
@@ -43,11 +47,14 @@ class Permission(BaseModel):
 
 class Role(BaseModel):
     name = models.CharField(max_length=50, unique=True)
-    is_system = models.BooleanField(default=False)  # protects built-in roles from deletion via admin
+    is_system = models.BooleanField(
+        default=False
+    )  # protects built-in roles from deletion via admin
     permissions = models.ManyToManyField(Permission, related_name="roles", blank=True)
 
     def __str__(self):
         return self.name
+
 
 class Area(BaseModel):
     name = models.CharField(max_length=100)
@@ -63,6 +70,7 @@ class Area(BaseModel):
 
     def __str__(self):
         return self.name
+
 
 class EmployeeType(models.TextChoices):
     FULL_TIME = "full_time"
@@ -86,10 +94,20 @@ class Employee(BaseModel):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100, blank=True)
 
-    employee_type = models.CharField(max_length=50, choices=EmployeeType.choices, default=EmployeeType.FULL_TIME)
-    branch = models.ForeignKey(Branch, on_delete=models.SET_NULL, null=True, blank=True, related_name="employees")
+    employee_type = models.CharField(
+        max_length=50, choices=EmployeeType.choices, default=EmployeeType.FULL_TIME
+    )
+    branch = models.ForeignKey(
+        Branch,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="employees",
+    )
 
-    role = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True, blank=True, related_name="employees")
+    role = models.ForeignKey(
+        Role, on_delete=models.SET_NULL, null=True, blank=True, related_name="employees"
+    )
 
     department = models.ForeignKey(
         Department,

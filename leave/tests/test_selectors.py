@@ -45,7 +45,9 @@ class LeavePolicyListTests(BaseTenantTestCase):
     def test_filters_by_leave_type_name(self):
         leave_type = leave_type_factory(name="Maternity", code="MAT")
         leave_policy_factory(name="Standard Maternity", leave_type=leave_type)
-        leave_policy_factory(name="Other Policy", leave_type=leave_type_factory(name="Other", code="OTH"))
+        leave_policy_factory(
+            name="Other Policy", leave_type=leave_type_factory(name="Other", code="OTH")
+        )
 
         results = list(leave_policy_list(search="maternity"))
 

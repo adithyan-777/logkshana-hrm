@@ -41,9 +41,7 @@ def daily_attendance_list(*, search: str = "") -> QuerySet[DailyAttendance]:
 
 
 def attendance_correction_list(*, search: str = "") -> QuerySet[AttendanceCorrection]:
-    queryset = AttendanceCorrection.objects.select_related("employee").order_by(
-        "-date"
-    )
+    queryset = AttendanceCorrection.objects.select_related("employee").order_by("-date")
 
     if search:
         queryset = queryset.filter(

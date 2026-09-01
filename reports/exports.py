@@ -43,7 +43,9 @@ def render_xlsx_response(*, data: ReportData, filename: str) -> HttpResponse:
 
     for column_cells in sheet.columns:
         max_length = max(len(str(cell.value or "")) for cell in column_cells)
-        sheet.column_dimensions[column_cells[0].column_letter].width = min(max_length + 2, 40)
+        sheet.column_dimensions[column_cells[0].column_letter].width = min(
+            max_length + 2, 40
+        )
 
     buffer = io.BytesIO()
     workbook.save(buffer)
@@ -85,7 +87,9 @@ def render_pdf_response(*, data: ReportData, filename: str) -> HttpResponse:
     return response
 
 
-def render_report_response(*, data: ReportData, filename: str, export_format: str) -> HttpResponse:
+def render_report_response(
+    *, data: ReportData, filename: str, export_format: str
+) -> HttpResponse:
     if export_format == "csv":
         return render_csv_response(data=data, filename=filename)
     if export_format == "xlsx":

@@ -5,15 +5,21 @@ from reports.utils import current_month_range
 
 
 class DateRangeFilterForm(forms.Form):
-    date_from = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
-    date_to = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
+    date_from = forms.DateField(
+        required=False, widget=forms.DateInput(attrs={"type": "date"})
+    )
+    date_to = forms.DateField(
+        required=False, widget=forms.DateInput(attrs={"type": "date"})
+    )
     department = forms.ModelChoiceField(
         queryset=Department.objects.order_by("name"),
         required=False,
         empty_label="All departments",
     )
     employee = forms.ModelChoiceField(
-        queryset=Employee.objects.filter(is_active=True).order_by("first_name", "last_name"),
+        queryset=Employee.objects.filter(is_active=True).order_by(
+            "first_name", "last_name"
+        ),
         required=False,
         empty_label="All employees",
     )
@@ -35,7 +41,9 @@ class DateRangeFilterForm(forms.Form):
 
 class IndividualReportFilterForm(DateRangeFilterForm):
     employee = forms.ModelChoiceField(
-        queryset=Employee.objects.filter(is_active=True).order_by("first_name", "last_name"),
+        queryset=Employee.objects.filter(is_active=True).order_by(
+            "first_name", "last_name"
+        ),
         required=False,
         empty_label="Select employee",
     )
@@ -64,15 +72,21 @@ class LeaveReportFilterForm(forms.Form):
         ],
         initial="balance",
     )
-    date_from = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
-    date_to = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
+    date_from = forms.DateField(
+        required=False, widget=forms.DateInput(attrs={"type": "date"})
+    )
+    date_to = forms.DateField(
+        required=False, widget=forms.DateInput(attrs={"type": "date"})
+    )
     department = forms.ModelChoiceField(
         queryset=Department.objects.order_by("name"),
         required=False,
         empty_label="All departments",
     )
     employee = forms.ModelChoiceField(
-        queryset=Employee.objects.filter(is_active=True).order_by("first_name", "last_name"),
+        queryset=Employee.objects.filter(is_active=True).order_by(
+            "first_name", "last_name"
+        ),
         required=False,
         empty_label="All employees",
     )

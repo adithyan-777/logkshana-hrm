@@ -35,7 +35,9 @@ class EmployeeListTests(BaseTenantTestCase):
         self.assertEqual(results[0].emp_code, "SEARCH-ME")
 
     def test_filters_by_email(self):
-        employee_factory(first_name="Email", emp_code="E110", email="unique@example.com")
+        employee_factory(
+            first_name="Email", emp_code="E110", email="unique@example.com"
+        )
         employee_factory(first_name="Other", emp_code="E111", email="other@example.com")
 
         results = list(employee_list(search="unique@example.com"))

@@ -14,9 +14,11 @@ def test_task(message="hello from celery"):
     print(f"[{time.strftime('%X')}] Task finished: {message}")
     return f"Done: {message}"
 
+
 @app.task
 def device_user_create_all_task(employee_id: int) -> None:
     from companies.models import Device
+
     employee = Employee.objects.get(pk=employee_id)
     devices = Device.objects.filter(
         company__schema_name=connection.schema_name,
@@ -27,6 +29,7 @@ def device_user_create_all_task(employee_id: int) -> None:
     for serial_number in devices.values_list("serial_number", flat=True):
         device_user_create_task.delay(employee_id, serial_number)
 
+
 @app.task(
     bind=True,
     autoretry_for=(URLError, TimeoutError, OSError),
@@ -35,5 +38,6 @@ def device_user_create_all_task(employee_id: int) -> None:
 )
 def device_user_create_task(self, employee_id: int, serial_number: str) -> None:
     from employees.services import device_user_create
+
     employee = Employee.objects.get(pk=employee_id)
     device_user_create(employee=employee, serial_number=serial_number)

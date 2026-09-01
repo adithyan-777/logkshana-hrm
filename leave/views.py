@@ -121,7 +121,9 @@ def leave_policy_list_view(request: HttpRequest) -> HttpResponse:
     )
 
     if is_htmx_partial(request):
-        return render(request, "leave/leave_policy_list.html#leave_policy_table", context)
+        return render(
+            request, "leave/leave_policy_list.html#leave_policy_table", context
+        )
 
     return render(request, "leave/leave_policy_list.html", context)
 
@@ -163,7 +165,9 @@ def leave_request_list_view(request: HttpRequest) -> HttpResponse:
     )
 
     if is_htmx_partial(request):
-        return render(request, "leave/leave_request_list.html#leave_request_table", context)
+        return render(
+            request, "leave/leave_request_list.html#leave_request_table", context
+        )
 
     return render(request, "leave/leave_request_list.html", context)
 

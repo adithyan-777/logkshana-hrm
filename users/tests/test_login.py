@@ -87,9 +87,7 @@ class TenantAccessTests(BaseTenantTestCase):
 
         try:
             client = TenantClient(other)
-            self.assertTrue(
-                client.login(email=self.user.email, password=TEST_PASSWORD)
-            )
+            self.assertTrue(client.login(email=self.user.email, password=TEST_PASSWORD))
             response = client.get(reverse("dashboard"))
             self.assertEqual(response.status_code, 404)
         finally:

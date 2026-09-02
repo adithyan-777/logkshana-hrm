@@ -1,9 +1,10 @@
 from datetime import date
 
 from django.contrib.auth import get_user_model
-from django_tenants.test.client import TenantRequestFactory
+from django.urls import reverse
+from django_tenants.test.client import TenantClient, TenantRequestFactory
 
-from common.tests.base import BaseTenantTestCase
+from common.tests.base import TEST_PASSWORD, BaseTenantTestCase
 from common.tests.factories import (
     department_factory,
     employee_factory,
@@ -75,6 +76,37 @@ class EmployeeCreateTests(BaseTenantTestCase):
 
         self.assertTrue(invite_link.startswith("http://"))
         self.assertIn("/accounts/password/reset/key/", invite_link)
+
+    def test_user_is_linked_to_current_tenant(self):
+        employee = employee_create(
+            first_name="Tenant",
+            last_name="Member",
+            emp_code="E040",
+            email="tenant.member@example.com",
+        )
+
+        self.assertIn(self.tenant, employee.user.tenants.all())
+
+    def test_created_user_can_login_to_tenant(self):
+        employee = employee_create(
+            first_name="Login",
+            last_name="Worker",
+            emp_code="E041",
+            email="login.worker@example.com",
+        )
+        user = employee.user
+        user.set_password(TEST_PASSWORD)
+        user.save(update_fields=["password"])
+
+        client = TenantClient(self.tenant)
+        response = client.post(
+            reverse("account_login"),
+            {"login": user.email, "password": TEST_PASSWORD},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("dashboard"))
+        self.assertTrue(client.login(email=user.email, password=TEST_PASSWORD))
 
 
 class EmployeeModelTests(BaseTenantTestCase):

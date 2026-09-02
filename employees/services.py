@@ -3,6 +3,7 @@ from django.db import transaction
 from employees.models import Employee
 
 import json
+import secrets
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from django.conf import settings
@@ -17,6 +18,9 @@ from allauth.account.forms import default_token_generator
 from allauth.account.utils import user_pk_to_url_str
 from django.urls import reverse
 from companies.models import Device
+from django_tenants.utils import get_public_schema_name, schema_context
+from tenant_users.tenants.utils import get_current_tenant
+from users.models import TenantUser
 
 from employees.tasks import device_user_create_task
 
@@ -54,13 +58,19 @@ def employee_create(
     once (e.g. in the response / a one-time confirmation screen) or email it
     to the employee. Never store it.
     """
+    tenant = get_current_tenant()
     username = _generate_username(first_name=first_name, last_name=last_name)
-    user_email = email or f"{username}@users.invalid"
+    user_email = email or f"{username}@{tenant.slug}.com"
+    with schema_context(get_public_schema_name()):
+        user = TenantUser.objects.create_user(
+            email=user_email,
+            username = username,
+            password=secrets.token_urlsafe(24),
+            is_active=True,
+        )
 
-    user = User(username=username, email=user_email)
-    user.set_unusable_password()
-    user.save()
-
+    tenant = get_current_tenant()
+    tenant.add_user(user, is_superuser=False, is_staff=False)
     employee = Employee(
         user=user,
         first_name=first_name,

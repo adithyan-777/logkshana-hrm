@@ -69,15 +69,15 @@ class TenantUserLoginTests(BaseTenantTestCase):
 class TenantAccessTests(BaseTenantTestCase):
     def test_member_of_other_tenant_gets_404(self):
         with schema_context(get_public_schema_name()):
-            existing = Company.objects.filter(schema_name=OTHER_SCHEMA).first()
-            if existing is not None:
-                existing.delete()
+            public = Company.objects.get(schema_name=get_public_schema_name())
             other = Company(
                 schema_name=OTHER_SCHEMA,
                 name="Other Co",
                 paid_until=date(2099, 1, 1),
                 on_trial=True,
+                owner=public.owner,
             )
+            other.auto_create_schema = True
             other.save()
             Domain.objects.create(
                 domain=OTHER_DOMAIN,
@@ -85,13 +85,7 @@ class TenantAccessTests(BaseTenantTestCase):
                 is_primary=True,
             )
 
-        try:
-            client = TenantClient(other)
-            self.assertTrue(client.login(email=self.user.email, password=TEST_PASSWORD))
-            response = client.get(reverse("dashboard"))
-            self.assertEqual(response.status_code, 404)
-        finally:
-            with schema_context(get_public_schema_name()):
-                leftover = Company.objects.filter(schema_name=OTHER_SCHEMA).first()
-                if leftover is not None:
-                    leftover.delete()
+        client = TenantClient(other)
+        self.assertTrue(client.login(email=self.user.email, password=TEST_PASSWORD))
+        response = client.get(reverse("dashboard"))
+        self.assertEqual(response.status_code, 404)

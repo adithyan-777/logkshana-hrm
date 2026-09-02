@@ -12,6 +12,15 @@ def _is_public_tenant(request: HttpRequest) -> bool:
     return getattr(tenant, "schema_name", None) == get_public_schema_name()
 
 
+def _greeting_name(user) -> str:
+    profile = getattr(user, "employee_profile", None)
+    if profile is not None:
+        full = f"{profile.first_name} {profile.last_name}".strip()
+        if full:
+            return full
+    return user.username or user.email
+
+
 @login_required
 @require_http_methods(["GET"])
 def dashboard_view(request: HttpRequest) -> HttpResponse:
@@ -25,8 +34,7 @@ def dashboard_view(request: HttpRequest) -> HttpResponse:
         {
             "summary": summary,
             "chart_data": summary.attendance_chart_data(),
-            "greeting_name": request.user.get_short_name()
-            or request.user.get_username(),
+            "greeting_name": _greeting_name(request.user),
         },
     )
 

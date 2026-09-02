@@ -13,16 +13,31 @@ TEST_PASSWORD = "password"
 
 
 def _ensure_public_tenant():
+    """Ensure the public tenant and a bootstrap owner user exist.
+
+    The owner is created via direct save (not UserProfileManager.create_user,
+    which itself requires the public tenant to already exist) to break the
+    chicken-and-egg dependency between the public tenant and its owner.
+    """
     public_schema = get_public_schema_name()
     public_tenant = Company.objects.filter(schema_name=public_schema).first()
     if public_tenant is not None:
         return public_tenant
+
+    owner, created = User.objects.get_or_create(
+        username="public_owner",
+        defaults={"email": "public.owner@example.com"},
+    )
+    if created:
+        owner.set_password(TEST_PASSWORD)
+        owner.save(update_fields=["password"])
 
     public_tenant = Company(
         schema_name=public_schema,
         name="Public",
         paid_until=date(2099, 1, 1),
         on_trial=True,
+        owner=owner,
     )
     public_tenant.auto_create_schema = False
     public_tenant.save()
@@ -42,6 +57,12 @@ class BaseTenantTestCase(FastTenantTestCase):
         tenant.name = "Test Company"
         tenant.paid_until = date(2099, 1, 1)
         tenant.on_trial = True
+        # TenantBase.owner is a required non-null FK. setup_tenant runs in the
+        # public schema (before the test tenant is saved), so bootstrap the
+        # public tenant + owner user first, then reuse that owner.
+        with schema_context(get_public_schema_name()):
+            public_tenant = _ensure_public_tenant()
+            tenant.owner = public_tenant.owner
 
     @classmethod
     def setUpClass(cls):

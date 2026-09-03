@@ -1075,6 +1075,13 @@
   border: 1px solid var(--border);
 }
 
+.seg__btn.is-disabled,
+.seg__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  pointer-events: none;
+}
+
 .profile-details {
   margin: 0;
   display: flex;

@@ -150,7 +150,7 @@
     });
 
     Alpine.store("theme", {
-      prefs: themeApi() ? themeApi().readPrefs() : { mode: "system", layout: "compact", scale: "md", sidebarVariant: "inset", sidebarMode: "default" },
+      prefs: themeApi() ? themeApi().readPrefs() : { mode: "light", layout: "compact", scale: "md", sidebarVariant: "inset", sidebarMode: "default" },
       set(key, value) {
         const api = themeApi();
         if (api) {

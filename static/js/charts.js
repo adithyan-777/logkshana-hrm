@@ -56,7 +56,7 @@
 
     const data = JSON.parse(el.textContent);
     const colors = chartColors();
-    const theme = document.documentElement.getAttribute("data-theme") || "dark";
+    const theme = document.documentElement.getAttribute("data-theme") || "light";
     lastTheme = theme;
     applyChartDefaults(colors);
 
@@ -199,7 +199,7 @@
   function refreshOnTheme() {
     // Wait a frame so light-dark() / data-theme has applied to computed styles
     requestAnimationFrame(() => {
-      const theme = document.documentElement.getAttribute("data-theme") || "dark";
+      const theme = document.documentElement.getAttribute("data-theme") || "light";
       if (theme !== lastTheme || document.getElementById("chart-data")) {
         initCharts();
       }

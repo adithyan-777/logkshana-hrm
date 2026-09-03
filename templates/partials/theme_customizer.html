@@ -33,15 +33,6 @@
     </div>
 
     <div class="theme-customizer__section">
-      <div class="theme-customizer__label">Color Mode</div>
-      <div class="seg" role="radiogroup" aria-label="Color mode">
-        <button type="button" class="seg__btn" role="radio" @click="$store.theme.set('mode', 'light')" :class="{ 'is-active': $store.theme.prefs.mode === 'light' }" :aria-checked="$store.theme.prefs.mode === 'light'">Light</button>
-        <button type="button" class="seg__btn" role="radio" @click="$store.theme.set('mode', 'dark')" :class="{ 'is-active': $store.theme.prefs.mode === 'dark' }" :aria-checked="$store.theme.prefs.mode === 'dark'">Dark</button>
-        <button type="button" class="seg__btn" role="radio" @click="$store.theme.set('mode', 'system')" :class="{ 'is-active': $store.theme.prefs.mode === 'system' }" :aria-checked="$store.theme.prefs.mode === 'system'">System</button>
-      </div>
-    </div>
-
-    <div class="theme-customizer__section">
       <div class="theme-customizer__label">Content Layout</div>
       <div class="seg" role="radiogroup" aria-label="Content layout">
         <button type="button" class="seg__btn" role="radio" @click="$store.theme.set('layout', 'compact')" :class="{ 'is-active': $store.theme.prefs.layout === 'compact' }" :aria-checked="$store.theme.prefs.layout === 'compact'">Compact</button>

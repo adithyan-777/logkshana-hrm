@@ -10,7 +10,7 @@
       const modeKey = "logkshana-theme-mode";
       const prefsKey = "logkshana-ui-prefs";
       const defaults = {
-        mode: "system",
+        mode: "light",
         layout: "compact",
         scale: "md",
         sidebarVariant: "inset",
@@ -19,13 +19,13 @@
       const prefs = { ...defaults };
       try {
         const mode = window.localStorage.getItem(modeKey);
-        if (mode === "system" || mode === "light" || mode === "dark") prefs.mode = mode;
+        if (mode === "light") prefs.mode = mode;
         const raw = window.localStorage.getItem(prefsKey);
         if (raw) Object.assign(prefs, JSON.parse(raw));
       } catch (_) {}
+      if (prefs.mode !== "light") prefs.mode = "light";
 
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const theme = prefs.mode === "dark" ? "dark" : prefs.mode === "light" ? "light" : prefersDark ? "dark" : "light";
+      const theme = "light";
       const root = document.documentElement;
       root.setAttribute("data-theme", theme);
       root.setAttribute("data-layout", prefs.layout || defaults.layout);

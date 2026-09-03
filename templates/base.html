@@ -78,22 +78,30 @@
   <label for="sidebar-mobile" class="backdrop" aria-hidden="true"></label>
 
   <nav class="mobile-bottombar" aria-label="Mobile navigation">
+    {% if nav_can.dashboard %}
     <a class="mobile-bottombar__link" href="{% url 'dashboard' %}" data-nav-match="dashboard" aria-label="Dashboard">
       <i class="bx bx-grid admin-icon admin-icon--20"></i>
       <span>Home</span>
     </a>
+    {% endif %}
+    {% if nav_can.employees %}
     <a class="mobile-bottombar__link" href="{% url 'employee_list' %}" data-nav-match="employees" aria-label="Employees">
       <i class="bx bx-user admin-icon admin-icon--20"></i>
       <span>People</span>
     </a>
-    <a class="mobile-bottombar__link" href="{% url 'daily_attendance_list' %}" data-nav-match="attendance" aria-label="Attendance">
+    {% endif %}
+    {% if nav_can.attendance and attendance_nav_url %}
+    <a class="mobile-bottombar__link" href="{{ attendance_nav_url }}" data-nav-match="attendance" aria-label="Attendance">
       <i class="bx bx-calendar-check admin-icon admin-icon--20"></i>
       <span>Attend</span>
     </a>
+    {% endif %}
+    {% if nav_can.reports %}
     <a class="mobile-bottombar__link" href="{% url 'report_hub' %}" data-nav-match="reports" aria-label="Reports">
       <i class="bx bx-chart-bar-columns admin-icon admin-icon--20"></i>
       <span>Reports</span>
     </a>
+    {% endif %}
     <label for="sidebar-mobile" class="mobile-bottombar__menu btn-icon" aria-label="Open menu">
       <i class="bx bx-menu admin-icon admin-icon--20"></i>
     </label>

@@ -1,0 +1,67 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block title %}Departments{% endblock %}
+
+{% block page_content %}
+
+<div class="toolbar">
+  <label class="sr-only" for="department-search">Search</label>
+  <input
+    id="department-search"
+    class="search-input toolbar__search"
+    type="search"
+    name="q"
+    value="{{ search }}"
+    placeholder="Name or code..."
+    hx-get="{% url 'department_list' %}"
+    hx-target="#department-list"
+    hx-trigger="keyup changed delay:300ms, search"
+    hx-push-url="true"
+  >
+</div>
+
+<div class="card card--table">
+  <div class="card__body">
+    <div
+      id="department-list"
+      class="data-table-wrap"
+      hx-get="{% url 'department_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+      hx-trigger="departmentCreated from:body"
+      hx-target="this"
+      hx-swap="innerHTML"
+    >
+      {% partialdef department_table inline %}
+{% if page_obj.paginator.count %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Code</th>
+            <th>Parent</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for department in page_obj %}
+        <tr>
+            <td>{{ department.name }}</td>
+            <td>{{ department.code|default:"—" }}</td>
+            <td>{{ department.parent|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/pagination.html#pagination" %}
+{% else %}
+<p class="empty-state">
+    {% if search %}
+    No departments match "{{ search }}".
+    {% else %}
+    No departments yet. <a href="{% url 'department_add' %}">Add the first department</a>.
+    {% endif %}
+</p>
+{% endif %}
+{% endpartialdef department_table %}
+    </div>
+  </div>
+</div>
+{% endblock %}

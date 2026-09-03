@@ -1,0 +1,74 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block title %}My Attendance{% endblock %}
+
+{% block page_content %}
+<div class="toolbar">
+  <label class="sr-only" for="my-attendance-search">Search</label>
+  <input
+    id="my-attendance-search"
+    class="search-input toolbar__search"
+    type="search"
+    name="q"
+    value="{{ search }}"
+    placeholder="Status..."
+    hx-get="{% url 'my_attendance' %}"
+    hx-target="#my-attendance-list"
+    hx-trigger="keyup changed delay:300ms, search"
+    hx-push-url="true"
+  >
+</div>
+
+<div class="card card--table">
+  <div class="card__body">
+    <div
+      id="my-attendance-list"
+      class="data-table-wrap"
+      hx-get="{% url 'my_attendance' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+      hx-trigger="none"
+      hx-target="this"
+      hx-swap="innerHTML"
+    >
+      {% partialdef my_attendance_table inline %}
+{% if not employee %}
+<p class="empty-state">No employee profile is linked to this account.</p>
+{% elif page_obj.paginator.count %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Scheduled</th>
+            <th>Worked</th>
+            <th>Late</th>
+            <th>OT</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in page_obj %}
+        <tr>
+            <td>{{ record.date }}</td>
+            <td><span class="badge status-{{ record.status }}">{{ record.get_status_display }}</span></td>
+            <td>{{ record.scheduled_minutes }}m</td>
+            <td>{{ record.worked_minutes }}m</td>
+            <td>{{ record.late_minutes }}m</td>
+            <td>{{ record.overtime_minutes }}m</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/pagination.html#pagination" %}
+{% else %}
+<p class="empty-state">
+    {% if search %}
+    No attendance matches "{{ search }}".
+    {% else %}
+    No attendance recorded yet.
+    {% endif %}
+</p>
+{% endif %}
+{% endpartialdef my_attendance_table %}
+    </div>
+  </div>
+</div>
+{% endblock %}

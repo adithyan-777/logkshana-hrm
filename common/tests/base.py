@@ -83,6 +83,13 @@ class BaseTenantTestCase(FastTenantTestCase):
                 cls.user.save()
             cls.user.tenants.add(cls.tenant)
 
+        from tenant_users.permissions.models import UserTenantPermissions
+
+        UserTenantPermissions.objects.update_or_create(
+            profile=cls.user,
+            defaults={"is_staff": True},
+        )
+
     def setUp(self):
         super().setUp()
         self.client = TenantClient(self.tenant)

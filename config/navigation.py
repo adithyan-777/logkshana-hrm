@@ -16,6 +16,55 @@ BREADCRUMBS: dict[str, list[tuple[str, str | None]]] = {
         ("Employees", "employee_list"),
         ("Add employee", None),
     ],
+    "employee_edit": [
+        ("Dashboard", "dashboard"),
+        ("Employees", "employee_list"),
+        ("Edit employee", None),
+    ],
+    "department_list": [
+        ("Dashboard", "dashboard"),
+        ("Employees", "employee_list"),
+        ("Departments", None),
+    ],
+    "department_add": [
+        ("Dashboard", "dashboard"),
+        ("Employees", "employee_list"),
+        ("Departments", "department_list"),
+        ("Add department", None),
+    ],
+    "position_list": [
+        ("Dashboard", "dashboard"),
+        ("Employees", "employee_list"),
+        ("Positions", None),
+    ],
+    "position_add": [
+        ("Dashboard", "dashboard"),
+        ("Employees", "employee_list"),
+        ("Positions", "position_list"),
+        ("Add position", None),
+    ],
+    "role_list": [
+        ("Dashboard", "dashboard"),
+        ("Employees", "employee_list"),
+        ("Roles", None),
+    ],
+    "role_add": [
+        ("Dashboard", "dashboard"),
+        ("Employees", "employee_list"),
+        ("Roles", "role_list"),
+        ("Add role", None),
+    ],
+    "permission_list": [
+        ("Dashboard", "dashboard"),
+        ("Employees", "employee_list"),
+        ("Permissions", None),
+    ],
+    "permission_add": [
+        ("Dashboard", "dashboard"),
+        ("Employees", "employee_list"),
+        ("Permissions", "permission_list"),
+        ("Add permission", None),
+    ],
     "attendance_transaction_list": [
         ("Dashboard", "dashboard"),
         ("Attendance", None),
@@ -59,6 +108,10 @@ BREADCRUMBS: dict[str, list[tuple[str, str | None]]] = {
         ("Attendance", None),
         ("Rules", "attendance_rule_list"),
         ("Add rule", None),
+    ],
+    "my_attendance": [
+        ("Dashboard", "dashboard"),
+        ("Attendance", None),
     ],
     "leave_type_list": [
         ("Dashboard", "dashboard"),
@@ -188,6 +241,10 @@ BREADCRUMBS: dict[str, list[tuple[str, str | None]]] = {
 
 LIST_ACTIONS: dict[str, tuple[str, str]] = {
     "employee_list": ("Add employee", "employee_add"),
+    "department_list": ("Add department", "department_add"),
+    "position_list": ("Add position", "position_add"),
+    "role_list": ("Add role", "role_add"),
+    "permission_list": ("Add permission", "permission_add"),
     "attendance_transaction_list": ("Record punch", "attendance_transaction_add"),
     "daily_attendance_list": ("Add daily record", "daily_attendance_add"),
     "attendance_correction_list": ("Submit correction", "attendance_correction_add"),
@@ -208,6 +265,15 @@ PAGE_HEADINGS: dict[str, str] = {
     "account_profile": "Profile",
     "employee_list": "Employees",
     "employee_add": "Add Employee",
+    "employee_edit": "Edit Employee",
+    "department_list": "Departments",
+    "department_add": "Add Department",
+    "position_list": "Positions",
+    "position_add": "Add Position",
+    "role_list": "Roles",
+    "role_add": "Add Role",
+    "permission_list": "Permissions",
+    "permission_add": "Add Permission",
     "attendance_transaction_list": "Attendance",
     "attendance_transaction_add": "Record Punch",
     "daily_attendance_list": "Attendance",
@@ -216,6 +282,7 @@ PAGE_HEADINGS: dict[str, str] = {
     "attendance_correction_add": "Submit Correction",
     "attendance_rule_list": "Attendance",
     "attendance_rule_add": "Add Rule",
+    "my_attendance": "My Attendance",
     "leave_type_list": "Leave",
     "leave_type_add": "Add Leave Type",
     "leave_policy_list": "Leave",
@@ -246,6 +313,15 @@ PAGE_SUBTITLES: dict[str, str] = {
     "account_profile": "Read-only account details.",
     "employee_list": "Directory + active/inactive status.",
     "employee_add": "Create an employee and send a password-setup invite.",
+    "employee_edit": "Update employee details.",
+    "department_list": "Departments and reporting structure.",
+    "department_add": "Create a department.",
+    "position_list": "Job titles and reporting lines.",
+    "position_add": "Create a position.",
+    "role_list": "Roles assigned to employees.",
+    "role_add": "Create a role.",
+    "permission_list": "Permissions granted to roles.",
+    "permission_add": "Create a permission.",
     "attendance_transaction_list": "Punches, daily outcomes, corrections, and rules.",
     "daily_attendance_list": "Punches, daily outcomes, corrections, and rules.",
     "attendance_correction_list": "Punches, daily outcomes, corrections, and rules.",
@@ -254,6 +330,7 @@ PAGE_SUBTITLES: dict[str, str] = {
     "daily_attendance_add": "Add a calculated daily attendance row.",
     "attendance_correction_add": "Submit a punch correction for review.",
     "attendance_rule_add": "Configure how attendance is calculated.",
+    "my_attendance": "Your daily attendance records.",
     "leave_type_list": "Types, policies, requests, and holidays.",
     "leave_policy_list": "Types, policies, requests, and holidays.",
     "leave_request_list": "Types, policies, requests, and holidays.",
@@ -304,11 +381,74 @@ COMMAND_PALETTE: list[dict[str, str]] = [
         "icon": "bx-user-plus",
     },
     {
+        "title": "Departments",
+        "subtitle": "Departments and reporting structure",
+        "url_name": "department_list",
+        "group": "People",
+        "icon": "bx-buildings",
+    },
+    {
+        "title": "Add department",
+        "subtitle": "Create a department",
+        "url_name": "department_add",
+        "group": "People",
+        "icon": "bx-plus",
+    },
+    {
+        "title": "Positions",
+        "subtitle": "Job titles and reporting lines",
+        "url_name": "position_list",
+        "group": "People",
+        "icon": "bx-briefcase-alt-2",
+    },
+    {
+        "title": "Add position",
+        "subtitle": "Create a position",
+        "url_name": "position_add",
+        "group": "People",
+        "icon": "bx-plus",
+    },
+    {
+        "title": "Roles",
+        "subtitle": "Roles assigned to employees",
+        "url_name": "role_list",
+        "group": "People",
+        "icon": "bx-shield-quarter",
+    },
+    {
+        "title": "Add role",
+        "subtitle": "Create a role",
+        "url_name": "role_add",
+        "group": "People",
+        "icon": "bx-plus",
+    },
+    {
+        "title": "Permissions",
+        "subtitle": "Permissions granted to roles",
+        "url_name": "permission_list",
+        "group": "People",
+        "icon": "bx-lock-open",
+    },
+    {
+        "title": "Add permission",
+        "subtitle": "Create a permission",
+        "url_name": "permission_add",
+        "group": "People",
+        "icon": "bx-plus",
+    },
+    {
         "title": "Punches",
         "subtitle": "Raw check-in and check-out",
         "url_name": "attendance_transaction_list",
         "group": "Attendance",
         "icon": "bx-walk",
+    },
+    {
+        "title": "My attendance",
+        "subtitle": "Your daily attendance",
+        "url_name": "my_attendance",
+        "group": "Attendance",
+        "icon": "bx-user-check",
     },
     {
         "title": "Record punch",
@@ -518,9 +658,60 @@ def page_action_for(request: HttpRequest) -> tuple[str, str] | None:
     return LIST_ACTIONS.get(url_name)
 
 
-def command_palette_for(_request: HttpRequest) -> list[dict[str, str]]:
+def command_palette_for(request: HttpRequest) -> list[dict[str, str]]:
+    from employees.permission_catalog import PermissionCodename
+    from employees.selectors import user_permission_codenames
+
+    palette_permissions = {
+        "dashboard": PermissionCodename.DASHBOARD_VIEW,
+        "employee_list": PermissionCodename.EMPLOYEES_VIEW,
+        "employee_add": PermissionCodename.EMPLOYEES_ADD,
+        "employee_edit": PermissionCodename.EMPLOYEES_EDIT,
+        "department_list": PermissionCodename.DEPARTMENTS_VIEW,
+        "department_add": PermissionCodename.DEPARTMENTS_ADD,
+        "position_list": PermissionCodename.POSITIONS_VIEW,
+        "position_add": PermissionCodename.POSITIONS_ADD,
+        "role_list": PermissionCodename.ROLES_VIEW,
+        "role_add": PermissionCodename.ROLES_ADD,
+        "permission_list": PermissionCodename.PERMISSIONS_VIEW,
+        "permission_add": PermissionCodename.PERMISSIONS_ADD,
+        "attendance_transaction_list": PermissionCodename.ATTENDANCE_VIEW,
+        "attendance_transaction_add": PermissionCodename.ATTENDANCE_ADD,
+        "daily_attendance_list": PermissionCodename.ATTENDANCE_VIEW,
+        "attendance_correction_list": PermissionCodename.ATTENDANCE_CORRECT,
+        "attendance_rule_list": PermissionCodename.ATTENDANCE_RULES_MANAGE,
+        "my_attendance": PermissionCodename.ATTENDANCE_OWN_VIEW,
+        "leave_request_list": PermissionCodename.LEAVE_VIEW,
+        "leave_request_add": PermissionCodename.LEAVE_ADD,
+        "leave_type_list": PermissionCodename.LEAVE_TYPES_MANAGE,
+        "leave_policy_list": PermissionCodename.LEAVE_TYPES_MANAGE,
+        "holiday_list": PermissionCodename.LEAVE_HOLIDAYS_MANAGE,
+        "timetable_list": PermissionCodename.SCHEDULE_VIEW,
+        "shift_list": PermissionCodename.SCHEDULE_VIEW,
+        "assignment_list": PermissionCodename.SCHEDULE_VIEW,
+        "temporary_list": PermissionCodename.SCHEDULE_VIEW,
+        "report_hub": PermissionCodename.REPORTS_VIEW,
+        "report_attendance_summary": PermissionCodename.REPORTS_VIEW,
+        "report_individual_attendance": PermissionCodename.REPORTS_VIEW,
+        "report_department_attendance": PermissionCodename.REPORTS_VIEW,
+        "report_exceptions": PermissionCodename.REPORTS_VIEW,
+        "report_punch_log": PermissionCodename.REPORTS_VIEW,
+        "report_overtime": PermissionCodename.REPORTS_VIEW,
+        "report_leave": PermissionCodename.REPORTS_VIEW,
+        "account_profile": None,
+    }
+
+    allowed = None
+    user = getattr(request, "user", None)
+    if user is not None and getattr(user, "is_authenticated", False):
+        allowed = user_permission_codenames(user=user)
+
     items: list[dict[str, str]] = []
     for entry in COMMAND_PALETTE:
+        if allowed is not None:
+            perm = palette_permissions.get(entry["url_name"])
+            if perm is not None and perm not in allowed:
+                continue
         try:
             url = reverse(entry["url_name"])
         except NoReverseMatch:

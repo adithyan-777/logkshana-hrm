@@ -6,6 +6,8 @@ from django.views.decorators.http import require_http_methods
 
 from common.http import is_htmx_partial
 from common.pagination import list_pagination_context
+from employees.decorators import require_permission
+from employees.permission_catalog import PermissionCodename
 from schedule.forms import (
     ScheduleAssignmentForm,
     ShiftForm,
@@ -78,6 +80,7 @@ def _render_temporary_form(
 
 
 @login_required
+@require_permission(PermissionCodename.SCHEDULE_VIEW)
 @require_http_methods(["GET"])
 def timetable_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
@@ -96,6 +99,7 @@ def timetable_list_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.SCHEDULE_ADD)
 @require_http_methods(["GET", "POST"])
 def timetable_add(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
@@ -120,6 +124,7 @@ def timetable_add(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.SCHEDULE_VIEW)
 @require_http_methods(["GET"])
 def shift_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
@@ -138,6 +143,7 @@ def shift_list_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.SCHEDULE_ADD)
 @require_http_methods(["GET", "POST"])
 def shift_add(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
@@ -177,6 +183,7 @@ def shift_add(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.SCHEDULE_VIEW)
 @require_http_methods(["GET"])
 def assignment_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
@@ -197,6 +204,7 @@ def assignment_list_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.SCHEDULE_ADD)
 @require_http_methods(["GET", "POST"])
 def assignment_add(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
@@ -221,6 +229,7 @@ def assignment_add(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.SCHEDULE_VIEW)
 @require_http_methods(["GET"])
 def temporary_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
@@ -239,6 +248,7 @@ def temporary_list_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.SCHEDULE_ADD)
 @require_http_methods(["GET", "POST"])
 def temporary_add(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":

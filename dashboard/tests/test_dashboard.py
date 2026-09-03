@@ -7,7 +7,7 @@ from django.test import RequestFactory, SimpleTestCase
 from django.urls import reverse
 
 from attendance.models import AttendanceCorrection, DailyAttendance, OvertimeRecord
-from common.tests.base import BaseTenantTestCase
+from common.tests.base import TEST_PASSWORD, BaseTenantTestCase
 from common.tests.factories import (
     attendance_correction_factory,
     daily_attendance_factory,
@@ -15,6 +15,7 @@ from common.tests.factories import (
     leave_request_factory,
 )
 from dashboard.selectors import dashboard_summary_get
+from django_tenants.test.client import TenantClient
 from leave.models import LeaveRequest
 
 
@@ -131,6 +132,19 @@ class DashboardViewTests(BaseTenantTestCase):
         self.assertContains(response, 'id="spa-view"')
         self.assertContains(response, "command-palette")
         self.assertContains(response, 'hx-get="/partials/attendance-chart/"')
+
+    def test_dashboard_redirects_employee_to_own_attendance(self):
+        employee = employee_factory(first_name="Limited", emp_code="DASH-ME")
+        user = employee.user
+        user.set_password(TEST_PASSWORD)
+        user.save()
+        client = TenantClient(self.tenant)
+        self.assertTrue(client.login(email=user.email, password=TEST_PASSWORD))
+
+        response = client.get(reverse("dashboard"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("my_attendance"))
 
     def test_attendance_chart_partial_requires_login(self):
         self.client.logout()

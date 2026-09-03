@@ -10,6 +10,7 @@ from attendance.forms import (
     AttendanceTransactionForm,
     DailyAttendanceForm,
 )
+from attendance.models import DailyAttendance
 from attendance.selectors import (
     attendance_correction_list,
     attendance_rule_list,
@@ -24,6 +25,9 @@ from attendance.services import (
 )
 from common.http import is_htmx_partial
 from common.pagination import list_pagination_context
+from employees.decorators import require_permission
+from employees.permission_catalog import PermissionCodename
+from employees.selectors import employee_get_for_user
 
 
 def _configure_datetime_fields(form):
@@ -74,6 +78,7 @@ def _render_rule_form(
 
 
 @login_required
+@require_permission(PermissionCodename.ATTENDANCE_VIEW)
 @require_http_methods(["GET"])
 def transaction_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
@@ -94,6 +99,7 @@ def transaction_list_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.ATTENDANCE_ADD)
 @require_http_methods(["GET", "POST"])
 def transaction_add(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
@@ -122,6 +128,7 @@ def transaction_add(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.ATTENDANCE_VIEW)
 @require_http_methods(["GET"])
 def daily_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
@@ -140,6 +147,7 @@ def daily_list_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.ATTENDANCE_ADD)
 @require_http_methods(["GET", "POST"])
 def daily_add(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
@@ -164,6 +172,7 @@ def daily_add(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.ATTENDANCE_CORRECT)
 @require_http_methods(["GET"])
 def correction_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
@@ -184,6 +193,7 @@ def correction_list_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.ATTENDANCE_CORRECT)
 @require_http_methods(["GET", "POST"])
 def correction_add(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
@@ -215,6 +225,7 @@ def correction_add(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.ATTENDANCE_RULES_MANAGE)
 @require_http_methods(["GET"])
 def rule_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
@@ -233,6 +244,7 @@ def rule_list_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.ATTENDANCE_RULES_MANAGE)
 @require_http_methods(["GET", "POST"])
 def rule_add(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
@@ -254,3 +266,32 @@ def rule_add(request: HttpRequest) -> HttpResponse:
         return _render_rule_form(request, form)
 
     return render(request, "attendance/rule_add.html", {"form": form})
+
+
+@login_required
+@require_permission(PermissionCodename.ATTENDANCE_OWN_VIEW)
+@require_http_methods(["GET"])
+def my_attendance_view(request: HttpRequest) -> HttpResponse:
+    employee = employee_get_for_user(user=request.user)
+    search = request.GET.get("q", "").strip()
+    if employee is None:
+        queryset = DailyAttendance.objects.none()
+    else:
+        queryset = daily_attendance_list(search=search, employee=employee)
+    context = list_pagination_context(
+        request,
+        queryset,
+        search=search,
+        base_url=reverse("my_attendance"),
+        hx_target="#my-attendance-list",
+    )
+    context["employee"] = employee
+
+    if is_htmx_partial(request):
+        return render(
+            request,
+            "attendance/my_attendance.html#my_attendance_table",
+            context,
+        )
+
+    return render(request, "attendance/my_attendance.html", context)

@@ -5,7 +5,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django_tenants.test.client import TenantClient
 
-from common.tests.base import BaseTenantTestCase
+from common.tests.base import TEST_PASSWORD, BaseTenantTestCase
 from common.tests.factories import (
     attendance_correction_factory,
     attendance_rule_factory,
@@ -344,3 +344,51 @@ class AttendanceRuleViewTests(BaseTenantTestCase):
 
         self.assertFalse(form.is_valid())
         self.assertIn("name", form.errors)
+
+
+class MyAttendanceViewTests(BaseTenantTestCase):
+    def _employee_client(self, *, first_name="Self", emp_code="ME-001"):
+        employee = employee_factory(first_name=first_name, emp_code=emp_code)
+        user = employee.user
+        user.set_password(TEST_PASSWORD)
+        user.save()
+        client = TenantClient(self.tenant)
+        self.assertTrue(client.login(email=user.email, password=TEST_PASSWORD))
+        return employee, client
+
+    def test_requires_login(self):
+        client = TenantClient(self.tenant)
+        response = client.get(reverse("my_attendance"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/login/", response.url)
+
+    def test_shows_only_own_daily_records(self):
+        employee, client = self._employee_client()
+        other = employee_factory(first_name="OtherPerson", emp_code="ME-OTH")
+        daily_attendance_factory(
+            employee=employee,
+            date=date(2026, 8, 10),
+            status=DailyAttendance.Status.PRESENT,
+        )
+        daily_attendance_factory(
+            employee=other,
+            date=date(2026, 8, 11),
+            status=DailyAttendance.Status.ABSENT,
+        )
+
+        response = client.get(reverse("my_attendance"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "My Attendance")
+        self.assertContains(response, "Present")
+        self.assertNotContains(response, "Absent")
+        self.assertNotContains(response, "OtherPerson")
+        self.assertContains(response, "/attendance/me/")
+
+    def test_forbidden_on_company_attendance_list(self):
+        _employee, client = self._employee_client(emp_code="ME-403")
+
+        response = client.get(reverse("attendance_transaction_list"))
+
+        self.assertEqual(response.status_code, 403)

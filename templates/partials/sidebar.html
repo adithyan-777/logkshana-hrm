@@ -31,42 +31,86 @@
     </button>
 
     <nav class="quick-actions" aria-label="Logkshana">
+      {% if nav_can.dashboard %}
       <a href="{% url 'dashboard' %}"
          class="quick-action {% if request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}"
          data-nav-match="dashboard">
         <span class="quick-action__icon"><i class="bx bx-grid admin-icon admin-icon--20"></i></span>
         <span class="quick-action__label">Dashboard</span>
       </a>
+      {% endif %}
+      {% if nav_can.employees %}
       <a href="{% url 'employee_list' %}"
          class="quick-action {% if request.path|slice:':11' == '/employees/' %}is-active{% endif %}"
          data-nav-match="employees">
         <span class="quick-action__icon"><i class="bx bx-user admin-icon admin-icon--20"></i></span>
         <span class="quick-action__label">Employees</span>
       </a>
-      <a href="{% url 'attendance_transaction_list' %}"
+      {% endif %}
+      {% if nav_can.attendance and attendance_nav_url %}
+      <a href="{{ attendance_nav_url }}"
          class="quick-action {% if request.path|slice:':12' == '/attendance/' %}is-active{% endif %}"
          data-nav-match="attendance">
         <span class="quick-action__icon"><i class="bx bx-calendar-check admin-icon admin-icon--20"></i></span>
         <span class="quick-action__label">Attendance</span>
       </a>
+      {% endif %}
+      {% if nav_can.leave %}
       <a href="{% url 'leave_request_list' %}"
          class="quick-action {% if request.path|slice:':7' == '/leave/' %}is-active{% endif %}"
          data-nav-match="leave">
         <span class="quick-action__icon"><i class="bx bx-calendar-minus admin-icon admin-icon--20"></i></span>
         <span class="quick-action__label">Leave</span>
       </a>
+      {% endif %}
+      {% if nav_can.schedule %}
       <a href="{% url 'timetable_list' %}"
          class="quick-action {% if request.path|slice:':10' == '/schedule/' %}is-active{% endif %}"
          data-nav-match="schedule">
         <span class="quick-action__icon"><i class="bx bx-clock-5 admin-icon admin-icon--20"></i></span>
         <span class="quick-action__label">Schedule</span>
       </a>
+      {% endif %}
+      {% if nav_can.reports %}
       <a href="{% url 'report_hub' %}"
          class="quick-action {% if request.path|slice:':9' == '/reports/' %}is-active{% endif %}"
          data-nav-match="reports">
         <span class="quick-action__icon"><i class="bx bx-chart-bar-big-columns admin-icon admin-icon--20"></i></span>
         <span class="quick-action__label">Reports</span>
       </a>
+      {% endif %}
+      {% if nav_can.departments %}
+      <a href="{% url 'department_list' %}"
+         class="quick-action {% if request.path|slice:':12' == '/departments/' %}is-active{% endif %}"
+         data-nav-match="departments">
+        <span class="quick-action__icon"><i class="bx bx-buildings admin-icon admin-icon--20"></i></span>
+        <span class="quick-action__label">Departments</span>
+      </a>
+      {% endif %}
+      {% if nav_can.positions %}
+      <a href="{% url 'position_list' %}"
+         class="quick-action {% if request.path|slice:':11' == '/positions/' %}is-active{% endif %}"
+         data-nav-match="positions">
+        <span class="quick-action__icon"><i class="bx bx-briefcase-alt-2 admin-icon admin-icon--20"></i></span>
+        <span class="quick-action__label">Positions</span>
+      </a>
+      {% endif %}
+      {% if nav_can.roles %}
+      <a href="{% url 'role_list' %}"
+         class="quick-action {% if request.path|slice:':6' == '/roles/' %}is-active{% endif %}"
+         data-nav-match="roles">
+        <span class="quick-action__icon"><i class="bx bx-shield-quarter admin-icon admin-icon--20"></i></span>
+        <span class="quick-action__label">Roles</span>
+      </a>
+      {% endif %}
+      {% if nav_can.permissions %}
+      <a href="{% url 'permission_list' %}"
+         class="quick-action {% if request.path|slice:':12' == '/permissions/' %}is-active{% endif %}"
+         data-nav-match="permissions">
+        <span class="quick-action__icon"><i class="bx bx-lock-open admin-icon admin-icon--20"></i></span>
+        <span class="quick-action__label">Permissions</span>
+      </a>
+      {% endif %}
     </nav>
   </div>
 </aside>

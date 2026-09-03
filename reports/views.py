@@ -7,6 +7,8 @@ from django.views.decorators.http import require_http_methods
 
 from common.http import is_htmx_partial
 from common.pagination import paginate_queryset
+from employees.decorators import require_permission
+from employees.permission_catalog import PermissionCodename
 from reports.exports import render_report_response
 from reports.forms import (
     DateRangeFilterForm,
@@ -79,12 +81,14 @@ def _filter_context(request: HttpRequest, form, *, report_url_name: str) -> dict
 
 
 @login_required
+@require_permission(PermissionCodename.REPORTS_VIEW)
 @require_http_methods(["GET"])
 def report_hub_view(request: HttpRequest) -> HttpResponse:
     return render(request, "reports/hub.html")
 
 
 @login_required
+@require_permission(PermissionCodename.REPORTS_VIEW)
 @require_http_methods(["GET"])
 def attendance_summary_view(request: HttpRequest) -> HttpResponse:
     form = DateRangeFilterForm(request.GET or None)
@@ -135,6 +139,7 @@ def attendance_summary_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.REPORTS_VIEW)
 @require_http_methods(["GET"])
 def individual_attendance_view(request: HttpRequest) -> HttpResponse:
     form = IndividualReportFilterForm(request.GET or None)
@@ -179,6 +184,7 @@ def individual_attendance_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.REPORTS_VIEW)
 @require_http_methods(["GET"])
 def department_attendance_view(request: HttpRequest) -> HttpResponse:
     form = DateRangeFilterForm(request.GET or None)
@@ -224,6 +230,7 @@ def department_attendance_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.REPORTS_VIEW)
 @require_http_methods(["GET"])
 def exception_report_view(request: HttpRequest) -> HttpResponse:
     form = ExceptionReportFilterForm(request.GET or None)
@@ -275,6 +282,7 @@ def exception_report_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.REPORTS_VIEW)
 @require_http_methods(["GET"])
 def punch_log_view(request: HttpRequest) -> HttpResponse:
     form = DateRangeFilterForm(request.GET or None)
@@ -323,6 +331,7 @@ def punch_log_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.REPORTS_VIEW)
 @require_http_methods(["GET"])
 def overtime_report_view(request: HttpRequest) -> HttpResponse:
     form = OvertimeReportFilterForm(request.GET or None)
@@ -374,6 +383,7 @@ def overtime_report_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.REPORTS_VIEW)
 @require_http_methods(["GET"])
 def leave_report_view(request: HttpRequest) -> HttpResponse:
     form = LeaveReportFilterForm(request.GET or None)

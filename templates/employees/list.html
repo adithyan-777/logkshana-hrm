@@ -26,7 +26,7 @@
       id="employee-list"
       class="data-table-wrap"
       hx-get="{% url 'employee_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="employeeCreated from:body"
+      hx-trigger="employeeCreated, employeeUpdated from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -42,6 +42,7 @@
             <th>Email</th>
             <th>Username</th>
             <th>Status</th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
@@ -59,6 +60,9 @@
                 {% else %}
                 <span class="badge inactive">Inactive</span>
                 {% endif %}
+            </td>
+            <td class="table-actions">
+                <a href="{% url 'employee_edit' employee.pk %}">Edit</a>
             </td>
         </tr>
         {% endfor %}

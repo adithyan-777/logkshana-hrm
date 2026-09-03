@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from employees.models import Area, Department, Employee, Position
+from employees.models import Area, Department, Employee, Permission, Position, Role
 
 
 @admin.register(Department)
@@ -15,6 +15,20 @@ class PositionAdmin(admin.ModelAdmin):
     list_display = ("title", "code", "parent")
     search_fields = ("title", "code")
     list_select_related = ("parent",)
+
+
+@admin.register(Permission)
+class PermissionAdmin(admin.ModelAdmin):
+    list_display = ("codename", "name", "description")
+    search_fields = ("codename", "name", "description")
+
+
+@admin.register(Role)
+class RoleAdmin(admin.ModelAdmin):
+    list_display = ("name", "is_system")
+    list_filter = ("is_system",)
+    search_fields = ("name",)
+    filter_horizontal = ("permissions",)
 
 
 @admin.register(Area)

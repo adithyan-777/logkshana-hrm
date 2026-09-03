@@ -5,7 +5,6 @@ from employees.services import employee_create
 from schedule.models import Timetable
 from schedule.services import shift_create, timetable_create
 
-
 def device_factory(*, serial_number="ZK-001", company, branch=None, **kwargs):
     from companies.models import Device
     from companies.services import company_primary_branch_get_or_create
@@ -65,6 +64,27 @@ def position_factory(*, title="Developer", code="DEV") -> Position:
     position.full_clean()
     position.save()
     return position
+
+
+def permission_factory(*, codename="view_dashboard", name="View Dashboard", description="") -> "Permission":
+    from employees.models import Permission
+
+    permission = Permission(codename=codename, name=name, description=description)
+    permission.full_clean()
+    permission.save()
+    return permission
+
+
+def role_factory(*, name="Manager", is_system=False, permissions=None) -> "Role":
+    from employees.models import Role
+
+    role = Role(name=name, is_system=is_system)
+    role.full_clean()
+    role.save()
+    if permissions:
+        role.permissions.set(permissions)
+    return role
+
 
 
 def employee_factory(*, first_name="Jane", last_name="Doe", emp_code="E001", **kwargs):

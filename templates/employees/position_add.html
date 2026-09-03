@@ -1,0 +1,58 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block title %}Add Position{% endblock %}
+
+{% block page_content %}
+<div class="card" style="max-width:720px;">
+  <div class="card__header">
+    <span class="card__title">Add position</span>
+  </div>
+  <div class="card__body">
+    <div id="position-form-container">
+      {% partialdef position_form inline %}
+{% if success_message %}
+<div id="form-messages" class="message success">
+    {{ success_message }}
+    <a href="{% url 'position_list' %}">View all positions</a>
+</div>
+{% else %}
+<div id="form-messages"></div>
+{% endif %}
+
+<form
+    id="position-form"
+    hx-post="{% url 'position_add' %}"
+    hx-target="#position-form-container"
+    hx-swap="innerHTML"
+>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="message error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="field">
+        <label for="{{ form.title.id_for_label }}">Title *</label>
+        {{ form.title }}
+        {% if form.title.errors %}<span class="error">{{ form.title.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.code.id_for_label }}">Code</label>
+        {{ form.code }}
+        {% if form.code.errors %}<span class="error">{{ form.code.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.parent.id_for_label }}">Parent position</label>
+        {{ form.parent }}
+        {% if form.parent.errors %}<span class="error">{{ form.parent.errors }}</span>{% endif %}
+    </div>
+
+    <button type="submit">Add Position</button>
+</form>
+{% endpartialdef position_form %}
+    </div>
+  </div>
+</div>
+{% endblock %}

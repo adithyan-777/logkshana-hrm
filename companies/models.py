@@ -77,6 +77,9 @@ class Device(BaseModel):
         blank=True,
     )
     is_active = models.BooleanField(default=True)
+    last_gateway_log_id = models.PositiveIntegerField(default=0)
+    last_synced_at = models.DateTimeField(null=True, blank=True)
+    last_sync_error = models.TextField(blank=True)
 
     class Meta:
         ordering = ["-id"]

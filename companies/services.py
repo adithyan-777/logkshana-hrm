@@ -1,11 +1,12 @@
 from datetime import datetime
 
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from django_tenants.utils import get_public_schema_name, schema_context
 
 from attendance.models import AttendanceTransaction
 from attendance.services import attendance_transaction_create
-from companies.models import Branch, Company
+from companies.models import Branch, Company, Device
 from companies.selectors import device_get_by_serial_number
 from employees.models import Employee
 from employees.selectors import employee_get_by_emp_code
@@ -61,6 +62,22 @@ def companies_ensure_primary_branches(*, companies=None) -> list[dict]:
         )
 
     return results
+
+
+def device_sync_state_update(
+    *,
+    device: Device,
+    last_gateway_log_id: int | None = None,
+    error: str = "",
+) -> Device:
+    device.last_synced_at = timezone.now()
+    device.last_sync_error = error
+    update_fields = ["last_synced_at", "last_sync_error", "updated_at"]
+    if last_gateway_log_id is not None:
+        device.last_gateway_log_id = last_gateway_log_id
+        update_fields.insert(0, "last_gateway_log_id")
+    device.save(update_fields=update_fields)
+    return device
 
 
 def attendance_log_create(

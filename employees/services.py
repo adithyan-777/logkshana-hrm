@@ -46,6 +46,7 @@ def employee_create(
     emp_code: str | None = None,
     department=None,
     position=None,
+    branch=None,
     email: str = "",
     mobile: str = "",
     hire_date=None,
@@ -78,6 +79,7 @@ def employee_create(
         emp_code=emp_code or None,
         department=department,
         position=position,
+        branch=branch,
         email=email,
         mobile=mobile,
         hire_date=hire_date,
@@ -197,9 +199,28 @@ def device_user_create(*, employee: Employee, serial_number: str) -> None:
         with urlopen(request, timeout=15) as response:
             response.read()
     except HTTPError as exc:
-        raise ValidationError({"device": f"Gateway returned HTTP {exc.code}."}) from exc
-    except URLError as exc:
-        raise ValidationError({"device": "Gateway unreachable."}) from exc
+        if 500 <= exc.code < 600:
+            # Transient 5xx (502 etc.) — let caller retry (Celery autoretry)
+            try:
+                body = exc.read().decode(errors="ignore")[:500] if hasattr(exc, "read") else ""
+            except Exception:
+                body = ""
+            detail = f" body: {body}" if body else ""
+            raise HTTPError(
+                exc.url, exc.code, f"{exc.msg} for {url}.{detail} (base: {settings.DEVICE_GATEWAY_BASE_URL})",
+                exc.headers, exc.fp
+            ) from exc
+        try:
+            body = exc.read().decode(errors="ignore")[:500] if hasattr(exc, "read") else ""
+        except Exception:
+            body = ""
+        detail = f" body: {body}" if body else ""
+        raise ValidationError({"device": f"Gateway returned HTTP {exc.code}.{detail} for {url}"}) from exc
+    except (URLError, TimeoutError, OSError) as exc:
+        # Transient — re-raise for retry
+        if isinstance(exc, URLError):
+            raise URLError(f"Gateway unreachable at {settings.DEVICE_GATEWAY_BASE_URL} ({url}): {exc.reason}") from exc
+        raise
 
 
 @transaction.atomic

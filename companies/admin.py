@@ -43,6 +43,8 @@ class DeviceAdmin(admin.ModelAdmin):
         "branch",
         "device_type",
         "is_active",
+        "last_gateway_log_id",
+        "last_synced_at",
     )
     list_filter = ("is_active",)
     search_fields = ("serial_number", "name")

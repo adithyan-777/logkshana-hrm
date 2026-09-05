@@ -1,3 +1,4 @@
+from datetime import time
 from uuid import uuid4
 
 from django.urls import reverse
@@ -6,6 +7,29 @@ from django_tenants.test.client import TenantClient
 from common.tests.base import BaseTenantTestCase
 from common.tests.factories import timetable_factory
 from schedule.models import Timetable
+
+
+def overnight_form_data(**overrides) -> dict:
+    code = f"NIGHT-{uuid4().hex[:6]}"
+    data = {
+        "name": "Night Shift",
+        "code": code,
+        "type": "normal",
+        "work_type": "work",
+        "workday": "1",
+        "check_in": "22:00",
+        "check_out": "06:00",
+        "check_in_cross_days": "0",
+        "check_out_cross_days": "1",
+        "late_in_grace_minutes": "0",
+        "early_out_grace_minutes": "0",
+        "day_change_time": "08:00",
+        "require_check_in": "on",
+        "require_check_out": "on",
+        "is_active": "on",
+    }
+    data.update(overrides)
+    return data
 
 
 class TimetableViewTests(BaseTenantTestCase):
@@ -75,6 +99,26 @@ class TimetableViewTests(BaseTenantTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get("HX-Trigger"), "timetableCreated")
         self.assertTrue(Timetable.objects.filter(code=code).exists())
+
+    def test_add_rejects_overnight_without_cross_days(self):
+        data = overnight_form_data(check_out_cross_days="0")
+        response = self.client.post(reverse("timetable_add"), data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.headers.get("HX-Trigger"))
+        self.assertFalse(Timetable.objects.filter(code=data["code"]).exists())
+
+    def test_add_creates_overnight_timetable_with_cross_days(self):
+        data = overnight_form_data()
+        response = self.client.post(reverse("timetable_add"), data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers.get("HX-Trigger"), "timetableCreated")
+
+        timetable = Timetable.objects.get(code=data["code"])
+        self.assertEqual(timetable.check_in, time(22, 0))
+        self.assertEqual(timetable.check_out, time(6, 0))
+        self.assertEqual(timetable.check_out_cross_days, 1)
 
 
 class ShiftViewTests(BaseTenantTestCase):

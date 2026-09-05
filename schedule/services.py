@@ -1,3 +1,5 @@
+from datetime import date, datetime, timedelta
+
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
@@ -8,6 +10,46 @@ from schedule.models import (
     TemporarySchedule,
     Timetable,
 )
+
+TIMETABLE_TIMES_ORDER_ERROR = (
+    "Check-out must be after check-in. For an overnight shift "
+    "(e.g. 22:00 to 06:00), set check-out cross days to 1."
+)
+
+
+def validate_timetable_times(
+    *,
+    check_in,
+    check_out,
+    check_in_cross_days,
+    check_out_cross_days,
+) -> None:
+    """
+    Check-out must land strictly after check-in on the effective
+    timeline (each time offset by its cross-day value), so 22:00 ->
+    06:00 is only valid with check_out_cross_days >= 1.
+
+    Missing times or cross-day values are skipped here; field-level
+    validation reports them.
+    """
+    if check_in is None or check_out is None:
+        return
+    if check_in_cross_days is None or check_out_cross_days is None:
+        return
+
+    # Compare on a timeline anchored to one date, offset by the
+    # cross-day fields.
+    anchor = date(2000, 1, 1)
+    effective_in = datetime.combine(
+        anchor + timedelta(days=check_in_cross_days),
+        check_in,
+    )
+    effective_out = datetime.combine(
+        anchor + timedelta(days=check_out_cross_days),
+        check_out,
+    )
+    if effective_out <= effective_in:
+        raise ValidationError({"check_out_cross_days": TIMETABLE_TIMES_ORDER_ERROR})
 
 
 @transaction.atomic
@@ -65,6 +107,12 @@ def timetable_create(
         is_active=is_active,
     )
     timetable.full_clean()
+    validate_timetable_times(
+        check_in=timetable.check_in,
+        check_out=timetable.check_out,
+        check_in_cross_days=timetable.check_in_cross_days,
+        check_out_cross_days=timetable.check_out_cross_days,
+    )
     timetable.save()
     return timetable
 

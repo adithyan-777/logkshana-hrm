@@ -107,6 +107,8 @@ class TimetableViewTests(BaseTenantTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(response.headers.get("HX-Trigger"))
         self.assertFalse(Timetable.objects.filter(code=data["code"]).exists())
+        # The cross-day error must be visible in the re-rendered form.
+        self.assertContains(response, "Check-out must be after check-in")
 
     def test_add_creates_overnight_timetable_with_cross_days(self):
         data = overnight_form_data()

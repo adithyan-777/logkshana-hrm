@@ -16,7 +16,7 @@
     >
       Copy link
     </button>
-    <a href="{% url 'employee_add' %}" hx-get="{% url 'employee_add' %}" hx-target="this" hx-swap="outerHTML">
+    <a href="{% url 'employee_add' %}" hx-get="{% url 'employee_add' %}" hx-target="#employee-form-container" hx-swap="innerHTML">
       Add another employee
     </a>
 </div>

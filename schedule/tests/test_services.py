@@ -51,6 +51,52 @@ class TimetableCreateTests(BaseTenantTestCase):
                 work_type=Timetable.WorkType.WORK,
             )
 
+    def test_rejects_overnight_shift_without_cross_days(self):
+        with self.assertRaises(ValidationError) as context:
+            timetable_create(
+                name="Night",
+                code="NIGHT-VAL",
+                type=Timetable.Type.NORMAL,
+                work_type=Timetable.WorkType.WORK,
+                check_in=time(22, 0),
+                check_out=time(6, 0),
+                check_in_cross_days=0,
+                check_out_cross_days=0,
+            )
+
+        self.assertIn("check_out_cross_days", context.exception.message_dict)
+        self.assertFalse(Timetable.objects.filter(code="NIGHT-VAL").exists())
+
+    def test_creates_overnight_shift_with_cross_days(self):
+        timetable = timetable_create(
+            name="Night",
+            code="NIGHT-OK",
+            type=Timetable.Type.NORMAL,
+            work_type=Timetable.WorkType.WORK,
+            check_in=time(22, 0),
+            check_out=time(6, 0),
+            check_out_cross_days=1,
+        )
+
+        self.assertEqual(timetable.check_out_cross_days, 1)
+        self.assertEqual(timetable.check_in, time(22, 0))
+        self.assertEqual(timetable.check_out, time(6, 0))
+
+    def test_rejects_check_in_cross_days_pushing_in_past_out(self):
+        # 09:00 pushed to the next day can no longer precede a
+        # same-day 18:00 check-out.
+        with self.assertRaises(ValidationError):
+            timetable_create(
+                name="Skewed",
+                code="SKEW",
+                type=Timetable.Type.NORMAL,
+                work_type=Timetable.WorkType.WORK,
+                check_in=time(9, 0),
+                check_out=time(18, 0),
+                check_in_cross_days=1,
+                check_out_cross_days=0,
+            )
+
 
 class ShiftCreateTests(BaseTenantTestCase):
     def test_creates_shift_with_days(self):
@@ -141,3 +187,20 @@ class TemporaryScheduleCreateTests(BaseTenantTestCase):
 
         self.assertEqual(temporary.reason, "Weekend work")
         self.assertTrue(temporary.overrides_normal_schedule)
+
+    def test_rejects_duplicate_employee_date_timetable(self):
+        employee = employee_factory(first_name="Dup", emp_code="E201")
+        timetable = timetable_factory(name="Cover", code="DUP")
+
+        temporary_schedule_create(
+            employee=employee,
+            date=date(2026, 6, 2),
+            timetable=timetable,
+        )
+
+        with self.assertRaises((ValidationError, IntegrityError)):
+            temporary_schedule_create(
+                employee=employee,
+                date=date(2026, 6, 2),
+                timetable=timetable,
+            )

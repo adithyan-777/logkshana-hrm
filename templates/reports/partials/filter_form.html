@@ -11,6 +11,33 @@
         </div>
         {% endfor %}
     </div>
+    {% if available_columns %}
+    <input type="hidden" name="report_key" value="{{ report_key }}">
+    <details class="report-columns">
+        <summary class="form-label">Columns</summary>
+        <div class="report-columns__grid">
+            {% for column in available_columns %}
+            <label class="report-columns__option">
+                <input
+                    type="checkbox"
+                    name="fields"
+                    value="{{ column.key }}"
+                    {% if column in columns %}checked{% endif %}
+                >
+                {{ column.label }}
+            </label>
+            {% endfor %}
+        </div>
+        <button
+            type="button"
+            class="btn btn--ghost"
+            hx-post="{% url 'report_save_columns' %}"
+            hx-include="closest form"
+        >
+            Save as my default
+        </button>
+    </details>
+    {% endif %}
     <div class="report-filters__actions">
         <button type="submit" class="btn btn--primary">
             <i class="bx bx-filter admin-icon admin-icon--18"></i>

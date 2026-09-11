@@ -1,8 +1,9 @@
 from django.db import transaction
 
-from employees.models import Employee
+from employees.models import Department, Employee, Permission, Position, Role
 
 import json
+import secrets
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from django.conf import settings
@@ -17,6 +18,9 @@ from allauth.account.forms import default_token_generator
 from allauth.account.utils import user_pk_to_url_str
 from django.urls import reverse
 from companies.models import Device
+from django_tenants.utils import get_public_schema_name, schema_context
+from tenant_users.tenants.utils import get_current_tenant
+from users.models import TenantUser
 
 from employees.tasks import device_user_create_task
 
@@ -42,6 +46,7 @@ def employee_create(
     emp_code: str | None = None,
     department=None,
     position=None,
+    branch=None,
     email: str = "",
     mobile: str = "",
     hire_date=None,
@@ -54,12 +59,19 @@ def employee_create(
     once (e.g. in the response / a one-time confirmation screen) or email it
     to the employee. Never store it.
     """
+    tenant = get_current_tenant()
     username = _generate_username(first_name=first_name, last_name=last_name)
+    user_email = email or f"{username}@{tenant.slug}.com"
+    with schema_context(get_public_schema_name()):
+        user = TenantUser.objects.create_user(
+            email=user_email,
+            username = username,
+            password=secrets.token_urlsafe(24),
+            is_active=True,
+        )
 
-    user = User(username=username, email=email)
-    user.set_unusable_password()
-    user.save()
-
+    tenant = get_current_tenant()
+    tenant.add_user(user, is_superuser=False, is_staff=False)
     employee = Employee(
         user=user,
         first_name=first_name,
@@ -67,11 +79,12 @@ def employee_create(
         emp_code=emp_code or None,
         department=department,
         position=position,
+        branch=branch,
         email=email,
         mobile=mobile,
         hire_date=hire_date,
         is_active=is_active,
-
+        role=employee_role_ensure(),
     )
     employee.full_clean()
     employee.save()
@@ -86,10 +99,67 @@ def employee_create(
         )
         transaction.on_commit(
             lambda: [
-                device_user_create_task.delay(employee_id, serial)
-                for serial in serials
+                device_user_create_task.delay(employee_id, serial) for serial in serials
             ]
         )
+    return employee
+
+
+@transaction.atomic
+def employee_update(
+    *,
+    employee: Employee,
+    first_name: str,
+    last_name: str = "",
+    emp_code: str | None = None,
+    department=None,
+    position=None,
+    email: str = "",
+    mobile: str = "",
+    hire_date=None,
+    is_active: bool = True,
+    sync_to_device: bool = True,
+) -> Employee:
+    old_emp_code = employee.emp_code
+    employee.first_name = first_name
+    employee.last_name = last_name
+    employee.emp_code = emp_code or None
+    employee.department = department
+    employee.position = position
+    employee.email = email
+    employee.mobile = mobile
+    employee.hire_date = hire_date
+    employee.is_active = is_active
+    employee.full_clean()
+    employee.save()
+
+    user = employee.user
+    if user is not None:
+        user_updates: list[str] = []
+        if email and user.email != email:
+            user.email = email
+            user_updates.append("email")
+        if user.is_active != is_active:
+            user.is_active = is_active
+            user_updates.append("is_active")
+        if user_updates:
+            with schema_context(get_public_schema_name()):
+                user.save(update_fields=user_updates)
+
+    if sync_to_device and employee.emp_code and employee.emp_code != old_emp_code:
+        employee_id = employee.id
+        serials = list(
+            Device.objects.filter(
+                company__schema_name=connection.schema_name,
+                is_active=True,
+            ).values_list("serial_number", flat=True)
+        )
+        transaction.on_commit(
+            lambda: [
+                device_user_create_task.delay(employee_id, serial) for serial in serials
+            ]
+        )
+
     return employee
 
 
@@ -119,16 +189,148 @@ def device_user_create(*, employee: Employee, serial_number: str) -> None:
         "privilege": 0,
         "card": "",
     }
+    from attendance.integrations.gateway import gateway_auth_headers
+
     request = Request(
         url,
         data=json.dumps(payload).encode(),
         method="POST",
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json", **gateway_auth_headers()},
     )
     try:
         with urlopen(request, timeout=15) as response:
             response.read()
     except HTTPError as exc:
-        raise ValidationError({"device": f"Gateway returned HTTP {exc.code}."}) from exc
-    except URLError as exc:
-        raise ValidationError({"device": "Gateway unreachable."}) from exc
+        if 500 <= exc.code < 600:
+            # Transient 5xx (502 etc.) — let caller retry (Celery autoretry)
+            try:
+                body = exc.read().decode(errors="ignore")[:500] if hasattr(exc, "read") else ""
+            except Exception:
+                body = ""
+            detail = f" body: {body}" if body else ""
+            raise HTTPError(
+                exc.url, exc.code, f"{exc.msg} for {url}.{detail} (base: {settings.DEVICE_GATEWAY_BASE_URL})",
+                exc.headers, exc.fp
+            ) from exc
+        try:
+            body = exc.read().decode(errors="ignore")[:500] if hasattr(exc, "read") else ""
+        except Exception:
+            body = ""
+        detail = f" body: {body}" if body else ""
+        raise ValidationError({"device": f"Gateway returned HTTP {exc.code}.{detail} for {url}"}) from exc
+    except (URLError, TimeoutError, OSError) as exc:
+        # Transient — re-raise for retry
+        if isinstance(exc, URLError):
+            raise URLError(f"Gateway unreachable at {settings.DEVICE_GATEWAY_BASE_URL} ({url}): {exc.reason}") from exc
+        raise
+
+
+@transaction.atomic
+def department_create(
+    *,
+    name: str,
+    code: str = "",
+    parent: Department | None = None,
+) -> Department:
+    department = Department(name=name, code=code or None, parent=parent)
+    department.full_clean()
+    department.save()
+    return department
+
+
+@transaction.atomic
+def position_create(
+    *,
+    title: str,
+    code: str = "",
+    parent: Position | None = None,
+) -> Position:
+    position = Position(title=title, code=code or None, parent=parent)
+    position.full_clean()
+    position.save()
+    return position
+
+
+@transaction.atomic
+def permission_catalog_ensure() -> list[Permission]:
+    from employees.permission_catalog import permission_catalog_entries
+
+    permissions: list[Permission] = []
+    for entry in permission_catalog_entries():
+        permission, _created = Permission.all_objects.update_or_create(
+            codename=entry["codename"],
+            defaults={
+                "name": entry["name"],
+                "description": entry["description"],
+                "deleted_at": None,
+            },
+        )
+        permissions.append(permission)
+    return permissions
+
+
+@transaction.atomic
+def employee_role_ensure() -> Role:
+    from employees.permission_catalog import (
+        EMPLOYEE_ROLE_NAME,
+        PermissionCodename,
+    )
+
+    permission_catalog_ensure()
+    permission = Permission.objects.get(codename=PermissionCodename.ATTENDANCE_OWN_VIEW)
+    role, _created = Role.all_objects.update_or_create(
+        name=EMPLOYEE_ROLE_NAME,
+        defaults={"is_system": True, "deleted_at": None},
+    )
+    role.permissions.set([permission])
+    return role
+
+
+def employees_assign_employee_role() -> int:
+    from django.db.models import Q
+    from tenant_users.permissions.models import UserTenantPermissions
+
+    role = employee_role_ensure()
+    admin_user_ids = set(
+        UserTenantPermissions.objects.filter(
+            Q(is_staff=True) | Q(is_superuser=True)
+        ).values_list("profile_id", flat=True)
+    )
+    tenant = getattr(connection, "tenant", None)
+    owner_id = getattr(tenant, "owner_id", None) if tenant is not None else None
+    if owner_id:
+        admin_user_ids.add(owner_id)
+
+    return (
+        Employee.objects.filter(user__isnull=False)
+        .exclude(user_id__in=admin_user_ids)
+        .update(role=role)
+    )
+
+
+@transaction.atomic
+def permission_create(
+    *,
+    codename: str,
+    name: str,
+    description: str = "",
+) -> Permission:
+    permission = Permission(codename=codename, name=name, description=description)
+    permission.full_clean()
+    permission.save()
+    return permission
+
+
+@transaction.atomic
+def role_create(
+    *,
+    name: str,
+    is_system: bool = False,
+    permissions: list[Permission] | None = None,
+) -> Role:
+    role = Role(name=name, is_system=is_system)
+    role.full_clean()
+    role.save()
+    if permissions:
+        role.permissions.set(permissions)
+    return role

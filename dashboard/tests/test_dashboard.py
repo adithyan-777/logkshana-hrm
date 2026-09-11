@@ -1,9 +1,13 @@
 from datetime import date
+from types import SimpleNamespace
+from unittest.mock import patch
 
+from django.http import HttpResponse
+from django.test import RequestFactory, SimpleTestCase
 from django.urls import reverse
 
 from attendance.models import AttendanceCorrection, DailyAttendance, OvertimeRecord
-from common.tests.base import BaseTenantTestCase
+from common.tests.base import TEST_PASSWORD, BaseTenantTestCase
 from common.tests.factories import (
     attendance_correction_factory,
     daily_attendance_factory,
@@ -11,7 +15,30 @@ from common.tests.factories import (
     leave_request_factory,
 )
 from dashboard.selectors import dashboard_summary_get
+from django_tenants.test.client import TenantClient
 from leave.models import LeaveRequest
+
+
+class PublicDashboardViewTests(SimpleTestCase):
+    def setUp(self):
+        self.request = RequestFactory().get("/")
+        self.request.user = SimpleNamespace(is_authenticated=True)
+        self.request.tenant = SimpleNamespace(schema_name="public")
+
+    @patch("dashboard.views.dashboard_summary_get")
+    @patch("dashboard.views.render", return_value=HttpResponse())
+    def test_public_dashboard_does_not_query_tenant_tables(
+        self,
+        render_mock,
+        summary_get_mock,
+    ):
+        from dashboard.views import dashboard_view
+
+        response = dashboard_view(self.request)
+
+        self.assertEqual(response.status_code, 200)
+        render_mock.assert_called_once_with(self.request, "dashboard/public.html")
+        summary_get_mock.assert_not_called()
 
 
 class DashboardSummaryTests(BaseTenantTestCase):
@@ -98,13 +125,26 @@ class DashboardViewTests(BaseTenantTestCase):
         self.assertContains(response, 'id="attendance-chart"')
         self.assertContains(response, 'id="attendance-chart-panel"')
         self.assertContains(response, 'id="attendance-chart-data"')
-        self.assertContains(response, "chart.js@4.5.1")
+        self.assertContains(response, "chart.umd.min.js")
         self.assertContains(response, "dashboard-charts.js")
-        self.assertContains(response, "alpinejs@3.14.9")
+        self.assertContains(response, "alpine.min.js")
         self.assertContains(response, "alpine-app.js")
         self.assertContains(response, 'id="spa-view"')
         self.assertContains(response, "command-palette")
         self.assertContains(response, 'hx-get="/partials/attendance-chart/"')
+
+    def test_dashboard_redirects_employee_to_own_attendance(self):
+        employee = employee_factory(first_name="Limited", emp_code="DASH-ME")
+        user = employee.user
+        user.set_password(TEST_PASSWORD)
+        user.save()
+        client = TenantClient(self.tenant)
+        self.assertTrue(client.login(email=user.email, password=TEST_PASSWORD))
+
+        response = client.get(reverse("dashboard"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("my_attendance"))
 
     def test_attendance_chart_partial_requires_login(self):
         self.client.logout()

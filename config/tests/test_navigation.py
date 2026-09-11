@@ -70,7 +70,9 @@ class NavigationHelpersTests(SimpleTestCase):
         expected = {
             name
             for name in BREADCRUMBS
-            if name.endswith("_list") or name.endswith("_add") or name.startswith("report_")
+            if name.endswith("_list")
+            or name.endswith("_add")
+            or name.startswith("report_")
         }
         self.assertIn("employee_list", expected)
         self.assertIn("report_attendance_summary", expected)

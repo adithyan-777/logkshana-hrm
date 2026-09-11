@@ -88,7 +88,13 @@ Destinations are declared in `COMMAND_PALETTE` in `config/navigation.py`. The na
 To add a jump target, append an entry:
 
 ```python
-{"title": "…", "subtitle": "…", "url_name": "my_url_name", "group": "People", "icon": "bx-user"}
+{
+    "title": "…",
+    "subtitle": "…",
+    "url_name": "my_url_name",
+    "group": "People",
+    "icon": "bx-user",
+}
 ```
 
 ---

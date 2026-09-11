@@ -87,7 +87,9 @@ class IndividualAttendanceSelectorTests(BaseTenantTestCase):
 class DepartmentAttendanceSelectorTests(BaseTenantTestCase):
     def test_groups_by_department(self):
         department = department_factory(name="Ops", code="OPS")
-        employee = employee_factory(first_name="Carol", emp_code="R004", department=department)
+        employee = employee_factory(
+            first_name="Carol", emp_code="R004", department=department
+        )
         daily_attendance_factory(
             employee=employee,
             date=date(2026, 4, 1),

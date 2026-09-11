@@ -6,6 +6,8 @@ from django.views.decorators.http import require_http_methods
 
 from common.http import is_htmx_partial
 from common.pagination import list_pagination_context
+from employees.decorators import require_permission
+from employees.permission_catalog import PermissionCodename
 from leave.forms import (
     HolidayForm,
     LeavePolicyForm,
@@ -67,6 +69,7 @@ def _render_holiday_form(
 
 
 @login_required
+@require_permission(PermissionCodename.LEAVE_TYPES_MANAGE)
 @require_http_methods(["GET"])
 def leave_type_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
@@ -85,6 +88,7 @@ def leave_type_list_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.LEAVE_TYPES_MANAGE)
 @require_http_methods(["GET", "POST"])
 def leave_type_add(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
@@ -109,6 +113,7 @@ def leave_type_add(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.LEAVE_TYPES_MANAGE)
 @require_http_methods(["GET"])
 def leave_policy_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
@@ -121,12 +126,15 @@ def leave_policy_list_view(request: HttpRequest) -> HttpResponse:
     )
 
     if is_htmx_partial(request):
-        return render(request, "leave/leave_policy_list.html#leave_policy_table", context)
+        return render(
+            request, "leave/leave_policy_list.html#leave_policy_table", context
+        )
 
     return render(request, "leave/leave_policy_list.html", context)
 
 
 @login_required
+@require_permission(PermissionCodename.LEAVE_TYPES_MANAGE)
 @require_http_methods(["GET", "POST"])
 def leave_policy_add(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
@@ -151,6 +159,7 @@ def leave_policy_add(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.LEAVE_VIEW)
 @require_http_methods(["GET"])
 def leave_request_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
@@ -163,12 +172,15 @@ def leave_request_list_view(request: HttpRequest) -> HttpResponse:
     )
 
     if is_htmx_partial(request):
-        return render(request, "leave/leave_request_list.html#leave_request_table", context)
+        return render(
+            request, "leave/leave_request_list.html#leave_request_table", context
+        )
 
     return render(request, "leave/leave_request_list.html", context)
 
 
 @login_required
+@require_permission(PermissionCodename.LEAVE_ADD)
 @require_http_methods(["GET", "POST"])
 def leave_request_add(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
@@ -193,6 +205,7 @@ def leave_request_add(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.LEAVE_HOLIDAYS_MANAGE)
 @require_http_methods(["GET"])
 def holiday_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
@@ -211,6 +224,7 @@ def holiday_list_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.LEAVE_HOLIDAYS_MANAGE)
 @require_http_methods(["GET", "POST"])
 def holiday_add(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":

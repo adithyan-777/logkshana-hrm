@@ -7,6 +7,16 @@ from django.views.decorators.http import require_http_methods
 
 from common.http import is_htmx_partial
 from common.pagination import paginate_queryset
+from employees.decorators import require_permission
+from employees.permission_catalog import PermissionCodename
+from reports.columns import (
+    ATTENDANCE_SUMMARY,
+    DEPARTMENT_ATTENDANCE,
+    INDIVIDUAL_ATTENDANCE,
+    REPORT_COLUMNS,
+    filter_columns,
+    resolve_report_columns,
+)
 from reports.exports import render_report_response
 from reports.forms import (
     DateRangeFilterForm,
@@ -17,9 +27,12 @@ from reports.forms import (
 )
 from reports.report_data import (
     attendance_summary_report_data,
+    attendance_summary_row_dicts,
     department_attendance_report_data,
+    department_attendance_row_dicts,
     exception_report_data,
     individual_attendance_report_data,
+    individual_attendance_row_dicts,
     leave_balance_report_data,
     leave_utilization_report_data,
     overtime_report_data,
@@ -39,6 +52,7 @@ from reports.selectors.leave import (
 )
 from reports.selectors.overtime import overtime_report_list
 from reports.selectors.punch_log import punch_log_list
+from reports.services import get_preferred_columns, save_preferred_columns
 from reports.utils import current_month_range, report_pagination_context
 
 
@@ -78,13 +92,28 @@ def _filter_context(request: HttpRequest, form, *, report_url_name: str) -> dict
     }
 
 
+def _resolve_columns(request: HttpRequest, report_key: str) -> list:
+    preferred = get_preferred_columns(request.user, report_key)
+    return resolve_report_columns(request, report_key=report_key, preferred_keys=preferred)
+
+
+def _column_context(columns: list, report_key: str) -> dict:
+    return {
+        "columns": columns,
+        "available_columns": REPORT_COLUMNS[report_key],
+        "report_key": report_key,
+    }
+
+
 @login_required
+@require_permission(PermissionCodename.REPORTS_VIEW)
 @require_http_methods(["GET"])
 def report_hub_view(request: HttpRequest) -> HttpResponse:
     return render(request, "reports/hub.html")
 
 
 @login_required
+@require_permission(PermissionCodename.REPORTS_VIEW)
 @require_http_methods(["GET"])
 def attendance_summary_view(request: HttpRequest) -> HttpResponse:
     form = DateRangeFilterForm(request.GET or None)
@@ -94,8 +123,14 @@ def attendance_summary_view(request: HttpRequest) -> HttpResponse:
 
     if form.is_valid():
         date_from, date_to = form.cleaned_date_range()
-        department_id = form.cleaned_data["department"].pk if form.cleaned_data["department"] else None
-        employee_id = form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
+        department_id = (
+            form.cleaned_data["department"].pk
+            if form.cleaned_data["department"]
+            else None
+        )
+        employee_id = (
+            form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
+        )
 
     queryset = attendance_summary_list(
         date_from=date_from,
@@ -104,9 +139,11 @@ def attendance_summary_view(request: HttpRequest) -> HttpResponse:
         employee_id=employee_id,
     )
 
+    columns = _resolve_columns(request, ATTENDANCE_SUMMARY)
+
     export_response = _maybe_export(
         request,
-        data=attendance_summary_report_data(list(queryset)),
+        data=attendance_summary_report_data(list(queryset), columns),
         filename="attendance-summary",
     )
     if export_response:
@@ -116,17 +153,22 @@ def attendance_summary_view(request: HttpRequest) -> HttpResponse:
     context = {
         **_filter_context(request, form, report_url_name="report_attendance_summary"),
         **report_pagination_context(request, page_obj),
+        **_column_context(columns, ATTENDANCE_SUMMARY),
+        "report_rows": attendance_summary_row_dicts(page_obj),
         "date_from": date_from,
         "date_to": date_to,
     }
 
     if is_htmx_partial(request):
-        return render(request, "reports/attendance_summary.html#attendance_summary_table", context)
+        return render(
+            request, "reports/attendance_summary.html#attendance_summary_table", context
+        )
 
     return render(request, "reports/attendance_summary.html", context)
 
 
 @login_required
+@require_permission(PermissionCodename.REPORTS_VIEW)
 @require_http_methods(["GET"])
 def individual_attendance_view(request: HttpRequest) -> HttpResponse:
     form = IndividualReportFilterForm(request.GET or None)
@@ -144,10 +186,11 @@ def individual_attendance_view(request: HttpRequest) -> HttpResponse:
                 employee_id=employee_id,
             )
 
+    columns = _resolve_columns(request, INDIVIDUAL_ATTENDANCE)
     if employee_id:
         export_response = _maybe_export(
             request,
-            data=individual_attendance_report_data(list(queryset)),
+            data=individual_attendance_report_data(list(queryset), columns),
             filename="individual-attendance",
         )
         if export_response:
@@ -155,8 +198,12 @@ def individual_attendance_view(request: HttpRequest) -> HttpResponse:
 
     page_obj = paginate_queryset(request, queryset)
     context = {
-        **_filter_context(request, form, report_url_name="report_individual_attendance"),
+        **_filter_context(
+            request, form, report_url_name="report_individual_attendance"
+        ),
         **report_pagination_context(request, page_obj),
+        **_column_context(columns, INDIVIDUAL_ATTENDANCE),
+        "report_rows": individual_attendance_row_dicts(page_obj),
         "date_from": date_from,
         "date_to": date_to,
         "employee_selected": employee_id is not None,
@@ -169,6 +216,7 @@ def individual_attendance_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.REPORTS_VIEW)
 @require_http_methods(["GET"])
 def department_attendance_view(request: HttpRequest) -> HttpResponse:
     form = DateRangeFilterForm(request.GET or None)
@@ -177,7 +225,11 @@ def department_attendance_view(request: HttpRequest) -> HttpResponse:
 
     if form.is_valid():
         date_from, date_to = form.cleaned_date_range()
-        department_id = form.cleaned_data["department"].pk if form.cleaned_data["department"] else None
+        department_id = (
+            form.cleaned_data["department"].pk
+            if form.cleaned_data["department"]
+            else None
+        )
 
     queryset = department_attendance_list(
         date_from=date_from,
@@ -185,9 +237,11 @@ def department_attendance_view(request: HttpRequest) -> HttpResponse:
         department_id=department_id,
     )
 
+    columns = _resolve_columns(request, DEPARTMENT_ATTENDANCE)
+
     export_response = _maybe_export(
         request,
-        data=department_attendance_report_data(list(queryset)),
+        data=department_attendance_report_data(list(queryset), columns),
         filename="department-attendance",
     )
     if export_response:
@@ -195,8 +249,12 @@ def department_attendance_view(request: HttpRequest) -> HttpResponse:
 
     page_obj = paginate_queryset(request, queryset)
     context = {
-        **_filter_context(request, form, report_url_name="report_department_attendance"),
+        **_filter_context(
+            request, form, report_url_name="report_department_attendance"
+        ),
         **report_pagination_context(request, page_obj),
+        **_column_context(columns, DEPARTMENT_ATTENDANCE),
+        "report_rows": department_attendance_row_dicts(page_obj),
         "date_from": date_from,
         "date_to": date_to,
     }
@@ -208,6 +266,7 @@ def department_attendance_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.REPORTS_VIEW)
 @require_http_methods(["GET"])
 def exception_report_view(request: HttpRequest) -> HttpResponse:
     form = ExceptionReportFilterForm(request.GET or None)
@@ -218,8 +277,14 @@ def exception_report_view(request: HttpRequest) -> HttpResponse:
 
     if form.is_valid():
         date_from, date_to = form.cleaned_date_range()
-        department_id = form.cleaned_data["department"].pk if form.cleaned_data["department"] else None
-        employee_id = form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
+        department_id = (
+            form.cleaned_data["department"].pk
+            if form.cleaned_data["department"]
+            else None
+        )
+        employee_id = (
+            form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
+        )
         exception_type = form.cleaned_data.get("exception_type") or ""
 
     queryset = exception_report_list(
@@ -253,6 +318,7 @@ def exception_report_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.REPORTS_VIEW)
 @require_http_methods(["GET"])
 def punch_log_view(request: HttpRequest) -> HttpResponse:
     form = DateRangeFilterForm(request.GET or None)
@@ -262,8 +328,14 @@ def punch_log_view(request: HttpRequest) -> HttpResponse:
 
     if form.is_valid():
         date_from, date_to = form.cleaned_date_range()
-        department_id = form.cleaned_data["department"].pk if form.cleaned_data["department"] else None
-        employee_id = form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
+        department_id = (
+            form.cleaned_data["department"].pk
+            if form.cleaned_data["department"]
+            else None
+        )
+        employee_id = (
+            form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
+        )
 
     queryset = punch_log_list(
         date_from=date_from,
@@ -295,6 +367,7 @@ def punch_log_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.REPORTS_VIEW)
 @require_http_methods(["GET"])
 def overtime_report_view(request: HttpRequest) -> HttpResponse:
     form = OvertimeReportFilterForm(request.GET or None)
@@ -305,8 +378,14 @@ def overtime_report_view(request: HttpRequest) -> HttpResponse:
 
     if form.is_valid():
         date_from, date_to = form.cleaned_date_range()
-        department_id = form.cleaned_data["department"].pk if form.cleaned_data["department"] else None
-        employee_id = form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
+        department_id = (
+            form.cleaned_data["department"].pk
+            if form.cleaned_data["department"]
+            else None
+        )
+        employee_id = (
+            form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
+        )
         status = form.cleaned_data.get("status") or ""
 
     queryset = overtime_report_list(
@@ -340,6 +419,7 @@ def overtime_report_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.REPORTS_VIEW)
 @require_http_methods(["GET"])
 def leave_report_view(request: HttpRequest) -> HttpResponse:
     form = LeaveReportFilterForm(request.GET or None)
@@ -354,8 +434,14 @@ def leave_report_view(request: HttpRequest) -> HttpResponse:
         report_type = form.cleaned_data.get("report_type") or "balance"
         date_from, date_to = form.cleaned_date_range()
         year = form.cleaned_year()
-        department_id = form.cleaned_data["department"].pk if form.cleaned_data["department"] else None
-        employee_id = form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
+        department_id = (
+            form.cleaned_data["department"].pk
+            if form.cleaned_data["department"]
+            else None
+        )
+        employee_id = (
+            form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
+        )
 
     if report_type == "balance":
         queryset = leave_balance_list(
@@ -410,3 +496,25 @@ def leave_report_view(request: HttpRequest) -> HttpResponse:
         return render(request, "reports/leave.html#leave_requests_table", context)
 
     return render(request, "reports/leave.html", context)
+
+
+@login_required
+@require_permission(PermissionCodename.REPORTS_VIEW)
+@require_http_methods(["POST"])
+def save_report_columns_view(request: HttpRequest) -> HttpResponse:
+    report_key = request.POST.get("report_key", "")
+    if report_key not in REPORT_COLUMNS:
+        return HttpResponse("Unknown report.", status=400)
+
+    keys = []
+    for part in request.POST.getlist("fields"):
+        keys.extend(part.split(","))
+
+    if not filter_columns(report_key, keys):
+        return HttpResponse("Select at least one valid column.", status=400)
+
+    save_preferred_columns(request.user, report_key, keys)
+
+    response = HttpResponse(status=204)
+    response["HX-Trigger"] = '{"showToast": {"message": "Column preference saved.", "type": "success"}}'
+    return response

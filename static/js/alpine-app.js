@@ -150,7 +150,7 @@
     });
 
     Alpine.store("theme", {
-      prefs: themeApi() ? themeApi().readPrefs() : { mode: "system", layout: "compact", scale: "md", sidebarVariant: "inset", sidebarMode: "default" },
+      prefs: themeApi() ? themeApi().readPrefs() : { mode: "light", layout: "compact", scale: "md", sidebarVariant: "inset", sidebarMode: "default" },
       set(key, value) {
         const api = themeApi();
         if (api) {
@@ -288,13 +288,11 @@
     if (!xhr) return;
     const trigger = xhr.getResponseHeader("HX-Trigger");
     if (!trigger || !window.Alpine) return;
-    const ui = window.Alpine.store("ui");
-    try {
-      const data = JSON.parse(trigger);
-      if (data.showToast) ui.toast(data.showToast.message || data.showToast, data.showToast.type);
-      if (data.closeModal) ui.closeModal();
-    } catch (_) {
-      if (trigger === "closeModal") ui.closeModal();
+    // htmx already dispatches HX-Trigger events (caught by the showToast /
+    // closeModal listeners above); only handle legacy payloads it cannot
+    // express, e.g. a bare "closeModal" string header.
+    if (trigger === "closeModal") {
+      window.Alpine.store("ui").closeModal();
     }
   });
 

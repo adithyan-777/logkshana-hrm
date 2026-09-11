@@ -1,0 +1,66 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block title %}Positions{% endblock %}
+
+{% block page_content %}
+
+<div class="toolbar">
+  <label class="sr-only" for="position-search">Search</label>
+  <input
+    id="position-search"
+    class="search-input toolbar__search"
+    type="search"
+    name="q"
+    value="{{ search }}"
+    placeholder="Title or code..."
+    hx-get="{% url 'position_list' %}"
+    hx-target="#position-list"
+    hx-trigger="keyup changed delay:300ms, search"
+  >
+</div>
+
+<div class="card card--table">
+  <div class="card__body">
+    <div
+      id="position-list"
+      class="data-table-wrap"
+      hx-get="{% url 'position_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+      hx-trigger="positionCreated from:body"
+      hx-target="this"
+      hx-swap="innerHTML"
+    >
+      {% partialdef position_table inline %}
+{% if page_obj.paginator.count %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Code</th>
+            <th>Parent</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for position in page_obj %}
+        <tr>
+            <td>{{ position.title }}</td>
+            <td>{{ position.code|default:"—" }}</td>
+            <td>{{ position.parent|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/pagination.html#pagination" %}
+{% else %}
+<p class="empty-state">
+    {% if search %}
+    No positions match "{{ search }}".
+    {% else %}
+    No positions yet. <a href="{% url 'position_add' %}">Add the first position</a>.
+    {% endif %}
+</p>
+{% endif %}
+{% endpartialdef position_table %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -8,13 +8,12 @@
   <script>
     (function () {
       const storageKey = "logkshana-theme-mode";
-      let mode = "system";
+      let mode = "light";
       try {
-        mode = window.localStorage.getItem(storageKey) || "system";
+        mode = window.localStorage.getItem(storageKey) || "light";
       } catch (_) {}
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const resolvedTheme = mode === "dark" ? "dark" : mode === "light" ? "light" : prefersDark ? "dark" : "light";
-      document.documentElement.setAttribute("data-theme", resolvedTheme);
+      if (mode !== "light") mode = "light";
+      document.documentElement.setAttribute("data-theme", mode);
     })();
   </script>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>

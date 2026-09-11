@@ -17,14 +17,14 @@
     {% endif %}
 
     <div class="form-field">
-      <label class="form-label" for="{{ form.login.id_for_label }}">Username</label>
+      <label class="form-label" for="{{ form.login.id_for_label }}">Email or username</label>
       <input
         class="form-input"
         id="{{ form.login.id_for_label }}"
         name="{{ form.login.html_name }}"
         type="text"
         autocomplete="username"
-        placeholder="Username"
+        placeholder="Email or username"
         required
         value="{{ form.login.value|default_if_none:'' }}"
       >

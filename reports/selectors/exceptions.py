@@ -31,11 +31,13 @@ def exception_report_list(
         queryset = queryset.filter(Q(has_check_in=False) | Q(has_check_out=False))
     else:
         queryset = queryset.filter(
-            Q(status__in=[
-                DailyAttendance.Status.LATE,
-                DailyAttendance.Status.ABSENT,
-                DailyAttendance.Status.INCOMPLETE,
-            ])
+            Q(
+                status__in=[
+                    DailyAttendance.Status.LATE,
+                    DailyAttendance.Status.ABSENT,
+                    DailyAttendance.Status.INCOMPLETE,
+                ]
+            )
             | Q(has_check_in=False)
             | Q(has_check_out=False)
         )

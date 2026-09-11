@@ -1,4 +1,5 @@
 from django import forms
+from django.core.exceptions import ValidationError
 from django.forms import inlineformset_factory
 
 from employees.models import Department, Employee
@@ -8,6 +9,10 @@ from schedule.models import (
     ShiftDay,
     TemporarySchedule,
     Timetable,
+)
+from schedule.services import (
+    TIMETABLE_TIMES_ORDER_ERROR,
+    validate_timetable_times,
 )
 
 TIME_INPUT = forms.TimeInput(attrs={"type": "time"})
@@ -52,6 +57,19 @@ class TimetableForm(forms.ModelForm):
             "check_out_end": TIME_INPUT,
             "day_change_time": TIME_INPUT,
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        try:
+            validate_timetable_times(
+                check_in=cleaned_data.get("check_in"),
+                check_out=cleaned_data.get("check_out"),
+                check_in_cross_days=cleaned_data.get("check_in_cross_days"),
+                check_out_cross_days=cleaned_data.get("check_out_cross_days"),
+            )
+        except ValidationError:
+            self.add_error("check_out_cross_days", TIMETABLE_TIMES_ORDER_ERROR)
+        return cleaned_data
 
 
 class ShiftForm(forms.ModelForm):

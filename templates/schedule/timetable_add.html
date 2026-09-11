@@ -102,10 +102,12 @@
             <div class="field">
                 <label for="{{ form.check_in_start.id_for_label }}">Check-in window start</label>
                 {{ form.check_in_start }}
+                {% if form.check_in_start.errors %}<span class="error">{{ form.check_in_start.errors }}</span>{% endif %}
             </div>
             <div class="field">
                 <label for="{{ form.check_in_end.id_for_label }}">Check-in window end</label>
                 {{ form.check_in_end }}
+                {% if form.check_in_end.errors %}<span class="error">{{ form.check_in_end.errors }}</span>{% endif %}
             </div>
         </div>
 
@@ -113,10 +115,12 @@
             <div class="field">
                 <label for="{{ form.check_out_start.id_for_label }}">Check-out window start</label>
                 {{ form.check_out_start }}
+                {% if form.check_out_start.errors %}<span class="error">{{ form.check_out_start.errors }}</span>{% endif %}
             </div>
             <div class="field">
                 <label for="{{ form.check_out_end.id_for_label }}">Check-out window end</label>
                 {{ form.check_out_end }}
+                {% if form.check_out_end.errors %}<span class="error">{{ form.check_out_end.errors }}</span>{% endif %}
             </div>
         </div>
 
@@ -124,14 +128,17 @@
             <div class="field">
                 <label for="{{ form.check_in_cross_days.id_for_label }}">Check-in cross days</label>
                 {{ form.check_in_cross_days }}
+                {% if form.check_in_cross_days.errors %}<span class="error">{{ form.check_in_cross_days.errors }}</span>{% endif %}
             </div>
             <div class="field">
                 <label for="{{ form.check_out_cross_days.id_for_label }}">Check-out cross days</label>
                 {{ form.check_out_cross_days }}
+                {% if form.check_out_cross_days.errors %}<span class="error">{{ form.check_out_cross_days.errors }}</span>{% endif %}
             </div>
             <div class="field">
                 <label for="{{ form.day_change_time.id_for_label }}">Day change time</label>
                 {{ form.day_change_time }}
+                {% if form.day_change_time.errors %}<span class="error">{{ form.day_change_time.errors }}</span>{% endif %}
             </div>
         </div>
     </fieldset>

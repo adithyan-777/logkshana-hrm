@@ -6,12 +6,18 @@ from attendance.models import (
     AttendanceTransaction,
     DailyAttendance,
 )
+from employees.models import Employee
 
 
-def attendance_transaction_list(*, search: str = "") -> QuerySet[AttendanceTransaction]:
+def attendance_transaction_list(
+    *, search: str = "", employee: Employee | None = None
+) -> QuerySet[AttendanceTransaction]:
     queryset = AttendanceTransaction.objects.select_related("employee").order_by(
         "-timestamp"
     )
+
+    if employee is not None:
+        queryset = queryset.filter(employee=employee)
 
     if search:
         queryset = queryset.filter(
@@ -24,10 +30,15 @@ def attendance_transaction_list(*, search: str = "") -> QuerySet[AttendanceTrans
     return queryset
 
 
-def daily_attendance_list(*, search: str = "") -> QuerySet[DailyAttendance]:
+def daily_attendance_list(
+    *, search: str = "", employee: Employee | None = None
+) -> QuerySet[DailyAttendance]:
     queryset = DailyAttendance.objects.select_related(
         "employee", "shift", "timetable"
     ).order_by("-date")
+
+    if employee is not None:
+        queryset = queryset.filter(employee=employee)
 
     if search:
         queryset = queryset.filter(
@@ -41,9 +52,7 @@ def daily_attendance_list(*, search: str = "") -> QuerySet[DailyAttendance]:
 
 
 def attendance_correction_list(*, search: str = "") -> QuerySet[AttendanceCorrection]:
-    queryset = AttendanceCorrection.objects.select_related("employee").order_by(
-        "-date"
-    )
+    queryset = AttendanceCorrection.objects.select_related("employee").order_by("-date")
 
     if search:
         queryset = queryset.filter(

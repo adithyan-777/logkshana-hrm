@@ -1,101 +1,100 @@
+from reports.columns import ReportColumn
 from reports.exports import ReportData
 from reports.utils import format_datetime, format_minutes
 
 
-def attendance_summary_report_data(rows) -> ReportData:
+def project_report_data(
+    *, title: str, columns: list[ReportColumn], row_dicts: list[dict]
+) -> ReportData:
+    """Project full row dicts onto the selected columns for exports."""
     return ReportData(
+        title=title,
+        headers=[column.label for column in columns],
+        rows=[[row[column.key] for column in columns] for row in row_dicts],
+    )
+
+
+def attendance_summary_row_dicts(rows) -> list[dict]:
+    return [
+        {
+            "employee_code": row["employee__emp_code"] or "",
+            "employee": f"{row['employee__first_name']} {row['employee__last_name']}".strip(),
+            "department": row["employee__department__name"] or "",
+            "total_days": row["total_days"],
+            "present_days": row["present_days"],
+            "absent_days": row["absent_days"],
+            "late_days": row["late_days"],
+            "leave_days": row["leave_days"],
+            "worked": format_minutes(row["total_worked_minutes"]),
+            "late_minutes": row["total_late_minutes"] or 0,
+            "overtime_minutes": row["total_overtime_minutes"] or 0,
+        }
+        for row in rows
+    ]
+
+
+def attendance_summary_report_data(
+    rows, columns: list[ReportColumn]
+) -> ReportData:
+    return project_report_data(
         title="Attendance Summary",
-        headers=[
-            "Employee Code",
-            "Employee",
-            "Department",
-            "Total Days",
-            "Present",
-            "Absent",
-            "Late",
-            "Leave",
-            "Worked",
-            "Late (min)",
-            "OT (min)",
-        ],
-        rows=[
-            [
-                row["employee__emp_code"] or "",
-                f"{row['employee__first_name']} {row['employee__last_name']}".strip(),
-                row["employee__department__name"] or "",
-                row["total_days"],
-                row["present_days"],
-                row["absent_days"],
-                row["late_days"],
-                row["leave_days"],
-                format_minutes(row["total_worked_minutes"]),
-                row["total_late_minutes"] or 0,
-                row["total_overtime_minutes"] or 0,
-            ]
-            for row in rows
-        ],
+        columns=columns,
+        row_dicts=attendance_summary_row_dicts(rows),
     )
 
 
-def individual_attendance_report_data(records) -> ReportData:
-    return ReportData(
+def individual_attendance_row_dicts(records) -> list[dict]:
+    return [
+        {
+            "date": record.date,
+            "status": record.get_status_display(),
+            "status_code": record.status,
+            "expected_in": format_datetime(record.expected_in),
+            "expected_out": format_datetime(record.expected_out),
+            "first_in": format_datetime(record.first_in),
+            "last_out": format_datetime(record.last_out),
+            "worked": format_minutes(record.worked_minutes),
+            "late": format_minutes(record.late_minutes),
+            "early_leave": format_minutes(record.early_leave_minutes),
+            "overtime": format_minutes(record.overtime_minutes),
+        }
+        for record in records
+    ]
+
+
+def individual_attendance_report_data(
+    records, columns: list[ReportColumn]
+) -> ReportData:
+    return project_report_data(
         title="Individual Attendance",
-        headers=[
-            "Date",
-            "Status",
-            "Expected In",
-            "Expected Out",
-            "First In",
-            "Last Out",
-            "Worked",
-            "Late",
-            "Early Leave",
-            "OT",
-        ],
-        rows=[
-            [
-                record.date,
-                record.get_status_display(),
-                format_datetime(record.expected_in),
-                format_datetime(record.expected_out),
-                format_datetime(record.first_in),
-                format_datetime(record.last_out),
-                format_minutes(record.worked_minutes),
-                format_minutes(record.late_minutes),
-                format_minutes(record.early_leave_minutes),
-                format_minutes(record.overtime_minutes),
-            ]
-            for record in records
-        ],
+        columns=columns,
+        row_dicts=individual_attendance_row_dicts(records),
     )
 
 
-def department_attendance_report_data(rows) -> ReportData:
-    return ReportData(
+def department_attendance_row_dicts(rows) -> list[dict]:
+    return [
+        {
+            "department": row["employee__department__name"] or "Unassigned",
+            "employee_count": row["employee_count"],
+            "total_days": row["total_days"],
+            "present_days": row["present_days"],
+            "absent_days": row["absent_days"],
+            "late_days": row["late_days"],
+            "late_minutes": row["total_late_minutes"] or 0,
+            "overtime_minutes": row["total_overtime_minutes"] or 0,
+        }
+        for row in rows
+    ]
+
+
+def department_attendance_report_data(
+    rows, columns: list[ReportColumn]
+) -> ReportData:
+    return project_report_data(
         title="Department Attendance",
-        headers=[
-            "Department",
-            "Employees",
-            "Total Days",
-            "Present",
-            "Absent",
-            "Late",
-            "Late (min)",
-            "OT (min)",
-        ],
-        rows=[
-            [
-                row["employee__department__name"] or "Unassigned",
-                row["employee_count"],
-                row["total_days"],
-                row["present_days"],
-                row["absent_days"],
-                row["late_days"],
-                row["total_late_minutes"] or 0,
-                row["total_overtime_minutes"] or 0,
-            ]
-            for row in rows
-        ],
+        columns=columns,
+        row_dicts=department_attendance_row_dicts(rows),
     )
 
 
@@ -143,7 +142,9 @@ def punch_log_report_data(transactions) -> ReportData:
             [
                 format_datetime(transaction.timestamp),
                 transaction.employee.full_name,
-                transaction.employee.department.name if transaction.employee.department else "",
+                transaction.employee.department.name
+                if transaction.employee.department
+                else "",
                 transaction.get_direction_display(),
                 transaction.get_source_display(),
                 transaction.external_id,

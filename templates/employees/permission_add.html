@@ -1,0 +1,58 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block title %}Add Permission{% endblock %}
+
+{% block page_content %}
+<div class="card" style="max-width:720px;">
+  <div class="card__header">
+    <span class="card__title">Add permission</span>
+  </div>
+  <div class="card__body">
+    <div id="permission-form-container">
+      {% partialdef permission_form inline %}
+{% if success_message %}
+<div id="form-messages" class="message success">
+    {{ success_message }}
+    <a href="{% url 'permission_list' %}">View all permissions</a>
+</div>
+{% else %}
+<div id="form-messages"></div>
+{% endif %}
+
+<form
+    id="permission-form"
+    hx-post="{% url 'permission_add' %}"
+    hx-target="#permission-form-container"
+    hx-swap="innerHTML"
+>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="message error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="field">
+        <label for="{{ form.codename.id_for_label }}">Codename *</label>
+        {{ form.codename }}
+        {% if form.codename.errors %}<span class="error">{{ form.codename.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.name.id_for_label }}">Name *</label>
+        {{ form.name }}
+        {% if form.name.errors %}<span class="error">{{ form.name.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.description.id_for_label }}">Description</label>
+        {{ form.description }}
+        {% if form.description.errors %}<span class="error">{{ form.description.errors }}</span>{% endif %}
+    </div>
+
+    <button type="submit">Add Permission</button>
+</form>
+{% endpartialdef permission_form %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -25,3 +25,12 @@ class IsHtmxPartialTests(SimpleTestCase):
         )
 
         self.assertFalse(is_htmx_partial(request))
+
+    def test_history_restore_is_not_partial(self):
+        request = self.factory.get(
+            "/",
+            HTTP_HX_REQUEST="true",
+            HTTP_HX_HISTORY_RESTORE_REQUEST="true",
+        )
+
+        self.assertFalse(is_htmx_partial(request))

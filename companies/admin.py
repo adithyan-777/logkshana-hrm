@@ -4,6 +4,7 @@ from django_tenants.admin import TenantAdminMixin
 from companies.models import Company, Domain
 from companies.models import DeviceBrand, DeviceType, Device, Branch
 
+
 @admin.register(Company)
 class CompanyAdmin(TenantAdminMixin, admin.ModelAdmin):
     list_display = ("name", "schema_name", "paid_until", "on_trial", "created_on")
@@ -18,11 +19,13 @@ class DomainAdmin(admin.ModelAdmin):
     search_fields = ("domain",)
     autocomplete_fields = ("tenant",)
 
+
 @admin.register(DeviceBrand)
 class DeviceBrandAdmin(admin.ModelAdmin):
     list_display = ("name", "description", "is_active")
     list_filter = ("is_active",)
     search_fields = ("name",)
+
 
 @admin.register(DeviceType)
 class DeviceTypeAdmin(admin.ModelAdmin):
@@ -30,12 +33,23 @@ class DeviceTypeAdmin(admin.ModelAdmin):
     list_filter = ("is_active",)
     search_fields = ("brand__name", "model_name")
 
+
 @admin.register(Device)
 class DeviceAdmin(admin.ModelAdmin):
-    list_display = ("serial_number", "name", "company", "branch", "device_type", "is_active")
+    list_display = (
+        "serial_number",
+        "name",
+        "company",
+        "branch",
+        "device_type",
+        "is_active",
+        "last_gateway_log_id",
+        "last_synced_at",
+    )
     list_filter = ("is_active",)
     search_fields = ("serial_number", "name")
     autocomplete_fields = ("company", "branch", "device_type")
+
 
 @admin.register(Branch)
 class BranchAdmin(admin.ModelAdmin):

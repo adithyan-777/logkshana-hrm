@@ -65,14 +65,11 @@ def individual_attendance_list(
     date_to: date,
     employee_id: int,
 ):
-    return (
-        _daily_attendance_base_queryset(
-            date_from=date_from,
-            date_to=date_to,
-            employee_id=employee_id,
-        )
-        .order_by("date")
-    )
+    return _daily_attendance_base_queryset(
+        date_from=date_from,
+        date_to=date_to,
+        employee_id=employee_id,
+    ).order_by("date")
 
 
 def department_attendance_list(

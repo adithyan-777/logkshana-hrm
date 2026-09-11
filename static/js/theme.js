@@ -4,7 +4,7 @@
   const prefsKey = "logkshana-ui-prefs";
 
   const defaults = {
-    mode: "system",
+    mode: "light",
     layout: "compact",
     scale: "md",
     sidebarVariant: "inset",
@@ -32,7 +32,7 @@
   function readPrefs() {
     const prefs = { ...defaults };
     const legacyMode = safeGetItem(modeKey) || safeGetItem("htmx-template-theme-mode");
-    if (legacyMode === "system" || legacyMode === "light" || legacyMode === "dark") {
+    if (legacyMode === "light") {
       prefs.mode = legacyMode;
     }
     try {
@@ -46,6 +46,7 @@
         }
       }
     } catch (_) {}
+    if (prefs.mode !== "light") prefs.mode = "light";
     return prefs;
   }
 
@@ -109,7 +110,7 @@
   function setPref(key, value) {
     const prefs = readPrefs();
     if (!(key in defaults)) return;
-    if (key === "mode" && !["light", "dark", "system"].includes(value)) return;
+    if (key === "mode" && value !== "light") return;
     if (key === "layout" && !["compact", "full"].includes(value)) return;
     if (key === "scale" && !["sm", "md", "lg"].includes(value)) return;
     if (key === "sidebarVariant" && !["default", "inset"].includes(value)) return;
@@ -123,10 +124,7 @@
   }
 
   function quickToggleTheme() {
-    const prefs = readPrefs();
-    const current = resolveTheme(prefs.mode);
-    prefs.mode = current === "dark" ? "light" : "dark";
-    applyPrefs(prefs);
+    return;
   }
 
   window.LogkshanaTheme = {

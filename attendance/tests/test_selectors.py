@@ -31,6 +31,19 @@ class AttendanceTransactionListTests(BaseTenantTestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].employee, employee)
 
+    def test_filters_to_one_employee(self):
+        employee = employee_factory(first_name="Mine", emp_code="AT-MINE")
+        attendance_transaction_factory(employee=employee, external_id="MINE-1")
+        attendance_transaction_factory(
+            employee=employee_factory(first_name="Theirs", emp_code="AT-THEIRS"),
+            external_id="THEIRS-1",
+        )
+
+        results = list(attendance_transaction_list(employee=employee))
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].external_id, "MINE-1")
+
     def test_excludes_soft_deleted_transactions(self):
         transaction = attendance_transaction_factory(external_id="DEL-1")
         transaction.delete()
@@ -56,6 +69,25 @@ class DailyAttendanceListTests(BaseTenantTestCase):
 
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].status, DailyAttendance.Status.ABSENT)
+
+    def test_filters_to_one_employee(self):
+        employee = employee_factory(first_name="Mine", emp_code="DA-MINE")
+        daily_attendance_factory(
+            employee=employee,
+            date=date(2026, 8, 1),
+            status=DailyAttendance.Status.PRESENT,
+        )
+        daily_attendance_factory(
+            employee=employee_factory(first_name="Theirs", emp_code="DA-THEIRS"),
+            date=date(2026, 8, 1),
+            status=DailyAttendance.Status.ABSENT,
+        )
+
+        results = list(daily_attendance_list(employee=employee))
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].employee, employee)
+        self.assertEqual(results[0].status, DailyAttendance.Status.PRESENT)
 
 
 class AttendanceCorrectionListTests(BaseTenantTestCase):

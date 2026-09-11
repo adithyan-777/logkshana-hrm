@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/6.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
+
 import sentry_sdk
 from pathlib import Path
 import os
@@ -31,7 +32,7 @@ SECRET_KEY = "django-insecure-uro!dm%+1*_ndwhmsv_k1g9^-(e)js1csd^3koe_hx_ih^i*@h
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -45,16 +46,30 @@ SHARED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "tenant_users.permissions",
+    "tenant_users.tenants",
     "rest_framework",
     "companies",
+    "users",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
     "django_celery_beat",
     "django_celery_results",
+    "waffle",
 ]
 
-TENANT_APPS = ("employees", "schedule", "leave", "attendance", "reports", "dashboard")
+TENANT_APPS = [
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "tenant_users.permissions",
+    "employees",
+    "schedule",
+    "leave",
+    "attendance",
+    "reports",
+    "dashboard",
+]
 
 INSTALLED_APPS = list(SHARED_APPS) + [
     app for app in TENANT_APPS if app not in SHARED_APPS
@@ -71,6 +86,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    "tenant_users.tenants.middleware.TenantAccessMiddleware",
+    "waffle.middleware.WaffleMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -92,18 +109,26 @@ TEMPLATES = [
 ]
 
 AUTHENTICATION_BACKENDS = [
-    # Needed to login by username in Django admin, regardless of `allauth`
-    "django.contrib.auth.backends.ModelBackend",
-    # `allauth` specific authentication methods, such as login by email
+    "tenant_users.permissions.backend.UserBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
+
+TENANT_USERS_DOMAIN = os.getenv("TENANT_USERS_DOMAIN")
+
+# Tenant users settings
+AUTH_USER_MODEL = "users.TenantUser"
+TENANT_USERS_PERMS_QUERYSET = (
+    "tenant_users.permissions.utils.get_optimized_tenant_perms_queryset"
+)
+TENANT_USERS_ACCESS_ERROR_MESSAGE = "Access denied. Please contact your administrator."
 
 WSGI_APPLICATION = "config.wsgi.application"
 
 ACCOUNT_EMAIL_VERIFICATION = "optional"
 
-ACCOUNT_LOGIN_METHODS = {"username"}
-ACCOUNT_SIGNUP_FIELDS = ["username*", "password1*", "password2*"]
+ACCOUNT_LOGIN_METHODS = {"email", "username"}
+ACCOUNT_USER_MODEL_USERNAME_FIELD = "username"
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
 
 LOGIN_REDIRECT_URL = "dashboard"
 
@@ -148,13 +173,13 @@ AUTH_PASSWORD_VALIDATORS = [
 
 ## Celery settings
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = 'django-db'  # uses django_celery_results
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
+CELERY_RESULT_BACKEND = "django-db"  # uses django_celery_results
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = os.getenv("TIMEZONE", "Asia/Qatar")  # match your Django TIME_ZONE
 
-CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
 
 # Internationalization
@@ -206,6 +231,10 @@ REST_FRAMEWORK = {
     ],
 }
 
+# Device gateway settings
+GATEWAY_SECRET_KEY = os.getenv("GATEWAY_SECRET_KEY")
+
+
 # Sentry settings
 sentry_sdk.init(
     dsn="https://8821592c9a560dba26b15f4c5eae26c9@o4511992195317760.ingest.de.sentry.io/4511992206131280",
@@ -224,4 +253,3 @@ sentry_sdk.init(
     # run the profiler on when there is an active transaction
     profile_lifecycle="trace",
 )
-

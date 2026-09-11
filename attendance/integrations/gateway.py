@@ -7,6 +7,44 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 
 
+def gateway_auth_headers() -> dict:
+    """Auth headers pattika sends when calling the device gateway.
+
+    Canonical scheme is ``Authorization: Bearer <GATEWAY_SECRET_KEY>``.
+    ``X-Gateway-Token`` is sent as well for gateways that prefer a custom
+    header. Empty dict when no secret is configured (local dev).
+    """
+    secret = getattr(settings, "GATEWAY_SECRET_KEY", "") or ""
+    if not secret:
+        return {}
+    return {"Authorization": f"Bearer {secret}", "X-Gateway-Token": secret}
+
+
+def gateway_request_is_authorized(request) -> bool:
+    """Check a request arriving from the device gateway.
+
+    Accepts (in order):
+    - ``Authorization: Bearer <GATEWAY_SECRET_KEY>`` (canonical)
+    - ``X-Gateway-Token: <GATEWAY_SECRET_KEY>``
+    - legacy ``?secret_key=<GATEWAY_SECRET_KEY>`` query param
+
+    Returns True when no ``GATEWAY_SECRET_KEY`` is configured so local dev
+    without a secret keeps working.
+    """
+    secret = getattr(settings, "GATEWAY_SECRET_KEY", "") or ""
+    if not secret:
+        return True
+    auth = request.META.get("HTTP_AUTHORIZATION", "")
+    if auth == f"Bearer {secret}":
+        return True
+    if request.META.get("HTTP_X_GATEWAY_TOKEN") == secret:
+        return True
+    # Legacy fallback for gateways that can only append a query param.
+    if request.GET.get("secret_key") == secret:
+        return True
+    return False
+
+
 def device_gateway_attendance_fetch(
     *,
     serial_number: str,
@@ -21,7 +59,8 @@ def device_gateway_attendance_fetch(
         params["after_id"] = after_id
 
     url = f"{base_url.rstrip('/')}/api/attendance?{urlencode(params)}"
-    request = Request(url, method="GET", headers={"Accept": "application/json"})
+    headers = {"Accept": "application/json", **gateway_auth_headers()}
+    request = Request(url, method="GET", headers=headers)
     try:
         with urlopen(request, timeout=30) as response:
             raw = response.read()

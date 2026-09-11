@@ -189,11 +189,13 @@ def device_user_create(*, employee: Employee, serial_number: str) -> None:
         "privilege": 0,
         "card": "",
     }
+    from attendance.integrations.gateway import gateway_auth_headers
+
     request = Request(
         url,
         data=json.dumps(payload).encode(),
         method="POST",
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json", **gateway_auth_headers()},
     )
     try:
         with urlopen(request, timeout=15) as response:

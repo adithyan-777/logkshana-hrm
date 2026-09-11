@@ -218,14 +218,24 @@ def device_attendance_pull(
 
     with schema_context(tenant_schema):
         for log in logs:
+            # Gateway identifies logs with ``gateway_log_id`` (older
+            # payloads used ``id``); accept either.
             log_id = log.get("id")
+            if log_id is None:
+                log_id = log.get("gateway_log_id")
             if log_id is None:
                 skipped += 1
                 continue
 
             max_log_id = max(max_log_id, log_id)
-            emp_code = str(log["user_id"])
-            timestamp = parse_datetime(log["timestamp"])
+            # Gateway sends ``user_id`` (device PIN); tolerate ``employee_id``.
+            emp_code = log.get("user_id", log.get("employee_id"))
+            if emp_code is None:
+                skipped += 1
+                continue
+            emp_code = str(emp_code)
+            timestamp_raw = log.get("timestamp")
+            timestamp = parse_datetime(timestamp_raw) if timestamp_raw else None
             if timestamp is None:
                 skipped += 1
                 continue

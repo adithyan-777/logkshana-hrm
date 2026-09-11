@@ -58,6 +58,31 @@ class DeviceAttendancePullTests(BaseTenantTestCase):
         self.assertEqual(self.device.last_sync_error, "")
 
     @patch("attendance.services.device_gateway_attendance_fetch")
+    def test_accepts_gateway_log_id_key(self, mock_fetch):
+        """Real gateway payloads identify logs with gateway_log_id, not id."""
+        employee_factory(first_name="Alice", emp_code="1001")
+        mock_fetch.return_value = [
+            {
+                "gateway_log_id": 201,
+                "user_id": "1001",
+                "timestamp": "2026-09-02T09:00:00Z",
+                "status": 0,
+                "verify_mode": 1,
+                "work_code": "0",
+                "serial_number": "TEST001",
+            }
+        ]
+
+        result = device_attendance_pull(serial_number="TEST001")
+
+        self.assertEqual(result["created"], 1)
+        self.assertEqual(result["skipped"], 0)
+        self.assertEqual(result["last_log_id"], 201)
+        self.assertTrue(
+            AttendanceTransaction.objects.filter(external_id="gateway:201").exists()
+        )
+
+    @patch("attendance.services.device_gateway_attendance_fetch")
     def test_auto_creates_employee_when_missing(self, mock_fetch):
         mock_fetch.return_value = [SAMPLE_LOGS[0]]
 

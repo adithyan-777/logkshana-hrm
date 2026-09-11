@@ -223,6 +223,34 @@
   margin-bottom: 0;
 }
 
+.report-columns {
+  margin-top: var(--space-3);
+}
+
+.report-columns summary {
+  cursor: pointer;
+  user-select: none;
+}
+
+.report-columns__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+  padding: var(--space-3);
+  background: var(--bg-subtle, var(--bg-elevated));
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+}
+
+.report-columns__option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
 .card--table .report-empty {
   padding: var(--space-4);
 }

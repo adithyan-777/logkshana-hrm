@@ -1,4 +1,5 @@
 {% extends "layouts/app_shell.html" %}
+{% load report_tags %}
 
 {% block title %}Department Attendance Report{% endblock %}
 
@@ -17,27 +18,17 @@
 <table class="data-table">
     <thead>
         <tr>
-            <th>Department</th>
-            <th>Employees</th>
-            <th>Total Days</th>
-            <th>Present</th>
-            <th>Absent</th>
-            <th>Late</th>
-            <th>Late (min)</th>
-            <th>OT (min)</th>
+            {% for column in columns %}
+            <th>{{ column.label }}</th>
+            {% endfor %}
         </tr>
     </thead>
     <tbody>
-        {% for row in page_obj %}
+        {% for row in report_rows %}
         <tr>
-            <td>{{ row.employee__department__name|default:"Unassigned" }}</td>
-            <td>{{ row.employee_count }}</td>
-            <td>{{ row.total_days }}</td>
-            <td>{{ row.present_days }}</td>
-            <td>{{ row.absent_days }}</td>
-            <td>{{ row.late_days }}</td>
-            <td>{{ row.total_late_minutes|default:0 }}m</td>
-            <td>{{ row.total_overtime_minutes|default:0 }}m</td>
+            {% for column in columns %}
+            <td>{{ row|report_cell:column.key }}</td>
+            {% endfor %}
         </tr>
         {% endfor %}
     </tbody>

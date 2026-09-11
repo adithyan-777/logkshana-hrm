@@ -21,4 +21,9 @@ urlpatterns = [
     path("punch-log/", views.punch_log_view, name="report_punch_log"),
     path("overtime/", views.overtime_report_view, name="report_overtime"),
     path("leave/", views.leave_report_view, name="report_leave"),
+    path(
+        "columns/save/",
+        views.save_report_columns_view,
+        name="report_save_columns",
+    ),
 ]

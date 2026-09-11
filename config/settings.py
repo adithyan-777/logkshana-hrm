@@ -231,6 +231,10 @@ REST_FRAMEWORK = {
     ],
 }
 
+# Device gateway settings
+GATEWAY_SECRET_KEY = os.getenv("GATEWAY_SECRET_KEY")
+
+
 # Sentry settings
 sentry_sdk.init(
     dsn="https://8821592c9a560dba26b15f4c5eae26c9@o4511992195317760.ingest.de.sentry.io/4511992206131280",

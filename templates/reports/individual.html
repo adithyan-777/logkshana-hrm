@@ -1,4 +1,5 @@
 {% extends "layouts/app_shell.html" %}
+{% load report_tags %}
 
 {% block title %}Individual Attendance Report{% endblock %}
 
@@ -19,31 +20,21 @@
 <table class="data-table">
     <thead>
         <tr>
-            <th>Date</th>
-            <th>Status</th>
-            <th>Expected In</th>
-            <th>Expected Out</th>
-            <th>First In</th>
-            <th>Last Out</th>
-            <th>Worked</th>
-            <th>Late</th>
-            <th>Early Leave</th>
-            <th>OT</th>
+            {% for column in columns %}
+            <th>{{ column.label }}</th>
+            {% endfor %}
         </tr>
     </thead>
     <tbody>
-        {% for record in page_obj %}
+        {% for row in report_rows %}
         <tr>
-            <td>{{ record.date }}</td>
-            <td><span class="badge status-{{ record.status }}">{{ record.get_status_display }}</span></td>
-            <td>{{ record.expected_in|default:"—" }}</td>
-            <td>{{ record.expected_out|default:"—" }}</td>
-            <td>{{ record.first_in|default:"—" }}</td>
-            <td>{{ record.last_out|default:"—" }}</td>
-            <td>{{ record.worked_minutes }}m</td>
-            <td>{{ record.late_minutes }}m</td>
-            <td>{{ record.early_leave_minutes }}m</td>
-            <td>{{ record.overtime_minutes }}m</td>
+            {% for column in columns %}
+            {% if column.key == "status" %}
+            <td><span class="badge status-{{ row.status_code }}">{{ row.status }}</span></td>
+            {% else %}
+            <td>{{ row|report_cell:column.key }}</td>
+            {% endif %}
+            {% endfor %}
         </tr>
         {% endfor %}
     </tbody>

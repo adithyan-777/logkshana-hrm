@@ -1,5 +1,6 @@
 from datetime import date, datetime, time, timedelta
 
+from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.db import connection
@@ -497,6 +498,19 @@ class Command(BaseCommand):
                 "belongs to the public tenant, it is moved. Default: localhost."
             ),
         )
+        parser.add_argument(
+            "--owner-email",
+            default="demo.owner@example.com",
+            help="Email (and username base) of the demo tenant owner to create.",
+        )
+        parser.add_argument(
+            "--owner-password",
+            default="ChangeMe123!",
+            help=(
+                "Initial password for the demo owner. Demo seeding only — "
+                "change it immediately after first login."
+            ),
+        )
 
     def handle(self, *args, **options):
         public_schema = get_public_schema_name()
@@ -504,8 +518,13 @@ class Command(BaseCommand):
         verbosity = options.get("verbosity", 1)
 
         with schema_context(public_schema):
+            owner, owner_created = self._ensure_owner(
+                email=options["owner_email"],
+                password=options["owner_password"],
+            )
             tenant, created_tenant = self._resolve_tenant(
                 schema_name=options.get("schema"),
+                owner=owner,
             )
 
         self.stdout.write(
@@ -513,10 +532,13 @@ class Command(BaseCommand):
         )
         if created_tenant:
             self.stdout.write(f"Created tenant '{tenant.schema_name}'")
+        if owner_created:
+            self.stdout.write(f"Created owner '{owner.email}'")
 
         self._ensure_tenant_schema(tenant=tenant, verbosity=verbosity)
 
         with schema_context(public_schema):
+            self._ensure_owner_access(owner=owner, tenant=tenant)
             for hostname in self._hostnames_for(domain=domain):
                 message = self._ensure_domain(tenant=tenant, domain=hostname)
                 if message:
@@ -535,10 +557,36 @@ class Command(BaseCommand):
 
         self.stdout.write("")
         self.stdout.write(f"Open the app on {domain} (must resolve to this tenant).")
+        self.stdout.write(f"Owner login: {options['owner_email']} (change the seeded password!)")
         self.stdout.write("Sample logins use employee usernames like ahmed.al-rashid")
         self.stdout.write("Demo employee codes: DEMO-001 .. DEMO-004")
 
-    def _resolve_tenant(self, *, schema_name: str | None) -> tuple[Company, bool]:
+    @staticmethod
+    def _ensure_owner(*, email: str, password: str):
+        """Get or create the demo tenant owner (Company.owner is required)."""
+        User = get_user_model()
+        username = (email.split("@")[0] or "demo_owner").strip() or "demo_owner"
+        owner, created = User.objects.get_or_create(
+            username=username,
+            defaults={"email": email},
+        )
+        if created:
+            owner.set_password(password)
+            owner.save(update_fields=["password"])
+        return owner, created
+
+    @staticmethod
+    def _ensure_owner_access(*, owner, tenant: Company) -> None:
+        """Attach the owner to the tenant with staff rights (admin login)."""
+        from tenant_users.permissions.models import UserTenantPermissions
+
+        owner.tenants.add(tenant)
+        UserTenantPermissions.objects.update_or_create(
+            profile=owner,
+            defaults={"is_staff": True},
+        )
+
+    def _resolve_tenant(self, *, schema_name: str | None, owner) -> tuple[Company, bool]:
         tenant_model = get_tenant_model()
         public_schema = get_public_schema_name()
 
@@ -556,7 +604,7 @@ class Command(BaseCommand):
 
         tenants = list(tenant_model.objects.exclude(schema_name=public_schema))
         if not tenants:
-            return self._create_demo_tenant(), True
+            return self._create_demo_tenant(owner=owner), True
         if len(tenants) > 1:
             names = ", ".join(t.schema_name for t in tenants)
             raise CommandError(
@@ -564,12 +612,13 @@ class Command(BaseCommand):
             )
         return tenants[0], False
 
-    def _create_demo_tenant(self) -> Company:
+    def _create_demo_tenant(self, *, owner) -> Company:
         company = Company(
             schema_name="demo",
             name="Demo Company",
             paid_until=date(2099, 1, 1),
             on_trial=True,
+            owner=owner,
         )
         company.save()
         return company

@@ -42,8 +42,8 @@ services:
     env_file:
       - .env
     environment:
-      DB_HOST: host.docker.internal
-      DB_PORT: "5432"
+      DB_HOST: ${CONTAINER_DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-5432}
       CELERY_BROKER_URL: redis://redis:6379/0
       DEBUG: ${DEBUG:-False}
       SECURE_COOKIES: ${SECURE_COOKIES:-False}
@@ -73,8 +73,8 @@ services:
     env_file:
       - .env
     environment:
-      DB_HOST: host.docker.internal
-      DB_PORT: "5432"
+      DB_HOST: ${CONTAINER_DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-5432}
       CELERY_BROKER_URL: redis://redis:6379/0
       DEBUG: ${DEBUG:-False}
       WAIT_FOR_TABLES: "django_celery_beat_periodictask,companies_company"
@@ -94,8 +94,8 @@ services:
     env_file:
       - .env
     environment:
-      DB_HOST: host.docker.internal
-      DB_PORT: "5432"
+      DB_HOST: ${CONTAINER_DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-5432}
       CELERY_BROKER_URL: redis://redis:6379/0
       DEBUG: ${DEBUG:-False}
       WAIT_FOR_TABLES: "django_celery_beat_periodictask,companies_company"

@@ -1,5 +1,6 @@
 from datetime import date, datetime, time, timedelta
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
@@ -494,8 +495,26 @@ class Command(BaseCommand):
             "--domain",
             default="localhost",
             help=(
-                "Hostname to attach to the seeded tenant. If it currently "
-                "belongs to the public tenant, it is moved. Default: localhost."
+                "Primary hostname to attach to the seeded tenant. If it "
+                "currently belongs to the public tenant, it is moved. "
+                "Default: localhost."
+            ),
+        )
+        parser.add_argument(
+            "--extra-domains",
+            default="",
+            help=(
+                "Comma-separated additional hostnames to attach, e.g. "
+                "'demo.site,shop.example.com'. They must resolve to this "
+                "server (DNS or /etc/hosts)."
+            ),
+        )
+        parser.add_argument(
+            "--skip-subdomain",
+            action="store_true",
+            help=(
+                "Do not auto-attach the conventional <schema>.TENANT_USERS_DOMAIN "
+                "subdomain (e.g. demo.localhost)."
             ),
         )
         parser.add_argument(
@@ -537,9 +556,16 @@ class Command(BaseCommand):
 
         self._ensure_tenant_schema(tenant=tenant, verbosity=verbosity)
 
+        hostnames = self._hostnames_for(
+            domain=domain,
+            schema_name=tenant.schema_name,
+            extra_domains=options["extra_domains"],
+            skip_subdomain=options["skip_subdomain"],
+        )
+
         with schema_context(public_schema):
             self._ensure_owner_access(owner=owner, tenant=tenant)
-            for hostname in self._hostnames_for(domain=domain):
+            for hostname in hostnames:
                 message = self._ensure_domain(tenant=tenant, domain=hostname)
                 if message:
                     self.stdout.write(message)
@@ -556,7 +582,13 @@ class Command(BaseCommand):
                 self.stdout.write(f"  created {count} {label.replace('_', ' ')}")
 
         self.stdout.write("")
-        self.stdout.write(f"Open the app on {domain} (must resolve to this tenant).")
+        self.stdout.write("Open the app on any of (must resolve to this server):")
+        for hostname in hostnames:
+            self.stdout.write(f"  http://{hostname}:8000")
+        self.stdout.write(
+            "Note: *.localhost resolves to 127.0.0.1 on modern systems; "
+            "other names need DNS or a /etc/hosts entry."
+        )
         self.stdout.write(f"Owner login: {options['owner_email']} (change the seeded password!)")
         self.stdout.write("Sample logins use employee usernames like ahmed.al-rashid")
         self.stdout.write("Demo employee codes: DEMO-001 .. DEMO-004")
@@ -639,10 +671,33 @@ class Command(BaseCommand):
             verbosity=verbosity,
         )
 
-    def _hostnames_for(self, *, domain: str) -> list[str]:
-        if domain == "localhost":
-            return ["localhost", "127.0.0.1"]
-        return [domain]
+    @staticmethod
+    def _hostnames_for(
+        *,
+        domain: str,
+        schema_name: str,
+        extra_domains: str = "",
+        skip_subdomain: bool = False,
+    ) -> list[str]:
+        """All hostnames to attach to the tenant.
+
+        Besides --domain this includes the conventional
+        <schema>.TENANT_USERS_DOMAIN subdomain (e.g. demo.localhost, per
+        django-tenant-users' provision_tenant convention), which works
+        without any /etc/hosts entry on modern systems.
+        """
+        hostnames = ["localhost", "127.0.0.1"] if domain == "localhost" else [domain]
+        if not skip_subdomain:
+            base_domain = getattr(settings, "TENANT_USERS_DOMAIN", None)
+            if base_domain:
+                conventional = f"{schema_name}.{base_domain}"
+                if conventional not in hostnames:
+                    hostnames.append(conventional)
+        for extra in (extra_domains or "").split(","):
+            extra = extra.strip()
+            if extra and extra not in hostnames:
+                hostnames.append(extra)
+        return hostnames
 
     def _ensure_domain(self, *, tenant: Company, domain: str) -> str | None:
         existing = Domain.objects.filter(domain=domain).select_related("tenant").first()

@@ -124,6 +124,18 @@ TENANT_USERS_ACCESS_ERROR_MESSAGE = "Access denied. Please contact your administ
 
 WSGI_APPLICATION = "config.wsgi.application"
 
+# Behind nginx (or any trusted internal proxy) that sets X-Forwarded-Proto.
+# Required so Django builds https:// URLs/redirects when TLS terminates
+# at the proxy. The proxy is on our own docker network, so trusting it is safe.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+
+# Prod HTTPS only: set SECURE_COOKIES=True once https:// works end to end.
+# (Local HTTP dev keeps False, or browsers would drop the session cookie.)
+SECURE_COOKIES = os.getenv("SECURE_COOKIES", "False") == "True"
+SESSION_COOKIE_SECURE = SECURE_COOKIES
+CSRF_COOKIE_SECURE = SECURE_COOKIES
+
 ACCOUNT_EMAIL_VERIFICATION = "optional"
 
 ACCOUNT_LOGIN_METHODS = {"email", "username"}

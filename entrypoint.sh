@@ -26,7 +26,7 @@ def wait_for(host, port, name, timeout=90):
 
 
 wait_for(
-    os.environ.get("DB_HOST", "db"),
+    os.environ.get("DB_HOST", "host.docker.internal"),
     os.environ.get("DB_PORT", "5432"),
     "Postgres",
 )

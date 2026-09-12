@@ -8,7 +8,9 @@ media
 staticfiles/
 
 # Backup files # 
-*.bak 
+*.bak
+backups/
+*.sql
 
 # If you are using PyCharm # 
 # User-specific stuff

@@ -66,3 +66,48 @@ class SeedDemoDataCommandTests(BaseTenantTestCase):
         self.assertEqual(moved.tenant_id, self.tenant.id)
         with schema_context(self.tenant.schema_name):
             self.assertTrue(Employee.objects.filter(emp_code="DEMO-001").exists())
+
+    def test_attaches_conventional_subdomain(self):
+        from django.conf import settings
+
+        base_domain = getattr(settings, "TENANT_USERS_DOMAIN", None)
+        if not base_domain:
+            self.skipTest("TENANT_USERS_DOMAIN is not configured")
+        domain = f"conv-{self.tenant.schema_name}.test"
+
+        call_command(
+            "seed_demo_data",
+            schema=self.tenant.schema_name,
+            domain=domain,
+            verbosity=0,
+        )
+
+        expected = f"{self.tenant.schema_name}.{base_domain}"
+        self.assertTrue(
+            Domain.objects.filter(domain=expected, tenant=self.tenant).exists()
+        )
+
+    def test_skip_subdomain_and_extra_domains(self):
+        from django.conf import settings
+
+        domain = f"extra-{self.tenant.schema_name}.test"
+
+        call_command(
+            "seed_demo_data",
+            schema=self.tenant.schema_name,
+            domain=domain,
+            extra_domains="extra1.test, extra2.test",
+            skip_subdomain=True,
+            verbosity=0,
+        )
+
+        base_domain = getattr(settings, "TENANT_USERS_DOMAIN", None)
+        if base_domain:
+            conventional = f"{self.tenant.schema_name}.{base_domain}"
+            self.assertFalse(Domain.objects.filter(domain=conventional).exists())
+        self.assertTrue(
+            Domain.objects.filter(domain="extra1.test", tenant=self.tenant).exists()
+        )
+        self.assertTrue(
+            Domain.objects.filter(domain="extra2.test", tenant=self.tenant).exists()
+        )

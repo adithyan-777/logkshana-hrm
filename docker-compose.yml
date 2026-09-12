@@ -42,7 +42,10 @@ services:
     env_file:
       - .env
     environment:
-      DB_HOST: ${CONTAINER_DB_HOST:-host.docker.internal}
+      # Container DB: CONTAINER_DB_HOST wins if set, else DB_HOST, else host-gateway.
+      # Laptop .env: DB_HOST=localhost (host-side) + CONTAINER_DB_HOST=host.docker.internal.
+      # Server .env: DB_HOST=<rds-endpoint> alone is enough.
+      DB_HOST: ${CONTAINER_DB_HOST:-${DB_HOST:-host.docker.internal}}
       DB_PORT: ${DB_PORT:-5432}
       CELERY_BROKER_URL: redis://redis:6379/0
       DEBUG: ${DEBUG:-False}
@@ -73,7 +76,10 @@ services:
     env_file:
       - .env
     environment:
-      DB_HOST: ${CONTAINER_DB_HOST:-host.docker.internal}
+      # Container DB: CONTAINER_DB_HOST wins if set, else DB_HOST, else host-gateway.
+      # Laptop .env: DB_HOST=localhost (host-side) + CONTAINER_DB_HOST=host.docker.internal.
+      # Server .env: DB_HOST=<rds-endpoint> alone is enough.
+      DB_HOST: ${CONTAINER_DB_HOST:-${DB_HOST:-host.docker.internal}}
       DB_PORT: ${DB_PORT:-5432}
       CELERY_BROKER_URL: redis://redis:6379/0
       DEBUG: ${DEBUG:-False}
@@ -94,7 +100,10 @@ services:
     env_file:
       - .env
     environment:
-      DB_HOST: ${CONTAINER_DB_HOST:-host.docker.internal}
+      # Container DB: CONTAINER_DB_HOST wins if set, else DB_HOST, else host-gateway.
+      # Laptop .env: DB_HOST=localhost (host-side) + CONTAINER_DB_HOST=host.docker.internal.
+      # Server .env: DB_HOST=<rds-endpoint> alone is enough.
+      DB_HOST: ${CONTAINER_DB_HOST:-${DB_HOST:-host.docker.internal}}
       DB_PORT: ${DB_PORT:-5432}
       CELERY_BROKER_URL: redis://redis:6379/0
       DEBUG: ${DEBUG:-False}

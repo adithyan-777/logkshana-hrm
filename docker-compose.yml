@@ -21,6 +21,32 @@
 name: pattika
 
 services:
+  # TEST-ONLY Postgres for seed/demo experiments (host Postgres on 5432 untouched).
+  # Never auto-starts; bring up explicitly:
+  #   docker compose --profile test up -d db
+  # Point laptop .env at it (see .env.example test block), then:
+  #   python manage.py migrate_schemas --noinput
+  #   python manage.py seed_demo_data
+  # Wipe the test DB (keeps all other volumes):
+  #   docker compose --profile test down && docker volume rm pattika_pgdata-test
+  db:
+    image: postgres:18-alpine
+    profiles: ["test"]
+    environment:
+      POSTGRES_DB: pattika_test
+      POSTGRES_USER: pattika
+      POSTGRES_PASSWORD: ${TEST_DB_PASSWORD:-pattika-test-pass}
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata-test:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pattika -d pattika_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   redis:
     image: redis:8-alpine
     command: ["redis-server", "--appendonly", "yes"]
@@ -166,6 +192,7 @@ volumes:
   staticfiles:
   certs:
   certbot-www:
+  pgdata-test:
 
 # Shared edge network: attach any other app's web service here and add
 # an nginx/conf.d/<app>.conf server block to route it by domain.

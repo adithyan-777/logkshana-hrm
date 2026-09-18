@@ -156,6 +156,9 @@ def _employee_get_or_create_for_device(*, emp_code: str, branch=None) -> Employe
         last_name=emp_code,
         emp_code=emp_code,
         branch=branch,
+        # Punch-only record: no phone known, fall back to the device PIN
+        # as the initial password (mobile is required by employee_create).
+        mobile=emp_code,
         sync_to_device=False,
     )
 

@@ -83,6 +83,7 @@ class EmployeeViewTests(BaseTenantTestCase):
                 "last_name": "Hire",
                 "emp_code": emp_code,
                 "email": "new.hire@example.com",
+                "mobile": "+97433555222",
                 "is_active": "on",
             },
         )
@@ -143,6 +144,7 @@ class EmployeeViewTests(BaseTenantTestCase):
                 "emp_code": "E-UPD",
                 "department": department.pk,
                 "email": "after@example.com",
+                "mobile": "+97433555333",
                 "is_active": "on",
             },
         )

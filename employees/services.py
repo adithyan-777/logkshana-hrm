@@ -3,7 +3,6 @@ from django.db import transaction
 from employees.models import Department, Employee, Permission, Position, Role
 
 import json
-import secrets
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from django.conf import settings
@@ -54,19 +53,21 @@ def employee_create(
     sync_to_device: bool = True,
 ) -> Employee:
     """Creates the Employee's User account with an auto-generated username
-    and temporary password. Returns (employee, plaintext_password) — the
-    plaintext is only available here, at creation time; show it to the admin
-    once (e.g. in the response / a one-time confirmation screen) or email it
-    to the employee. Never store it.
+    and the mobile number as the initial password. Mobile is required.
+    Returns the employee. The invite link flow can still be used to let the
+    employee set a new password afterwards.
     """
     tenant = get_current_tenant()
+    mobile = (mobile or "").strip()
+    if not mobile:
+        raise ValidationError({"mobile": "Mobile number is required."})
     username = _generate_username(first_name=first_name, last_name=last_name)
     user_email = email or f"{username}@{tenant.slug}.com"
     with schema_context(get_public_schema_name()):
         user = TenantUser.objects.create_user(
             email=user_email,
-            username = username,
-            password=secrets.token_urlsafe(24),
+            username=username,
+            password=mobile,
             is_active=True,
         )
 

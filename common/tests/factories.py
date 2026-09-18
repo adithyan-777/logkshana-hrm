@@ -87,11 +87,14 @@ def role_factory(*, name="Manager", is_system=False, permissions=None) -> "Role"
 
 
 
-def employee_factory(*, first_name="Jane", last_name="Doe", emp_code="E001", **kwargs):
+def employee_factory(
+    *, first_name="Jane", last_name="Doe", emp_code="E001", mobile="+97433000000", **kwargs
+):
     return employee_create(
         first_name=first_name,
         last_name=last_name,
         emp_code=emp_code,
+        mobile=mobile,
         **kwargs,
     )
 

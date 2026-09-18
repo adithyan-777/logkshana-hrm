@@ -42,6 +42,7 @@ class EmployeeCreateTests(BaseTenantTestCase):
             department=department,
             position=position,
             email="jane@example.com",
+            mobile="+97433555001",
             hire_date=date(2026, 1, 15),
         )
 
@@ -51,6 +52,7 @@ class EmployeeCreateTests(BaseTenantTestCase):
         self.assertEqual(employee.position, position)
         self.assertIsNotNone(employee.user)
         self.assertTrue(employee.user.has_usable_password())
+        self.assertTrue(employee.user.check_password("+97433555001"))
         self.assertEqual(employee.user.username, "janedoe")
         self.assertEqual(employee.user.email, "jane@example.com")
         self.assertEqual(employee.role.name, "Employee")
@@ -60,8 +62,18 @@ class EmployeeCreateTests(BaseTenantTestCase):
         )
 
     def test_generates_unique_username_for_same_name(self):
-        first = employee_create(first_name="John", last_name="Smith", emp_code="E010")
-        second = employee_create(first_name="John", last_name="Smith", emp_code="E011")
+        first = employee_create(
+            first_name="John",
+            last_name="Smith",
+            emp_code="E010",
+            mobile="+97433555010",
+        )
+        second = employee_create(
+            first_name="John",
+            last_name="Smith",
+            emp_code="E011",
+            mobile="+97433555011",
+        )
 
         self.assertNotEqual(first.user.username, second.user.username)
         self.assertTrue(first.user.username.startswith("johnsmith"))
@@ -72,12 +84,14 @@ class EmployeeCreateTests(BaseTenantTestCase):
             last_name="Smith",
             emp_code="E012",
             email="js1@example.com",
+            mobile="+97433555012",
         )
         second = employee_create(
             first_name="John",
             last_name="Smith",
             emp_code="E013",
             email="js2@example.com",
+            mobile="+97433555013",
         )
 
         self.assertNotEqual(first.user.username, second.user.username)
@@ -91,6 +105,7 @@ class EmployeeCreateTests(BaseTenantTestCase):
             last_name="Name",
             emp_code="E050",
             email="original@example.com",
+            mobile="+97433555050",
         )
 
         updated = employee_update(
@@ -99,6 +114,7 @@ class EmployeeCreateTests(BaseTenantTestCase):
             last_name="Person",
             emp_code="E050",
             email="changed@example.com",
+            mobile="+97433555050",
             is_active=False,
         )
 
@@ -121,12 +137,22 @@ class EmployeeCreateTests(BaseTenantTestCase):
         self.assertTrue(invite_link.startswith("http://"))
         self.assertIn("/accounts/password/reset/key/", invite_link)
 
+    def test_missing_mobile_raises(self):
+        with self.assertRaises(ValidationError):
+            employee_create(first_name="No", last_name="Phone", emp_code="E061")
+
+        with self.assertRaises(ValidationError):
+            employee_create(
+                first_name="Blank", last_name="Phone", emp_code="E062", mobile="  "
+            )
+
     def test_user_is_linked_to_current_tenant(self):
         employee = employee_create(
             first_name="Tenant",
             last_name="Member",
             emp_code="E040",
             email="tenant.member@example.com",
+            mobile="+97433555040",
         )
 
         self.assertIn(self.tenant, employee.user.tenants.all())
@@ -137,6 +163,7 @@ class EmployeeCreateTests(BaseTenantTestCase):
             last_name="Worker",
             emp_code="E041",
             email="login.worker@example.com",
+            mobile="+97433555041",
         )
         user = employee.user
         user.set_password(TEST_PASSWORD)

@@ -75,6 +75,7 @@ def _get_or_create_employee(
     department=None,
     position=None,
     email: str = "",
+    mobile: str = "",
     hire_date=None,
     branch=None,
 ) -> Employee:
@@ -92,6 +93,7 @@ def _get_or_create_employee(
         department=department,
         position=position,
         email=email,
+        mobile=mobile,
         hire_date=hire_date,
         sync_to_device=False,
     )
@@ -181,6 +183,7 @@ def seed_demo_data(*, branch=None) -> dict[str, int]:
         department=engineering,
         position=developer,
         email="ahmed.demo@example.com",
+        mobile="+97433000001",
         hire_date=hire_date,
         branch=branch,
     )
@@ -191,6 +194,7 @@ def seed_demo_data(*, branch=None) -> dict[str, int]:
         department=hr,
         position=hr_manager,
         email="fatima.demo@example.com",
+        mobile="+97433000002",
         hire_date=hire_date,
         branch=branch,
     )
@@ -201,6 +205,7 @@ def seed_demo_data(*, branch=None) -> dict[str, int]:
         department=finance,
         position=accountant,
         email="omar.demo@example.com",
+        mobile="+97433000003",
         hire_date=hire_date,
         branch=branch,
     )
@@ -211,6 +216,7 @@ def seed_demo_data(*, branch=None) -> dict[str, int]:
         department=engineering,
         position=developer,
         email="sara.demo@example.com",
+        mobile="+97433000004",
         hire_date=date(2025, 3, 1),
         branch=branch,
     )

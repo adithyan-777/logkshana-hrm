@@ -20,6 +20,36 @@
 
 <div class="card card--table">
   <div class="card__body">
+    <h2 class="card__title">Recent punches</h2>
+    {% if not employee %}
+    <p class="empty-state">No employee profile is linked to this account ({{ request.user.email|default:request.user.username }}). Ask an admin to link your login to your employee record.</p>
+    {% elif recent_punches %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Direction</th>
+                <th>Source</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for punch in recent_punches %}
+            <tr>
+                <td>{{ punch.timestamp }}</td>
+                <td>{{ punch.get_direction_display }}</td>
+                <td>{{ punch.get_source_display }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty-state">No punches recorded yet{% if employee.emp_code %} for employee code {{ employee.emp_code }}{% endif %}. If you checked in on the device, ask an admin to verify your employee code matches the device PIN.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card card--table">
+  <div class="card__body">
     <div
       id="my-attendance-list"
       class="data-table-wrap"
@@ -62,7 +92,7 @@
     {% if search %}
     No attendance matches "{{ search }}".
     {% else %}
-    No attendance recorded yet.
+    No daily attendance calculated yet. Punches above still count — daily rows appear once check-in/out pairs are processed.
     {% endif %}
 </p>
 {% endif %}

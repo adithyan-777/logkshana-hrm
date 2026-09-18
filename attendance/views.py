@@ -616,8 +616,10 @@ def my_attendance_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
     if employee is None:
         queryset = DailyAttendance.objects.none()
+        recent_punches: list = []
     else:
         queryset = daily_attendance_list(search=search, employee=employee)
+        recent_punches = list(attendance_transaction_list(employee=employee)[:10])
     context = list_pagination_context(
         request,
         queryset,
@@ -626,6 +628,7 @@ def my_attendance_view(request: HttpRequest) -> HttpResponse:
         hx_target="#my-attendance-list",
     )
     context["employee"] = employee
+    context["recent_punches"] = recent_punches
 
     if is_htmx_partial(request):
         return render(

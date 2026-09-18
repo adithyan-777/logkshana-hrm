@@ -386,6 +386,21 @@ class MyAttendanceViewTests(BaseTenantTestCase):
         self.assertNotContains(response, "OtherPerson")
         self.assertContains(response, "/attendance/me/")
 
+    def test_shows_own_punches_without_daily_row(self):
+        employee, client = self._employee_client(emp_code="ME-P1")
+        punch = attendance_transaction_factory(employee=employee)
+        # Simulate punches with no calculated daily row (e.g. row removed
+        # or not yet processed): the user must still see their punches.
+        DailyAttendance.objects.filter(employee=employee).delete()
+        other = employee_factory(first_name="OtherPerson", emp_code="ME-POTH")
+        attendance_transaction_factory(employee=other)
+
+        response = client.get(reverse("my_attendance"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Recent punches")
+        self.assertEqual(list(response.context["recent_punches"]), [punch])
+
     def test_forbidden_on_company_attendance_list(self):
         _employee, client = self._employee_client(emp_code="ME-403")
 

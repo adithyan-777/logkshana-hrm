@@ -1,6 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpRequest, HttpResponse
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
@@ -14,7 +14,7 @@ from employees.forms import (
     PositionForm,
     RoleForm,
 )
-from employees.models import Employee
+from employees.models import Department, Employee, Position
 from employees.permission_catalog import PermissionCodename
 from employees.selectors import (
     department_list,
@@ -23,15 +23,22 @@ from employees.selectors import (
     permission_list,
     position_list,
     role_list,
+    user_has_permission,
 )
 from employees.services import (
     department_create,
+    department_delete,
+    department_update,
     employee_create,
+    employee_delete,
     employee_invite_link,
+    employee_role_ensure,
     employee_update,
     permission_catalog_ensure,
     permission_create,
     position_create,
+    position_delete,
+    position_update,
     role_create,
 )
 
@@ -65,6 +72,12 @@ def employee_list_view(request: HttpRequest) -> HttpResponse:
         search=search,
         base_url=reverse("employee_list"),
         hx_target="#employee-list",
+    )
+    context["can_edit"] = user_has_permission(
+        user=request.user, codename=PermissionCodename.EMPLOYEES_EDIT
+    )
+    context["can_delete"] = user_has_permission(
+        user=request.user, codename=PermissionCodename.EMPLOYEES_DELETE
     )
 
     if is_htmx_partial(request):
@@ -148,6 +161,19 @@ def employee_edit(request: HttpRequest, employee_id: int) -> HttpResponse:
     )
 
 
+@login_required
+@require_permission(PermissionCodename.EMPLOYEES_DELETE)
+@require_http_methods(["DELETE"])
+def employee_delete_view(request: HttpRequest, employee_id: int) -> HttpResponse:
+    employee = employee_get(employee_id=employee_id)
+    if employee is None:
+        raise Http404
+    employee_delete(employee=employee)
+    response = HttpResponse("")
+    response["HX-Trigger"] = "employeeDeleted"
+    return response
+
+
 def _render_department_form(
     request: HttpRequest, form: DepartmentForm, *, success_message: str = ""
 ) -> HttpResponse:
@@ -169,6 +195,12 @@ def department_list_view(request: HttpRequest) -> HttpResponse:
         search=search,
         base_url=reverse("department_list"),
         hx_target="#department-list",
+    )
+    context["can_edit"] = user_has_permission(
+        user=request.user, codename=PermissionCodename.DEPARTMENTS_ADD
+    )
+    context["can_delete"] = user_has_permission(
+        user=request.user, codename=PermissionCodename.DEPARTMENTS_DELETE
     )
 
     if is_htmx_partial(request):
@@ -202,6 +234,56 @@ def department_add(request: HttpRequest) -> HttpResponse:
     return render(request, "employees/department_add.html", {"form": form})
 
 
+def _render_department_edit_form(
+    request: HttpRequest, form: DepartmentForm, *, department: Department
+) -> HttpResponse:
+    return render(
+        request,
+        "employees/department_edit.html#department_edit_form",
+        {"form": form, "department": department},
+    )
+
+
+@login_required
+@require_permission(PermissionCodename.DEPARTMENTS_ADD)
+@require_http_methods(["GET", "POST"])
+def department_edit(request: HttpRequest, department_id: int) -> HttpResponse:
+    department = get_object_or_404(Department, pk=department_id)
+
+    if request.method == "POST":
+        form = DepartmentForm(request.POST, instance=department)
+        if form.is_valid():
+            department_update(**form.cleaned_data, department=department)
+            response = _render_department_edit_form(
+                request, DepartmentForm(instance=department), department=department
+            )
+            response["HX-Trigger"] = "departmentUpdated"
+            return response
+
+        return _render_department_edit_form(request, form, department=department)
+
+    form = DepartmentForm(instance=department)
+    if is_htmx_partial(request):
+        return _render_department_edit_form(request, form, department=department)
+
+    return render(
+        request,
+        "employees/department_edit.html",
+        {"form": form, "department": department},
+    )
+
+
+@login_required
+@require_permission(PermissionCodename.DEPARTMENTS_DELETE)
+@require_http_methods(["DELETE"])
+def department_delete_view(request: HttpRequest, department_id: int) -> HttpResponse:
+    department = get_object_or_404(Department, pk=department_id)
+    department_delete(department=department)
+    response = HttpResponse("")
+    response["HX-Trigger"] = "departmentDeleted"
+    return response
+
+
 def _render_position_form(
     request: HttpRequest, form: PositionForm, *, success_message: str = ""
 ) -> HttpResponse:
@@ -223,6 +305,12 @@ def position_list_view(request: HttpRequest) -> HttpResponse:
         search=search,
         base_url=reverse("position_list"),
         hx_target="#position-list",
+    )
+    context["can_edit"] = user_has_permission(
+        user=request.user, codename=PermissionCodename.POSITIONS_ADD
+    )
+    context["can_delete"] = user_has_permission(
+        user=request.user, codename=PermissionCodename.POSITIONS_DELETE
     )
 
     if is_htmx_partial(request):
@@ -256,6 +344,56 @@ def position_add(request: HttpRequest) -> HttpResponse:
     return render(request, "employees/position_add.html", {"form": form})
 
 
+def _render_position_edit_form(
+    request: HttpRequest, form: PositionForm, *, position: Position
+) -> HttpResponse:
+    return render(
+        request,
+        "employees/position_edit.html#position_edit_form",
+        {"form": form, "position": position},
+    )
+
+
+@login_required
+@require_permission(PermissionCodename.POSITIONS_ADD)
+@require_http_methods(["GET", "POST"])
+def position_edit(request: HttpRequest, position_id: int) -> HttpResponse:
+    position = get_object_or_404(Position, pk=position_id)
+
+    if request.method == "POST":
+        form = PositionForm(request.POST, instance=position)
+        if form.is_valid():
+            position_update(**form.cleaned_data, position=position)
+            response = _render_position_edit_form(
+                request, PositionForm(instance=position), position=position
+            )
+            response["HX-Trigger"] = "positionUpdated"
+            return response
+
+        return _render_position_edit_form(request, form, position=position)
+
+    form = PositionForm(instance=position)
+    if is_htmx_partial(request):
+        return _render_position_edit_form(request, form, position=position)
+
+    return render(
+        request,
+        "employees/position_edit.html",
+        {"form": form, "position": position},
+    )
+
+
+@login_required
+@require_permission(PermissionCodename.POSITIONS_DELETE)
+@require_http_methods(["DELETE"])
+def position_delete_view(request: HttpRequest, position_id: int) -> HttpResponse:
+    position = get_object_or_404(Position, pk=position_id)
+    position_delete(position=position)
+    response = HttpResponse("")
+    response["HX-Trigger"] = "positionDeleted"
+    return response
+
+
 def _render_role_form(
     request: HttpRequest, form: RoleForm, *, success_message: str = ""
 ) -> HttpResponse:
@@ -270,6 +408,7 @@ def _render_role_form(
 @require_permission(PermissionCodename.ROLES_VIEW)
 @require_http_methods(["GET"])
 def role_list_view(request: HttpRequest) -> HttpResponse:
+    employee_role_ensure()
     search = request.GET.get("q", "").strip()
     context = list_pagination_context(
         request,

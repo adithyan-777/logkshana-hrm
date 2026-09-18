@@ -21,6 +21,7 @@ from employees.selectors import (
     user_has_permission,
     user_permission_codenames,
 )
+from employees.services import employee_role_ensure
 
 
 class EmployeeListTests(BaseTenantTestCase):
@@ -168,6 +169,7 @@ class PositionListTests(BaseTenantTestCase):
 
 class RoleListTests(BaseTenantTestCase):
     def test_returns_roles_ordered_by_name(self):
+        employee_role_ensure()
         role_factory(name="Manager")
         role_factory(name="Admin")
 

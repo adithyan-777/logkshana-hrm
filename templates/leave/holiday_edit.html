@@ -1,0 +1,67 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block title %}Edit Holiday{% endblock %}
+
+{% block page_content %}
+{% include "partials/tabs_leave.html#tabs_leave" %}
+
+<div class="card" style="max-width:720px;">
+  <div class="card__header">
+    <span class="card__title">Edit holiday</span>
+  </div>
+  <div class="card__body">
+    <div id="holiday-edit-form-container">
+      {% partialdef holiday_edit_form inline %}
+<form
+    id="holiday-edit-form"
+    hx-post="{% url 'holiday_edit' holiday.pk %}"
+    hx-target="#holiday-edit-form-container"
+    hx-swap="innerHTML"
+>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="message error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="field">
+        <label for="{{ form.name.id_for_label }}">Name *</label>
+        {{ form.name }}
+        {% if form.name.errors %}<span class="error">{{ form.name.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field-row">
+        <div class="field">
+            <label for="{{ form.date.id_for_label }}">Date *</label>
+            {{ form.date }}
+            {% if form.date.errors %}<span class="error">{{ form.date.errors }}</span>{% endif %}
+        </div>
+        <div class="field">
+            <label for="{{ form.end_date.id_for_label }}">End date</label>
+            {{ form.end_date }}
+            {% if form.end_date.errors %}<span class="error">{{ form.end_date.errors }}</span>{% endif %}
+        </div>
+        <div class="field">
+            <label for="{{ form.holiday_type.id_for_label }}">Type</label>
+            {{ form.holiday_type }}
+        </div>
+    </div>
+
+    <div class="field">
+        <label for="{{ form.description.id_for_label }}">Description</label>
+        {{ form.description }}
+    </div>
+
+    <div class="field checkbox">
+        {{ form.is_active }}
+        <label for="{{ form.is_active.id_for_label }}">Active</label>
+    </div>
+
+    <button type="submit">Save changes</button>
+    <a href="{% url 'holiday_list' %}">Back to holidays</a>
+</form>
+{% endpartialdef holiday_edit_form %}
+    </div>
+  </div>
+</div>
+{% endblock %}

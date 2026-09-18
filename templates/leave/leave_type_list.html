@@ -26,7 +26,7 @@
       id="leave-type-list"
       class="data-table-wrap"
       hx-get="{% url 'leave_type_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="leaveTypeCreated from:body"
+      hx-trigger="leaveTypeCreated, leaveTypeUpdated, leaveTypeDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -41,6 +41,7 @@
             <th>Approval</th>
             <th>Half day</th>
             <th>Status</th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
@@ -56,6 +57,26 @@
                 <span class="badge active">Active</span>
                 {% else %}
                 <span class="badge inactive">Inactive</span>
+                {% endif %}
+            </td>
+            <td class="table-actions">
+                {% if can_edit %}
+                <a href="{% url 'leave_type_edit' leave_type.pk %}" class="btn-icon" title="Edit leave type" aria-label="Edit {{ leave_type.name }}">
+                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
+                </a>
+                {% endif %}
+                {% if can_delete %}
+                <button
+                  type="button"
+                  class="btn-icon btn-icon--danger"
+                  title="Delete leave type"
+                  aria-label="Delete {{ leave_type.name }}"
+                  hx-delete="{% url 'leave_type_delete' leave_type.pk %}"
+                  hx-confirm="Delete {{ leave_type.name }}?"
+                  hx-swap="none"
+                >
+                    <i class="bx bx-trash admin-icon admin-icon--18"></i>
+                </button>
                 {% endif %}
             </td>
         </tr>

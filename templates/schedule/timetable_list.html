@@ -26,7 +26,7 @@
       id="timetable-list"
       class="data-table-wrap"
       hx-get="{% url 'timetable_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="timetableCreated from:body"
+      hx-trigger="timetableCreated, timetableUpdated, timetableDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -42,6 +42,7 @@
             <th>Check in</th>
             <th>Check out</th>
             <th>Status</th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
@@ -58,6 +59,26 @@
                 <span class="badge active">Active</span>
                 {% else %}
                 <span class="badge inactive">Inactive</span>
+                {% endif %}
+            </td>
+            <td class="table-actions">
+                {% if can_edit %}
+                <a href="{% url 'timetable_edit' timetable.pk %}" class="btn-icon" title="Edit timetable" aria-label="Edit {{ timetable.name }}">
+                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
+                </a>
+                {% endif %}
+                {% if can_delete %}
+                <button
+                  type="button"
+                  class="btn-icon btn-icon--danger"
+                  title="Delete timetable"
+                  aria-label="Delete {{ timetable.name }}"
+                  hx-delete="{% url 'timetable_delete' timetable.pk %}"
+                  hx-confirm="Delete {{ timetable.name }}?"
+                  hx-swap="none"
+                >
+                    <i class="bx bx-trash admin-icon admin-icon--18"></i>
+                </button>
                 {% endif %}
             </td>
         </tr>

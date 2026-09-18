@@ -26,7 +26,7 @@
       id="leave-policy-list"
       class="data-table-wrap"
       hx-get="{% url 'leave_policy_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="leavePolicyCreated from:body"
+      hx-trigger="leavePolicyCreated, leavePolicyUpdated, leavePolicyDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -41,6 +41,7 @@
             <th>Accrual</th>
             <th>Carry forward</th>
             <th>Status</th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
@@ -56,6 +57,26 @@
                 <span class="badge active">Active</span>
                 {% else %}
                 <span class="badge inactive">Inactive</span>
+                {% endif %}
+            </td>
+            <td class="table-actions">
+                {% if can_edit %}
+                <a href="{% url 'leave_policy_edit' policy.pk %}" class="btn-icon" title="Edit leave policy" aria-label="Edit {{ policy.name }}">
+                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
+                </a>
+                {% endif %}
+                {% if can_delete %}
+                <button
+                  type="button"
+                  class="btn-icon btn-icon--danger"
+                  title="Delete leave policy"
+                  aria-label="Delete {{ policy.name }}"
+                  hx-delete="{% url 'leave_policy_delete' policy.pk %}"
+                  hx-confirm="Delete {{ policy.name }}?"
+                  hx-swap="none"
+                >
+                    <i class="bx bx-trash admin-icon admin-icon--18"></i>
+                </button>
                 {% endif %}
             </td>
         </tr>

@@ -146,6 +146,168 @@ def _validate_attendance_correction(correction: AttendanceCorrection) -> None:
         raise ValidationError("Check-out must be on or after check-in.")
 
 
+@transaction.atomic
+def attendance_transaction_update(
+    *,
+    transaction: AttendanceTransaction,
+    employee,
+    external_id: str,
+    timestamp,
+    direction: str,
+    source: str,
+    external_employee_id: str = "",
+    raw_data=None,
+) -> AttendanceTransaction:
+    transaction.employee = employee
+    transaction.external_id = external_id
+    transaction.timestamp = timestamp
+    transaction.direction = direction
+    transaction.source = source
+    transaction.external_employee_id = external_employee_id
+    transaction.raw_data = raw_data or {}
+    transaction.full_clean()
+    transaction.save()
+    return transaction
+
+
+@transaction.atomic
+def attendance_transaction_delete(
+    *, transaction: AttendanceTransaction
+) -> AttendanceTransaction:
+    """Soft-deletes the punch (recoverable via all_objects)."""
+    transaction.delete()
+    return transaction
+
+
+@transaction.atomic
+def daily_attendance_update(
+    *,
+    daily_attendance: DailyAttendance,
+    employee,
+    date,
+    status: str,
+    shift=None,
+    timetable=None,
+    scheduled_minutes: int = 0,
+    worked_minutes: int = 0,
+    late_minutes: int = 0,
+    early_leave_minutes: int = 0,
+    overtime_minutes: int = 0,
+    has_check_in: bool = False,
+    has_check_out: bool = False,
+    notes: str = "",
+) -> DailyAttendance:
+    daily_attendance.employee = employee
+    daily_attendance.date = date
+    daily_attendance.status = status
+    daily_attendance.shift = shift
+    daily_attendance.timetable = timetable
+    daily_attendance.scheduled_minutes = scheduled_minutes
+    daily_attendance.worked_minutes = worked_minutes
+    daily_attendance.late_minutes = late_minutes
+    daily_attendance.early_leave_minutes = early_leave_minutes
+    daily_attendance.overtime_minutes = overtime_minutes
+    daily_attendance.has_check_in = has_check_in
+    daily_attendance.has_check_out = has_check_out
+    daily_attendance.notes = notes
+    daily_attendance.full_clean()
+    daily_attendance.save()
+    return daily_attendance
+
+
+@transaction.atomic
+def daily_attendance_delete(
+    *, daily_attendance: DailyAttendance
+) -> DailyAttendance:
+    """Soft-deletes the daily record (recoverable via all_objects)."""
+    daily_attendance.delete()
+    return daily_attendance
+
+
+@transaction.atomic
+def attendance_correction_update(
+    *,
+    correction: AttendanceCorrection,
+    employee,
+    date,
+    reason: str,
+    check_in=None,
+    check_out=None,
+    status: str = AttendanceCorrection.Status.PENDING,
+    requested_by=None,
+) -> AttendanceCorrection:
+    correction.employee = employee
+    correction.date = date
+    correction.reason = reason
+    correction.check_in = check_in
+    correction.check_out = check_out
+    correction.status = status
+    correction.requested_by = requested_by
+    correction.full_clean()
+    _validate_attendance_correction(correction)
+    correction.save()
+    return correction
+
+
+@transaction.atomic
+def attendance_correction_delete(
+    *, correction: AttendanceCorrection
+) -> AttendanceCorrection:
+    """Soft-deletes the correction (recoverable via all_objects)."""
+    correction.delete()
+    return correction
+
+
+@transaction.atomic
+def attendance_rule_update(
+    *,
+    rule: AttendanceRule,
+    name: str,
+    require_check_in: bool = True,
+    require_check_out: bool = True,
+    missing_check_in_as_absence: bool = True,
+    missing_check_out_as_incomplete: bool = True,
+    late_grace_minutes: int = 0,
+    early_leave_grace_minutes: int = 0,
+    late_to_absence_minutes: int = 0,
+    duplicate_punch_window_minutes: int = 1,
+    allow_multiple_in_out: bool = False,
+    is_active: bool = True,
+) -> AttendanceRule:
+    rule.name = name
+    rule.require_check_in = require_check_in
+    rule.require_check_out = require_check_out
+    rule.missing_check_in_as_absence = missing_check_in_as_absence
+    rule.missing_check_out_as_incomplete = missing_check_out_as_incomplete
+    rule.late_grace_minutes = late_grace_minutes
+    rule.early_leave_grace_minutes = early_leave_grace_minutes
+    rule.late_to_absence_minutes = late_to_absence_minutes
+    rule.duplicate_punch_window_minutes = duplicate_punch_window_minutes
+    rule.allow_multiple_in_out = allow_multiple_in_out
+    rule.is_active = is_active
+    rule.full_clean()
+    rule.save()
+    return rule
+
+
+@transaction.atomic
+def attendance_rule_delete(*, rule: AttendanceRule) -> AttendanceRule:
+    """Soft-deletes the rule (recoverable via all_objects)."""
+    rule.delete()
+    return rule
+
+
+# Short aliases matching the "<entity>_<action>" naming used by URLs/views.
+transaction_update = attendance_transaction_update
+transaction_delete = attendance_transaction_delete
+daily_update = daily_attendance_update
+daily_delete = daily_attendance_delete
+correction_update = attendance_correction_update
+correction_delete = attendance_correction_delete
+rule_update = attendance_rule_update
+rule_delete = attendance_rule_delete
+
+
 def _employee_get_or_create_for_device(*, emp_code: str, branch=None) -> Employee:
     employee = employee_get_by_emp_code(emp_code=emp_code)
     if employee is not None:

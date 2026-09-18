@@ -25,7 +25,7 @@
       id="position-list"
       class="data-table-wrap"
       hx-get="{% url 'position_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="positionCreated from:body"
+      hx-trigger="positionCreated, positionUpdated, positionDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -37,6 +37,7 @@
             <th>Title</th>
             <th>Code</th>
             <th>Parent</th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
@@ -45,6 +46,26 @@
             <td>{{ position.title }}</td>
             <td>{{ position.code|default:"—" }}</td>
             <td>{{ position.parent|default:"—" }}</td>
+            <td class="table-actions">
+                {% if can_edit %}
+                <a href="{% url 'position_edit' position.pk %}" class="btn-icon" title="Edit position" aria-label="Edit {{ position.title }}">
+                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
+                </a>
+                {% endif %}
+                {% if can_delete %}
+                <button
+                  type="button"
+                  class="btn-icon btn-icon--danger"
+                  title="Delete position"
+                  aria-label="Delete {{ position.title }}"
+                  hx-delete="{% url 'position_delete' position.pk %}"
+                  hx-confirm="Delete position “{{ position.title }}”?"
+                  hx-swap="none"
+                >
+                    <i class="bx bx-trash admin-icon admin-icon--18"></i>
+                </button>
+                {% endif %}
+            </td>
         </tr>
         {% endfor %}
     </tbody>

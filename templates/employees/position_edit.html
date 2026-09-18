@@ -1,0 +1,50 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block title %}Edit Position{% endblock %}
+
+{% block page_content %}
+<div class="card" style="max-width:720px;">
+  <div class="card__header">
+    <span class="card__title">Edit position</span>
+  </div>
+  <div class="card__body">
+    <div id="position-edit-form-container">
+      {% partialdef position_edit_form inline %}
+<form
+    id="position-edit-form"
+    hx-post="{% url 'position_edit' position.pk %}"
+    hx-target="#position-edit-form-container"
+    hx-swap="innerHTML"
+>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="message error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="field">
+        <label for="{{ form.title.id_for_label }}">Title *</label>
+        {{ form.title }}
+        {% if form.title.errors %}<span class="error">{{ form.title.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.code.id_for_label }}">Code</label>
+        {{ form.code }}
+        {% if form.code.errors %}<span class="error">{{ form.code.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.parent.id_for_label }}">Parent position</label>
+        {{ form.parent }}
+        {% if form.parent.errors %}<span class="error">{{ form.parent.errors }}</span>{% endif %}
+    </div>
+
+    <button type="submit">Save changes</button>
+    <a href="{% url 'position_list' %}">Back to positions</a>
+</form>
+{% endpartialdef position_edit_form %}
+    </div>
+  </div>
+</div>
+{% endblock %}

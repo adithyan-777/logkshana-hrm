@@ -1,8 +1,8 @@
-# Logkshana — Product & Features Overview
+# ITTISAL HRMS — Product & Features Overview
 
 Reference for **what the app does** and **how users move through it**. For CSS classes, form fields, table columns, and DataTables config, see [frontend-handoff.md](frontend-handoff.md).
 
-**App name (UI):** Logkshana  
+**App name (UI):** ITTISAL HRMS  
 **Repo / project:** Pattika  
 **Audience:** HR admins and internal staff managing attendance, leave, and schedules  
 **Delivery:** Django server-rendered HTML — no separate SPA or public REST API for the UI
@@ -11,7 +11,7 @@ Reference for **what the app does** and **how users move through it**. For CSS c
 
 ## What this app is
 
-Logkshana is a **multi-tenant HR and attendance system**. Each company (tenant) has its own isolated data: employees, punch records, daily attendance, leave, work schedules, and reports.
+ITTISAL HRMS is a **multi-tenant HR and attendance system**. Each company (tenant) has its own isolated data: employees, punch records, daily attendance, leave, work schedules, and reports.
 
 A typical day for an HR user:
 
@@ -281,7 +281,7 @@ Each company is a **tenant** with its own database schema, resolved by **domain/
 | For frontend | Implication |
 |--------------|-------------|
 | Tenant picker | **Not needed** — one company per URL |
-| Company name in chrome | **Not shown** — brand is “Logkshana” |
+| Company name in chrome | **Not shown** — brand is “ITTISAL HRMS” |
 | Data scoping | Automatic — all lists/reports are already tenant-scoped |
 | Settings UI | **Not built** — no company profile page yet |
 

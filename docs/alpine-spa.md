@@ -67,7 +67,7 @@ Defined in `static/js/alpine-app.js` on `alpine:init`.
 |-------|------|
 | `$store.spa` | Current path, loading flag, command-palette destinations |
 | `$store.ui` | Open menu (`profile` / `notify` / `theme`), command palette, toasts, modal |
-| `$store.theme` | Color mode, layout, scale, sidebar prefs — writes through `window.LogkshanaTheme` |
+| `$store.theme` | Layout, scale, sidebar prefs — writes through `window.IttisalTheme` |
 
 Chrome that lives **outside** `#spa-view` (sidebar, command palette, toasts, modal, progress bar) keeps Alpine state across page swaps. Topbar menus live **inside** `#spa-view`, so they re-init after each navigation; prefs still come from `$store.theme`.
 
@@ -121,7 +121,7 @@ Use `is_htmx_partial(request)` in new list/add/report views. Do not go back to a
 |------|--------|
 | `templates/base.html` | Alpine + HTMX boost, `#spa-view`, progress bar, toasts, command palette, Chart.js always loaded |
 | `static/js/alpine-app.js` | Stores, palette, HTMX ↔ Alpine (initTree, title, nav active, loading) |
-| `static/js/theme.js` | `window.LogkshanaTheme`; storage keys unified to `logkshana-*` |
+| `static/js/theme.js` | `window.IttisalTheme`; storage keys unified to `ittisal-*` |
 | `templates/partials/command_palette.html` | Palette UI |
 | `templates/partials/sidebar.html` | Search opens palette; `data-nav-match` for active section |
 | `templates/partials/profile_menu.html` | Alpine menu; logout not boosted |

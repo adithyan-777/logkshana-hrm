@@ -26,7 +26,7 @@
       id="holiday-list"
       class="data-table-wrap"
       hx-get="{% url 'holiday_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="holidayCreated from:body"
+      hx-trigger="holidayCreated, holidayUpdated, holidayDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -40,6 +40,7 @@
             <th>End date</th>
             <th>Type</th>
             <th>Status</th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
@@ -54,6 +55,26 @@
                 <span class="badge active">Active</span>
                 {% else %}
                 <span class="badge inactive">Inactive</span>
+                {% endif %}
+            </td>
+            <td class="table-actions">
+                {% if can_edit %}
+                <a href="{% url 'holiday_edit' holiday.pk %}" class="btn-icon" title="Edit holiday" aria-label="Edit {{ holiday.name }}">
+                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
+                </a>
+                {% endif %}
+                {% if can_delete %}
+                <button
+                  type="button"
+                  class="btn-icon btn-icon--danger"
+                  title="Delete holiday"
+                  aria-label="Delete {{ holiday.name }}"
+                  hx-delete="{% url 'holiday_delete' holiday.pk %}"
+                  hx-confirm="Delete {{ holiday.name }}?"
+                  hx-swap="none"
+                >
+                    <i class="bx bx-trash admin-icon admin-icon--18"></i>
+                </button>
                 {% endif %}
             </td>
         </tr>

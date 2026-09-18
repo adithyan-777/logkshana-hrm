@@ -1,0 +1,91 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block title %}Edit Leave Policy{% endblock %}
+
+{% block page_content %}
+{% include "partials/tabs_leave.html#tabs_leave" %}
+
+<div class="card" style="max-width:720px;">
+  <div class="card__header">
+    <span class="card__title">Edit leave policy</span>
+  </div>
+  <div class="card__body">
+    <div id="leave-policy-edit-form-container">
+      {% partialdef leave_policy_edit_form inline %}
+<form
+    id="leave-policy-edit-form"
+    hx-post="{% url 'leave_policy_edit' leave_policy.pk %}"
+    hx-target="#leave-policy-edit-form-container"
+    hx-swap="innerHTML"
+>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="message error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="field">
+        <label for="{{ form.leave_type.id_for_label }}">Leave type *</label>
+        {{ form.leave_type }}
+        {% if form.leave_type.errors %}<span class="error">{{ form.leave_type.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.name.id_for_label }}">Policy name *</label>
+        {{ form.name }}
+        {% if form.name.errors %}<span class="error">{{ form.name.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field-row">
+        <div class="field">
+            <label for="{{ form.entitlement_days.id_for_label }}">Entitlement days</label>
+            {{ form.entitlement_days }}
+        </div>
+        <div class="field">
+            <label for="{{ form.accrual_type.id_for_label }}">Accrual type</label>
+            {{ form.accrual_type }}
+        </div>
+        <div class="field">
+            <label for="{{ form.accrual_days.id_for_label }}">Accrual days</label>
+            {{ form.accrual_days }}
+        </div>
+    </div>
+
+    <div class="field-row">
+        <div class="field checkbox">
+            {{ form.carry_forward }}
+            <label for="{{ form.carry_forward.id_for_label }}">Carry forward</label>
+        </div>
+        <div class="field">
+            <label for="{{ form.max_carry_forward_days.id_for_label }}">Max carry forward days</label>
+            {{ form.max_carry_forward_days }}
+        </div>
+        <div class="field">
+            <label for="{{ form.minimum_service_days.id_for_label }}">Minimum service days</label>
+            {{ form.minimum_service_days }}
+        </div>
+    </div>
+
+    <div class="field-row">
+        <div class="field checkbox">
+            {{ form.expiry_enabled }}
+            <label for="{{ form.expiry_enabled.id_for_label }}">Expiry enabled</label>
+        </div>
+        <div class="field">
+            <label for="{{ form.expiry_days.id_for_label }}">Expiry days</label>
+            {{ form.expiry_days }}
+        </div>
+        <div class="field checkbox">
+            {{ form.is_active }}
+            <label for="{{ form.is_active.id_for_label }}">Active</label>
+        </div>
+    </div>
+
+    <button type="submit">Save changes</button>
+    <a href="{% url 'leave_policy_list' %}">Back to leave policies</a>
+</form>
+{% endpartialdef leave_policy_edit_form %}
+    </div>
+  </div>
+</div>
+{% endblock %}

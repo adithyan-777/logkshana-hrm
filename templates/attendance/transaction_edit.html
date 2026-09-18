@@ -1,0 +1,68 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block title %}Edit Punch{% endblock %}
+
+{% block page_content %}
+{% include "partials/tabs_attendance.html#tabs_attendance" %}
+
+<div class="card" style="max-width:720px;">
+  <div class="card__header">
+    <span class="card__title">Edit punch</span>
+  </div>
+  <div class="card__body">
+    <div id="transaction-edit-form-container">
+      {% partialdef transaction_edit_form inline %}
+<form
+    id="transaction-edit-form"
+    hx-post="{% url 'transaction_edit' transaction.pk %}"
+    hx-target="#transaction-edit-form-container"
+    hx-swap="innerHTML"
+>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="message error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="field">
+        <label for="{{ form.employee.id_for_label }}">Employee *</label>
+        {{ form.employee }}
+        {% if form.employee.errors %}<span class="error">{{ form.employee.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field-row">
+        <div class="field">
+            <label for="{{ form.timestamp.id_for_label }}">Timestamp *</label>
+            {{ form.timestamp }}
+            {% if form.timestamp.errors %}<span class="error">{{ form.timestamp.errors }}</span>{% endif %}
+        </div>
+        <div class="field">
+            <label for="{{ form.direction.id_for_label }}">Direction</label>
+            {{ form.direction }}
+        </div>
+        <div class="field">
+            <label for="{{ form.source.id_for_label }}">Source</label>
+            {{ form.source }}
+        </div>
+    </div>
+
+    <div class="field-row">
+        <div class="field">
+            <label for="{{ form.external_id.id_for_label }}">External ID *</label>
+            {{ form.external_id }}
+            {% if form.external_id.errors %}<span class="error">{{ form.external_id.errors }}</span>{% endif %}
+        </div>
+        <div class="field">
+            <label for="{{ form.external_employee_id.id_for_label }}">External employee ID</label>
+            {{ form.external_employee_id }}
+        </div>
+    </div>
+
+    <button type="submit">Save changes</button>
+    <a href="{% url 'attendance_transaction_list' %}">Back to punches</a>
+</form>
+{% endpartialdef transaction_edit_form %}
+    </div>
+  </div>
+</div>
+{% endblock %}

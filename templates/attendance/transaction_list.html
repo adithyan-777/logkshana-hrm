@@ -26,7 +26,7 @@
       id="transaction-list"
       class="data-table-wrap"
       hx-get="{% url 'attendance_transaction_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="attendanceTransactionCreated from:body"
+      hx-trigger="attendanceTransactionCreated, transactionUpdated, transactionDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -40,6 +40,7 @@
             <th>Direction</th>
             <th>Source</th>
             <th>External ID</th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
@@ -50,6 +51,26 @@
             <td>{{ transaction.get_direction_display }}</td>
             <td>{{ transaction.get_source_display }}</td>
             <td>{{ transaction.external_id }}</td>
+            <td class="table-actions">
+                {% if can_edit %}
+                <a href="{% url 'transaction_edit' transaction.pk %}" class="btn-icon" title="Edit punch" aria-label="Edit punch {{ transaction.external_id }}">
+                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
+                </a>
+                {% endif %}
+                {% if can_delete %}
+                <button
+                  type="button"
+                  class="btn-icon btn-icon--danger"
+                  title="Delete punch"
+                  aria-label="Delete punch {{ transaction.external_id }}"
+                  hx-delete="{% url 'transaction_delete' transaction.pk %}"
+                  hx-confirm="Delete punch {{ transaction.external_id }}?"
+                  hx-swap="none"
+                >
+                    <i class="bx bx-trash admin-icon admin-icon--18"></i>
+                </button>
+                {% endif %}
+            </td>
         </tr>
         {% endfor %}
     </tbody>

@@ -119,7 +119,7 @@ class DashboardViewTests(BaseTenantTestCase):
         self.assertContains(response, "Quick actions")
         self.assertContains(response, "Leave requests")
         self.assertContains(response, "Exceptions")
-        self.assertContains(response, "Logkshana")
+        self.assertContains(response, "ITTISAL HRMS")
         self.assertContains(response, "sidebar")
         self.assertContains(response, "breadcrumbs")
         self.assertContains(response, 'id="attendance-chart"')

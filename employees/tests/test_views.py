@@ -32,6 +32,7 @@ class EmployeeFormTests(BaseTenantTestCase):
                 "emp_code": "E200",
                 "department": department.pk,
                 "email": "valid@example.com",
+                "mobile": "+97433555200",
                 "is_active": True,
             }
         )
@@ -379,12 +380,13 @@ class PermissionViewTests(BaseTenantTestCase):
     def test_list_shows_created_permission(self):
         permission_factory(codename="view_employees", name="View Employees")
 
-        response = self.client.get(reverse("permission_list"))
+        response = self.client.get(reverse("permission_list"), {"q": "view_employees"})
 
         self.assertContains(response, "view_employees")
         self.assertContains(response, "View Employees")
 
     def test_list_pagination(self):
+        self.client.get(reverse("permission_list"))
         existing = Permission.objects.count()
         for index in range(26):
             permission_factory(

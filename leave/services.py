@@ -130,3 +130,140 @@ def _validate_leave_request(leave_request: LeaveRequest) -> None:
 def _validate_holiday(holiday: Holiday) -> None:
     if holiday.end_date and holiday.end_date < holiday.date:
         raise ValidationError("Holiday end date must be on or after start date.")
+
+
+@transaction.atomic
+def leave_type_update(
+    *,
+    leave_type: LeaveType,
+    name: str,
+    code: str,
+    description: str = "",
+    paid: bool = True,
+    requires_approval: bool = True,
+    allow_half_day: bool = True,
+    allow_negative_balance: bool = False,
+    is_active: bool = True,
+) -> LeaveType:
+    leave_type.name = name
+    leave_type.code = code
+    leave_type.description = description
+    leave_type.paid = paid
+    leave_type.requires_approval = requires_approval
+    leave_type.allow_half_day = allow_half_day
+    leave_type.allow_negative_balance = allow_negative_balance
+    leave_type.is_active = is_active
+    leave_type.full_clean()
+    leave_type.save()
+    return leave_type
+
+
+@transaction.atomic
+def leave_type_delete(*, leave_type: LeaveType) -> LeaveType:
+    leave_type.delete()
+    return leave_type
+
+
+@transaction.atomic
+def leave_policy_update(
+    *,
+    leave_policy: LeavePolicy,
+    leave_type: LeaveType,
+    name: str,
+    entitlement_days=0,
+    accrual_type: str,
+    accrual_days=0,
+    carry_forward: bool = False,
+    max_carry_forward_days=None,
+    expiry_enabled: bool = False,
+    expiry_days=None,
+    minimum_service_days: int = 0,
+    is_active: bool = True,
+) -> LeavePolicy:
+    leave_policy.leave_type = leave_type
+    leave_policy.name = name
+    leave_policy.entitlement_days = entitlement_days
+    leave_policy.accrual_type = accrual_type
+    leave_policy.accrual_days = accrual_days
+    leave_policy.carry_forward = carry_forward
+    leave_policy.max_carry_forward_days = max_carry_forward_days
+    leave_policy.expiry_enabled = expiry_enabled
+    leave_policy.expiry_days = expiry_days
+    leave_policy.minimum_service_days = minimum_service_days
+    leave_policy.is_active = is_active
+    leave_policy.full_clean()
+    leave_policy.save()
+    return leave_policy
+
+
+@transaction.atomic
+def leave_policy_delete(*, leave_policy: LeavePolicy) -> LeavePolicy:
+    leave_policy.delete()
+    return leave_policy
+
+
+@transaction.atomic
+def leave_request_update(
+    *,
+    leave_request: LeaveRequest,
+    employee,
+    leave_type: LeaveType,
+    start_date,
+    end_date,
+    duration_type: str,
+    days,
+    start_half: bool = False,
+    end_half: bool = False,
+    reason: str = "",
+    status: str = LeaveRequest.Status.DRAFT,
+    created_by=None,
+) -> LeaveRequest:
+    leave_request.employee = employee
+    leave_request.leave_type = leave_type
+    leave_request.start_date = start_date
+    leave_request.end_date = end_date
+    leave_request.duration_type = duration_type
+    leave_request.days = days
+    leave_request.start_half = start_half
+    leave_request.end_half = end_half
+    leave_request.reason = reason
+    leave_request.status = status
+    leave_request.full_clean()
+    _validate_leave_request(leave_request)
+    leave_request.save()
+    return leave_request
+
+
+@transaction.atomic
+def leave_request_delete(*, leave_request: LeaveRequest) -> LeaveRequest:
+    leave_request.delete()
+    return leave_request
+
+
+@transaction.atomic
+def holiday_update(
+    *,
+    holiday: Holiday,
+    name: str,
+    date,
+    end_date=None,
+    holiday_type: str,
+    description: str = "",
+    is_active: bool = True,
+) -> Holiday:
+    holiday.name = name
+    holiday.date = date
+    holiday.end_date = end_date
+    holiday.holiday_type = holiday_type
+    holiday.description = description
+    holiday.is_active = is_active
+    holiday.full_clean()
+    _validate_holiday(holiday)
+    holiday.save()
+    return holiday
+
+
+@transaction.atomic
+def holiday_delete(*, holiday: Holiday) -> Holiday:
+    holiday.delete()
+    return holiday

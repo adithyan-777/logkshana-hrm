@@ -26,7 +26,7 @@
       id="shift-list"
       class="data-table-wrap"
       hx-get="{% url 'shift_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="shiftCreated from:body"
+      hx-trigger="shiftCreated, shiftUpdated, shiftDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -41,6 +41,7 @@
             <th>Days</th>
             <th>Auto shift</th>
             <th>Status</th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
@@ -56,6 +57,26 @@
                 <span class="badge active">Active</span>
                 {% else %}
                 <span class="badge inactive">Inactive</span>
+                {% endif %}
+            </td>
+            <td class="table-actions">
+                {% if can_edit %}
+                <a href="{% url 'shift_edit' shift.pk %}" class="btn-icon" title="Edit shift" aria-label="Edit {{ shift.name }}">
+                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
+                </a>
+                {% endif %}
+                {% if can_delete %}
+                <button
+                  type="button"
+                  class="btn-icon btn-icon--danger"
+                  title="Delete shift"
+                  aria-label="Delete {{ shift.name }}"
+                  hx-delete="{% url 'shift_delete' shift.pk %}"
+                  hx-confirm="Delete {{ shift.name }}?"
+                  hx-swap="none"
+                >
+                    <i class="bx bx-trash admin-icon admin-icon--18"></i>
+                </button>
                 {% endif %}
             </td>
         </tr>

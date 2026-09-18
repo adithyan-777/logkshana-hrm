@@ -164,6 +164,64 @@ def employee_update(
     return employee
 
 
+@transaction.atomic
+def employee_delete(*, employee: Employee) -> Employee:
+    """Soft-deletes the employee and deactivates their login account."""
+    user = employee.user
+    employee.delete()
+    if user is not None and user.is_active:
+        with schema_context(get_public_schema_name()):
+            user.is_active = False
+            user.save(update_fields=["is_active"])
+    return employee
+
+
+@transaction.atomic
+def department_update(
+    *,
+    department: Department,
+    name: str,
+    code: str = "",
+    parent: Department | None = None,
+) -> Department:
+    department.name = name
+    department.code = code or None
+    department.parent = parent
+    department.full_clean()
+    department.save()
+    return department
+
+
+@transaction.atomic
+def department_delete(*, department: Department) -> Department:
+    """Soft-deletes the department (recoverable via all_objects)."""
+    department.delete()
+    return department
+
+
+@transaction.atomic
+def position_update(
+    *,
+    position: Position,
+    title: str,
+    code: str = "",
+    parent: Position | None = None,
+) -> Position:
+    position.title = title
+    position.code = code or None
+    position.parent = parent
+    position.full_clean()
+    position.save()
+    return position
+
+
+@transaction.atomic
+def position_delete(*, position: Position) -> Position:
+    """Soft-deletes the position (recoverable via all_objects)."""
+    position.delete()
+    return position
+
+
 def employee_invite_link(*, employee: Employee, request) -> str:
     user = employee.user
     key = default_token_generator.make_token(user)

@@ -234,7 +234,7 @@ form button[type="submit"]:not(.btn):hover {
 
 .badge.status-pending {
   background: color-mix(in srgb, var(--warning) 14%, transparent);
-  color: light-dark(#a16207, var(--warning));
+  color: #a16207;
 }
 
 .badge.status-rejected,
@@ -247,7 +247,7 @@ form button[type="submit"]:not(.btn):hover {
 .badge.status-late,
 .badge.status-early_out {
   background: color-mix(in srgb, var(--warning) 18%, transparent);
-  color: light-dark(#9a7b00, var(--warning));
+  color: #9a7b00;
 }
 
 .badge.status-incomplete {

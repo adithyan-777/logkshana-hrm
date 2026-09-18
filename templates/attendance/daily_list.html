@@ -26,7 +26,7 @@
       id="daily-list"
       class="data-table-wrap"
       hx-get="{% url 'daily_attendance_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="dailyAttendanceCreated from:body"
+      hx-trigger="dailyAttendanceCreated, dailyUpdated, dailyDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -42,6 +42,7 @@
             <th>Worked</th>
             <th>Late</th>
             <th>OT</th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
@@ -54,6 +55,26 @@
             <td>{{ record.worked_minutes }}m</td>
             <td>{{ record.late_minutes }}m</td>
             <td>{{ record.overtime_minutes }}m</td>
+            <td class="table-actions">
+                {% if can_edit %}
+                <a href="{% url 'daily_edit' record.pk %}" class="btn-icon" title="Edit daily record" aria-label="Edit daily record {{ record.date }}">
+                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
+                </a>
+                {% endif %}
+                {% if can_delete %}
+                <button
+                  type="button"
+                  class="btn-icon btn-icon--danger"
+                  title="Delete daily record"
+                  aria-label="Delete daily record {{ record.date }}"
+                  hx-delete="{% url 'daily_delete' record.pk %}"
+                  hx-confirm="Delete daily record {{ record.date }}?"
+                  hx-swap="none"
+                >
+                    <i class="bx bx-trash admin-icon admin-icon--18"></i>
+                </button>
+                {% endif %}
+            </td>
         </tr>
         {% endfor %}
     </tbody>

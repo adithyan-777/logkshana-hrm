@@ -25,7 +25,7 @@
       id="department-list"
       class="data-table-wrap"
       hx-get="{% url 'department_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="departmentCreated from:body"
+      hx-trigger="departmentCreated, departmentUpdated, departmentDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -37,6 +37,7 @@
             <th>Name</th>
             <th>Code</th>
             <th>Parent</th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
@@ -45,6 +46,26 @@
             <td>{{ department.name }}</td>
             <td>{{ department.code|default:"—" }}</td>
             <td>{{ department.parent|default:"—" }}</td>
+            <td class="table-actions">
+                {% if can_edit %}
+                <a href="{% url 'department_edit' department.pk %}" class="btn-icon" title="Edit department" aria-label="Edit {{ department.name }}">
+                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
+                </a>
+                {% endif %}
+                {% if can_delete %}
+                <button
+                  type="button"
+                  class="btn-icon btn-icon--danger"
+                  title="Delete department"
+                  aria-label="Delete {{ department.name }}"
+                  hx-delete="{% url 'department_delete' department.pk %}"
+                  hx-confirm="Delete department “{{ department.name }}”?"
+                  hx-swap="none"
+                >
+                    <i class="bx bx-trash admin-icon admin-icon--18"></i>
+                </button>
+                {% endif %}
+            </td>
         </tr>
         {% endfor %}
     </tbody>

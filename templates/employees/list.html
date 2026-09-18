@@ -25,7 +25,7 @@
       id="employee-list"
       class="data-table-wrap"
       hx-get="{% url 'employee_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="employeeCreated, employeeUpdated from:body"
+      hx-trigger="employeeCreated, employeeUpdated, employeeDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -61,7 +61,24 @@
                 {% endif %}
             </td>
             <td class="table-actions">
-                <a href="{% url 'employee_edit' employee.pk %}">Edit</a>
+                {% if can_edit %}
+                <a href="{% url 'employee_edit' employee.pk %}" class="btn-icon" title="Edit employee" aria-label="Edit {{ employee.first_name }} {{ employee.last_name }}">
+                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
+                </a>
+                {% endif %}
+                {% if can_delete %}
+                <button
+                  type="button"
+                  class="btn-icon btn-icon--danger"
+                  title="Delete employee"
+                  aria-label="Delete {{ employee.first_name }} {{ employee.last_name }}"
+                  hx-delete="{% url 'employee_delete' employee.pk %}"
+                  hx-confirm="Delete {{ employee.first_name }} {{ employee.last_name }}? Their login will be deactivated."
+                  hx-swap="none"
+                >
+                    <i class="bx bx-trash admin-icon admin-icon--18"></i>
+                </button>
+                {% endif %}
             </td>
         </tr>
         {% endfor %}

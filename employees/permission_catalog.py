@@ -6,10 +6,13 @@ class PermissionCodename(models.TextChoices):
     EMPLOYEES_VIEW = "employees.view", "View employees"
     EMPLOYEES_ADD = "employees.add", "Add employees"
     EMPLOYEES_EDIT = "employees.edit", "Edit employees"
+    EMPLOYEES_DELETE = "employees.delete", "Delete employees"
     DEPARTMENTS_VIEW = "departments.view", "View departments"
     DEPARTMENTS_ADD = "departments.add", "Add departments"
+    DEPARTMENTS_DELETE = "departments.delete", "Delete departments"
     POSITIONS_VIEW = "positions.view", "View positions"
     POSITIONS_ADD = "positions.add", "Add positions"
+    POSITIONS_DELETE = "positions.delete", "Delete positions"
     ROLES_VIEW = "roles.view", "View roles"
     ROLES_ADD = "roles.add", "Add roles"
     PERMISSIONS_VIEW = "permissions.view", "View permissions"
@@ -19,13 +22,16 @@ class PermissionCodename(models.TextChoices):
     ATTENDANCE_ADD = "attendance.add", "Record punches"
     ATTENDANCE_CORRECT = "attendance.correct", "Correct attendance"
     ATTENDANCE_RULES_MANAGE = "attendance.rules.manage", "Manage attendance rules"
+    ATTENDANCE_DELETE = "attendance.delete", "Delete attendance records"
     LEAVE_VIEW = "leave.view", "View leave"
     LEAVE_ADD = "leave.add", "Add leave requests"
     LEAVE_APPROVE = "leave.approve", "Approve leave"
+    LEAVE_DELETE = "leave.delete", "Delete leave records"
     LEAVE_TYPES_MANAGE = "leave.types.manage", "Manage leave types"
     LEAVE_HOLIDAYS_MANAGE = "leave.holidays.manage", "Manage holidays"
     SCHEDULE_VIEW = "schedule.view", "View schedule"
     SCHEDULE_ADD = "schedule.add", "Add schedules"
+    SCHEDULE_DELETE = "schedule.delete", "Delete schedules"
     REPORTS_VIEW = "reports.view", "View reports"
 
 
@@ -34,10 +40,13 @@ _DESCRIPTIONS: dict[str, str] = {
     PermissionCodename.EMPLOYEES_VIEW: "View the employee directory.",
     PermissionCodename.EMPLOYEES_ADD: "Create employees and send invites.",
     PermissionCodename.EMPLOYEES_EDIT: "Update employee records.",
+    PermissionCodename.EMPLOYEES_DELETE: "Soft-delete employees and deactivate their logins.",
     PermissionCodename.DEPARTMENTS_VIEW: "View departments.",
     PermissionCodename.DEPARTMENTS_ADD: "Create departments.",
+    PermissionCodename.DEPARTMENTS_DELETE: "Soft-delete departments.",
     PermissionCodename.POSITIONS_VIEW: "View positions.",
     PermissionCodename.POSITIONS_ADD: "Create positions.",
+    PermissionCodename.POSITIONS_DELETE: "Soft-delete positions.",
     PermissionCodename.ROLES_VIEW: "View roles.",
     PermissionCodename.ROLES_ADD: "Create roles.",
     PermissionCodename.PERMISSIONS_VIEW: "View permissions.",
@@ -47,13 +56,16 @@ _DESCRIPTIONS: dict[str, str] = {
     PermissionCodename.ATTENDANCE_ADD: "Record check-in and check-out punches.",
     PermissionCodename.ATTENDANCE_CORRECT: "Submit and review attendance corrections.",
     PermissionCodename.ATTENDANCE_RULES_MANAGE: "Configure attendance calculation rules.",
+    PermissionCodename.ATTENDANCE_DELETE: "Soft-delete punches, daily rows, corrections, and rules.",
     PermissionCodename.LEAVE_VIEW: "View leave requests.",
     PermissionCodename.LEAVE_ADD: "Create leave requests.",
     PermissionCodename.LEAVE_APPROVE: "Approve or reject leave requests.",
+    PermissionCodename.LEAVE_DELETE: "Soft-delete leave requests, policies, types, and holidays.",
     PermissionCodename.LEAVE_TYPES_MANAGE: "Manage leave types and policies.",
     PermissionCodename.LEAVE_HOLIDAYS_MANAGE: "Manage company holidays.",
     PermissionCodename.SCHEDULE_VIEW: "View timetables, shifts, and assignments.",
     PermissionCodename.SCHEDULE_ADD: "Create timetables, shifts, and assignments.",
+    PermissionCodename.SCHEDULE_DELETE: "Soft-delete timetables, shifts, assignments, and overrides.",
     PermissionCodename.REPORTS_VIEW: "Open reports and analytics.",
 }
 

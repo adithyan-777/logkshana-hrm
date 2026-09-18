@@ -26,7 +26,7 @@
       id="correction-list"
       class="data-table-wrap"
       hx-get="{% url 'attendance_correction_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="attendanceCorrectionCreated from:body"
+      hx-trigger="attendanceCorrectionCreated, correctionUpdated, correctionDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -41,6 +41,7 @@
             <th>Check out</th>
             <th>Status</th>
             <th>Reason</th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
@@ -52,6 +53,26 @@
             <td>{{ correction.check_out|default:"—" }}</td>
             <td><span class="badge status-{{ correction.status }}">{{ correction.get_status_display }}</span></td>
             <td>{{ correction.reason|truncatewords:8 }}</td>
+            <td class="table-actions">
+                {% if can_edit %}
+                <a href="{% url 'correction_edit' correction.pk %}" class="btn-icon" title="Edit correction" aria-label="Edit correction {{ correction.date }}">
+                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
+                </a>
+                {% endif %}
+                {% if can_delete %}
+                <button
+                  type="button"
+                  class="btn-icon btn-icon--danger"
+                  title="Delete correction"
+                  aria-label="Delete correction {{ correction.date }}"
+                  hx-delete="{% url 'correction_delete' correction.pk %}"
+                  hx-confirm="Delete correction {{ correction.date }}?"
+                  hx-swap="none"
+                >
+                    <i class="bx bx-trash admin-icon admin-icon--18"></i>
+                </button>
+                {% endif %}
+            </td>
         </tr>
         {% endfor %}
     </tbody>

@@ -1,8 +1,8 @@
-# Logkshana — Frontend Handoff
+# ITTISAL HRMS — Frontend Handoff
 
 Reference for styling the Django server-rendered UI.
 
-**App name:** Logkshana  
+**App name:** ITTISAL HRMS  
 **Stack:** Django templates, HTMX 2.0.4, **jQuery DataTables**, vanilla JS, `static/css/app.css`  
 **Auth:** django-allauth
 

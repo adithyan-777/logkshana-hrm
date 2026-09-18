@@ -1,0 +1,50 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block title %}Edit Department{% endblock %}
+
+{% block page_content %}
+<div class="card" style="max-width:720px;">
+  <div class="card__header">
+    <span class="card__title">Edit department</span>
+  </div>
+  <div class="card__body">
+    <div id="department-edit-form-container">
+      {% partialdef department_edit_form inline %}
+<form
+    id="department-edit-form"
+    hx-post="{% url 'department_edit' department.pk %}"
+    hx-target="#department-edit-form-container"
+    hx-swap="innerHTML"
+>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="message error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="field">
+        <label for="{{ form.name.id_for_label }}">Name *</label>
+        {{ form.name }}
+        {% if form.name.errors %}<span class="error">{{ form.name.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.code.id_for_label }}">Code</label>
+        {{ form.code }}
+        {% if form.code.errors %}<span class="error">{{ form.code.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.parent.id_for_label }}">Parent department</label>
+        {{ form.parent }}
+        {% if form.parent.errors %}<span class="error">{{ form.parent.errors }}</span>{% endif %}
+    </div>
+
+    <button type="submit">Save changes</button>
+    <a href="{% url 'department_list' %}">Back to departments</a>
+</form>
+{% endpartialdef department_edit_form %}
+    </div>
+  </div>
+</div>
+{% endblock %}

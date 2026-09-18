@@ -4,13 +4,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}{{ page_heading|default:"Dashboard" }}{% endblock %} · Logkshana</title>
+  <title>{% block title %}{{ page_heading|default:"Dashboard" }}{% endblock %} · ITTISAL HRMS</title>
   <script>
     (function () {
-      const modeKey = "logkshana-theme-mode";
-      const prefsKey = "logkshana-ui-prefs";
+      const prefsKey = "ittisal-ui-prefs";
       const defaults = {
-        mode: "light",
         layout: "compact",
         scale: "md",
         sidebarVariant: "inset",
@@ -18,16 +16,11 @@
       };
       const prefs = { ...defaults };
       try {
-        const mode = window.localStorage.getItem(modeKey);
-        if (mode === "light") prefs.mode = mode;
-        const raw = window.localStorage.getItem(prefsKey);
+        const raw = window.localStorage.getItem(prefsKey) || window.localStorage.getItem("logkshana-ui-prefs");
         if (raw) Object.assign(prefs, JSON.parse(raw));
       } catch (_) {}
-      if (prefs.mode !== "light") prefs.mode = "light";
 
-      const theme = "light";
       const root = document.documentElement;
-      root.setAttribute("data-theme", theme);
       root.setAttribute("data-layout", prefs.layout || defaults.layout);
       root.setAttribute("data-scale", prefs.scale || defaults.scale);
       root.setAttribute("data-sidebar-variant", prefs.sidebarVariant || defaults.sidebarVariant);
@@ -58,7 +51,7 @@
   <script>
     (function () {
       try {
-        const raw = window.localStorage.getItem("logkshana-ui-prefs");
+        const raw = window.localStorage.getItem("ittisal-ui-prefs");
         const mode = raw ? (JSON.parse(raw).sidebarMode || "default") : "default";
         if (mode === "icon") document.getElementById("sidebar-collapsed").checked = true;
       } catch (_) {}

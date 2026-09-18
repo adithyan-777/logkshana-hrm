@@ -26,7 +26,7 @@
       id="rule-list"
       class="data-table-wrap"
       hx-get="{% url 'attendance_rule_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="attendanceRuleCreated from:body"
+      hx-trigger="attendanceRuleCreated, ruleUpdated, ruleDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -40,6 +40,7 @@
             <th>Early grace</th>
             <th>Multiple in/out</th>
             <th>Status</th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
@@ -54,6 +55,26 @@
                 <span class="badge active">Active</span>
                 {% else %}
                 <span class="badge inactive">Inactive</span>
+                {% endif %}
+            </td>
+            <td class="table-actions">
+                {% if can_edit %}
+                <a href="{% url 'rule_edit' rule.pk %}" class="btn-icon" title="Edit rule" aria-label="Edit {{ rule.name }}">
+                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
+                </a>
+                {% endif %}
+                {% if can_delete %}
+                <button
+                  type="button"
+                  class="btn-icon btn-icon--danger"
+                  title="Delete rule"
+                  aria-label="Delete {{ rule.name }}"
+                  hx-delete="{% url 'rule_delete' rule.pk %}"
+                  hx-confirm="Delete {{ rule.name }}?"
+                  hx-swap="none"
+                >
+                    <i class="bx bx-trash admin-icon admin-icon--18"></i>
+                </button>
                 {% endif %}
             </td>
         </tr>

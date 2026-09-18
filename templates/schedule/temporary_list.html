@@ -26,7 +26,7 @@
       id="temporary-list"
       class="data-table-wrap"
       hx-get="{% url 'temporary_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="temporaryCreated from:body"
+      hx-trigger="temporaryCreated, temporaryUpdated, temporaryDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -40,6 +40,7 @@
             <th>Timetable</th>
             <th>Reason</th>
             <th>Overrides</th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
@@ -50,6 +51,26 @@
             <td>{{ item.timetable.name }}</td>
             <td>{{ item.reason|default:"—" }}</td>
             <td>{% if item.overrides_normal_schedule %}Yes{% else %}No{% endif %}</td>
+            <td class="table-actions">
+                {% if can_edit %}
+                <a href="{% url 'temporary_edit' item.pk %}" class="btn-icon" title="Edit temporary schedule" aria-label="Edit temporary schedule {{ item.pk }}">
+                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
+                </a>
+                {% endif %}
+                {% if can_delete %}
+                <button
+                  type="button"
+                  class="btn-icon btn-icon--danger"
+                  title="Delete temporary schedule"
+                  aria-label="Delete temporary schedule {{ item.pk }}"
+                  hx-delete="{% url 'temporary_delete' item.pk %}"
+                  hx-confirm="Delete temporary schedule {{ item.pk }}?"
+                  hx-swap="none"
+                >
+                    <i class="bx bx-trash admin-icon admin-icon--18"></i>
+                </button>
+                {% endif %}
+            </td>
         </tr>
         {% endfor %}
     </tbody>

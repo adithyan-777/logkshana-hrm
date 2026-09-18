@@ -14,15 +14,15 @@
     return {
       accent: resolveColor("--accent", "#e6987e"),
       text: resolveColor("--text-muted", "#85837D"),
-      textStrong: resolveColor("--text", "#C3C1BA"),
-      grid: resolveColor("--border", "#3E3E38"),
-      bg: resolveColor("--bg-elevated", "#1B1B1B"),
-      popover: resolveColor("--bg-popover", "#1B1B1B"),
-      border: resolveColor("--border", "#3E3E38"),
-      success: resolveColor("--success", "#4ade80"),
-      warning: resolveColor("--warning", "#facc15"),
-      danger: resolveColor("--danger", "#f87171"),
-      info: resolveColor("--info", "#60a5fa"),
+      textStrong: resolveColor("--text", "#3E3E38"),
+      grid: resolveColor("--border", "#ebebeb"),
+      bg: resolveColor("--bg-elevated", "#FAF9F1"),
+      popover: resolveColor("--bg-popover", "#FAF9F1"),
+      border: resolveColor("--border", "#ebebeb"),
+      success: resolveColor("--success", "#16a34a"),
+      warning: resolveColor("--warning", "#ca8a04"),
+      danger: resolveColor("--danger", "#dc2626"),
+      info: resolveColor("--info", "#2563eb"),
       muted: resolveColor("--text-dim", "#85837D"),
       warm: resolveColor("--accent-warm", "#e6987e"),
     };
@@ -31,7 +31,6 @@
   let attendanceChart = null;
   let revenueChart = null;
   let statusChart = null;
-  let lastTheme = null;
 
   function tooltipOptions(colors) {
     return {
@@ -56,8 +55,6 @@
 
     const data = JSON.parse(el.textContent);
     const colors = chartColors();
-    const theme = document.documentElement.getAttribute("data-theme") || "light";
-    lastTheme = theme;
     applyChartDefaults(colors);
 
     const attendanceCtx = document.getElementById("attendanceChart");
@@ -196,34 +193,11 @@
     return color;
   }
 
-  function refreshOnTheme() {
-    // Wait a frame so light-dark() / data-theme has applied to computed styles
-    requestAnimationFrame(() => {
-      const theme = document.documentElement.getAttribute("data-theme") || "light";
-      if (theme !== lastTheme || document.getElementById("chart-data")) {
-        initCharts();
-      }
-    });
-  }
-
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", initCharts);
   } else {
     initCharts();
   }
-
-  window.addEventListener("themechange", refreshOnTheme);
-
-  // Also catch OS / attribute flips that might not fire themechange
-  const themeObserver = new MutationObserver((mutations) => {
-    for (const m of mutations) {
-      if (m.type === "attributes" && m.attributeName === "data-theme") {
-        refreshOnTheme();
-        break;
-      }
-    }
-  });
-  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
   document.body.addEventListener("htmx:afterSwap", function (evt) {
     if (evt.target && evt.target.id === "attendance-chart-panel") {

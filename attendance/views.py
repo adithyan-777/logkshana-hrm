@@ -4,7 +4,7 @@ from functools import wraps
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import HttpRequest, HttpResponse, JsonResponse
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils.dateparse import parse_datetime
 from django.views.decorators.csrf import csrf_exempt
@@ -17,7 +17,12 @@ from attendance.forms import (
     DailyAttendanceForm,
 )
 from attendance.integrations.gateway import gateway_request_is_authorized
-from attendance.models import DailyAttendance
+from attendance.models import (
+    AttendanceCorrection,
+    AttendanceRule,
+    AttendanceTransaction,
+    DailyAttendance,
+)
 from attendance.selectors import (
     attendance_correction_list,
     attendance_rule_list,
@@ -26,15 +31,23 @@ from attendance.selectors import (
 )
 from attendance.services import (
     attendance_correction_create,
+    attendance_correction_delete,
+    attendance_correction_update,
     attendance_rule_create,
+    attendance_rule_delete,
+    attendance_rule_update,
     attendance_transaction_create,
+    attendance_transaction_delete,
+    attendance_transaction_update,
     daily_attendance_create,
+    daily_attendance_delete,
+    daily_attendance_update,
 )
 from common.http import is_htmx_partial
 from common.pagination import list_pagination_context
 from employees.decorators import require_permission
 from employees.permission_catalog import PermissionCodename
-from employees.selectors import employee_get_for_user
+from employees.selectors import employee_get_for_user, user_has_permission
 
 
 def verify_gateway_secret_key(request: HttpRequest) -> bool:
@@ -120,6 +133,12 @@ def transaction_list_view(request: HttpRequest) -> HttpResponse:
         base_url=reverse("attendance_transaction_list"),
         hx_target="#transaction-list",
     )
+    context["can_edit"] = user_has_permission(
+        user=request.user, codename=PermissionCodename.ATTENDANCE_ADD
+    )
+    context["can_delete"] = user_has_permission(
+        user=request.user, codename=PermissionCodename.ATTENDANCE_DELETE
+    )
 
     if is_htmx_partial(request):
         return render(
@@ -158,6 +177,76 @@ def transaction_add(request: HttpRequest) -> HttpResponse:
     return render(request, "attendance/transaction_add.html", {"form": form})
 
 
+def _render_transaction_edit_form(
+    request: HttpRequest, form: AttendanceTransactionForm, *, transaction
+) -> HttpResponse:
+    return render(
+        request,
+        "attendance/transaction_edit.html#transaction_edit_form",
+        {"form": form, "transaction": transaction},
+    )
+
+
+@login_required
+@require_permission(PermissionCodename.ATTENDANCE_ADD)
+@require_http_methods(["GET", "POST"])
+def transaction_edit(request: HttpRequest, transaction_id: int) -> HttpResponse:
+    transaction = get_object_or_404(AttendanceTransaction, pk=transaction_id)
+
+    if request.method == "POST":
+        form = AttendanceTransactionForm(request.POST, instance=transaction)
+        _configure_datetime_fields(form)
+        if form.is_valid():
+            attendance_transaction_update(
+                **form.cleaned_data, transaction=transaction
+            )
+            response = _render_transaction_edit_form(
+                request,
+                AttendanceTransactionForm(instance=transaction),
+                transaction=transaction,
+            )
+            response["HX-Trigger"] = "transactionUpdated"
+            return response
+
+        return _render_transaction_edit_form(request, form, transaction=transaction)
+
+    form = AttendanceTransactionForm(instance=transaction)
+    _configure_datetime_fields(form)
+    if is_htmx_partial(request):
+        return _render_transaction_edit_form(request, form, transaction=transaction)
+
+    return render(
+        request,
+        "attendance/transaction_edit.html",
+        {"form": form, "transaction": transaction},
+    )
+
+
+def attendance_transaction_edit(
+    request: HttpRequest, attendance_transaction_id: int
+) -> HttpResponse:
+    return transaction_edit(request, transaction_id=attendance_transaction_id)
+
+
+@login_required
+@require_permission(PermissionCodename.ATTENDANCE_DELETE)
+@require_http_methods(["DELETE"])
+def transaction_delete_view(request: HttpRequest, transaction_id: int) -> HttpResponse:
+    transaction = get_object_or_404(AttendanceTransaction, pk=transaction_id)
+    attendance_transaction_delete(transaction=transaction)
+    response = HttpResponse("")
+    response["HX-Trigger"] = "transactionDeleted"
+    return response
+
+
+def attendance_transaction_delete_view(
+    request: HttpRequest, attendance_transaction_id: int
+) -> HttpResponse:
+    return transaction_delete_view(
+        request, transaction_id=attendance_transaction_id
+    )
+
+
 @login_required
 @require_permission(PermissionCodename.ATTENDANCE_VIEW)
 @require_http_methods(["GET"])
@@ -169,6 +258,12 @@ def daily_list_view(request: HttpRequest) -> HttpResponse:
         search=search,
         base_url=reverse("daily_attendance_list"),
         hx_target="#daily-list",
+    )
+    context["can_edit"] = user_has_permission(
+        user=request.user, codename=PermissionCodename.ATTENDANCE_ADD
+    )
+    context["can_delete"] = user_has_permission(
+        user=request.user, codename=PermissionCodename.ATTENDANCE_DELETE
     )
 
     if is_htmx_partial(request):
@@ -202,6 +297,76 @@ def daily_add(request: HttpRequest) -> HttpResponse:
     return render(request, "attendance/daily_add.html", {"form": form})
 
 
+def _render_daily_edit_form(
+    request: HttpRequest, form: DailyAttendanceForm, *, daily_attendance
+) -> HttpResponse:
+    return render(
+        request,
+        "attendance/daily_edit.html#daily_edit_form",
+        {"form": form, "daily_attendance": daily_attendance},
+    )
+
+
+@login_required
+@require_permission(PermissionCodename.ATTENDANCE_ADD)
+@require_http_methods(["GET", "POST"])
+def daily_edit(request: HttpRequest, daily_id: int) -> HttpResponse:
+    daily_attendance = get_object_or_404(DailyAttendance, pk=daily_id)
+
+    if request.method == "POST":
+        form = DailyAttendanceForm(request.POST, instance=daily_attendance)
+        if form.is_valid():
+            daily_attendance_update(
+                **form.cleaned_data, daily_attendance=daily_attendance
+            )
+            response = _render_daily_edit_form(
+                request,
+                DailyAttendanceForm(instance=daily_attendance),
+                daily_attendance=daily_attendance,
+            )
+            response["HX-Trigger"] = "dailyUpdated"
+            return response
+
+        return _render_daily_edit_form(
+            request, form, daily_attendance=daily_attendance
+        )
+
+    form = DailyAttendanceForm(instance=daily_attendance)
+    if is_htmx_partial(request):
+        return _render_daily_edit_form(
+            request, form, daily_attendance=daily_attendance
+        )
+
+    return render(
+        request,
+        "attendance/daily_edit.html",
+        {"form": form, "daily_attendance": daily_attendance},
+    )
+
+
+def daily_attendance_edit(
+    request: HttpRequest, daily_attendance_id: int
+) -> HttpResponse:
+    return daily_edit(request, daily_id=daily_attendance_id)
+
+
+@login_required
+@require_permission(PermissionCodename.ATTENDANCE_DELETE)
+@require_http_methods(["DELETE"])
+def daily_delete_view(request: HttpRequest, daily_id: int) -> HttpResponse:
+    daily_attendance = get_object_or_404(DailyAttendance, pk=daily_id)
+    daily_attendance_delete(daily_attendance=daily_attendance)
+    response = HttpResponse("")
+    response["HX-Trigger"] = "dailyDeleted"
+    return response
+
+
+def daily_attendance_delete_view(
+    request: HttpRequest, daily_attendance_id: int
+) -> HttpResponse:
+    return daily_delete_view(request, daily_id=daily_attendance_id)
+
+
 @login_required
 @require_permission(PermissionCodename.ATTENDANCE_CORRECT)
 @require_http_methods(["GET"])
@@ -213,6 +378,12 @@ def correction_list_view(request: HttpRequest) -> HttpResponse:
         search=search,
         base_url=reverse("attendance_correction_list"),
         hx_target="#correction-list",
+    )
+    context["can_edit"] = user_has_permission(
+        user=request.user, codename=PermissionCodename.ATTENDANCE_CORRECT
+    )
+    context["can_delete"] = user_has_permission(
+        user=request.user, codename=PermissionCodename.ATTENDANCE_DELETE
     )
 
     if is_htmx_partial(request):
@@ -255,6 +426,76 @@ def correction_add(request: HttpRequest) -> HttpResponse:
     return render(request, "attendance/correction_add.html", {"form": form})
 
 
+def _render_correction_edit_form(
+    request: HttpRequest, form: AttendanceCorrectionForm, *, correction
+) -> HttpResponse:
+    return render(
+        request,
+        "attendance/correction_edit.html#correction_edit_form",
+        {"form": form, "correction": correction},
+    )
+
+
+@login_required
+@require_permission(PermissionCodename.ATTENDANCE_CORRECT)
+@require_http_methods(["GET", "POST"])
+def correction_edit(request: HttpRequest, correction_id: int) -> HttpResponse:
+    correction = get_object_or_404(AttendanceCorrection, pk=correction_id)
+
+    if request.method == "POST":
+        form = AttendanceCorrectionForm(request.POST, instance=correction)
+        _configure_datetime_fields(form)
+        if form.is_valid():
+            attendance_correction_update(
+                **form.cleaned_data,
+                correction=correction,
+                requested_by=correction.requested_by,
+            )
+            response = _render_correction_edit_form(
+                request,
+                AttendanceCorrectionForm(instance=correction),
+                correction=correction,
+            )
+            response["HX-Trigger"] = "correctionUpdated"
+            return response
+
+        return _render_correction_edit_form(request, form, correction=correction)
+
+    form = AttendanceCorrectionForm(instance=correction)
+    _configure_datetime_fields(form)
+    if is_htmx_partial(request):
+        return _render_correction_edit_form(request, form, correction=correction)
+
+    return render(
+        request,
+        "attendance/correction_edit.html",
+        {"form": form, "correction": correction},
+    )
+
+
+def attendance_correction_edit(
+    request: HttpRequest, attendance_correction_id: int
+) -> HttpResponse:
+    return correction_edit(request, correction_id=attendance_correction_id)
+
+
+@login_required
+@require_permission(PermissionCodename.ATTENDANCE_DELETE)
+@require_http_methods(["DELETE"])
+def correction_delete_view(request: HttpRequest, correction_id: int) -> HttpResponse:
+    correction = get_object_or_404(AttendanceCorrection, pk=correction_id)
+    attendance_correction_delete(correction=correction)
+    response = HttpResponse("")
+    response["HX-Trigger"] = "correctionDeleted"
+    return response
+
+
+def attendance_correction_delete_view(
+    request: HttpRequest, attendance_correction_id: int
+) -> HttpResponse:
+    return correction_delete_view(request, correction_id=attendance_correction_id)
+
+
 @login_required
 @require_permission(PermissionCodename.ATTENDANCE_RULES_MANAGE)
 @require_http_methods(["GET"])
@@ -266,6 +507,12 @@ def rule_list_view(request: HttpRequest) -> HttpResponse:
         search=search,
         base_url=reverse("attendance_rule_list"),
         hx_target="#rule-list",
+    )
+    context["can_edit"] = user_has_permission(
+        user=request.user, codename=PermissionCodename.ATTENDANCE_RULES_MANAGE
+    )
+    context["can_delete"] = user_has_permission(
+        user=request.user, codename=PermissionCodename.ATTENDANCE_DELETE
     )
 
     if is_htmx_partial(request):
@@ -297,6 +544,68 @@ def rule_add(request: HttpRequest) -> HttpResponse:
         return _render_rule_form(request, form)
 
     return render(request, "attendance/rule_add.html", {"form": form})
+
+
+def _render_rule_edit_form(
+    request: HttpRequest, form: AttendanceRuleForm, *, rule
+) -> HttpResponse:
+    return render(
+        request,
+        "attendance/rule_edit.html#rule_edit_form",
+        {"form": form, "rule": rule},
+    )
+
+
+@login_required
+@require_permission(PermissionCodename.ATTENDANCE_RULES_MANAGE)
+@require_http_methods(["GET", "POST"])
+def rule_edit(request: HttpRequest, rule_id: int) -> HttpResponse:
+    rule = get_object_or_404(AttendanceRule, pk=rule_id)
+
+    if request.method == "POST":
+        form = AttendanceRuleForm(request.POST, instance=rule)
+        if form.is_valid():
+            attendance_rule_update(**form.cleaned_data, rule=rule)
+            response = _render_rule_edit_form(
+                request, AttendanceRuleForm(instance=rule), rule=rule
+            )
+            response["HX-Trigger"] = "ruleUpdated"
+            return response
+
+        return _render_rule_edit_form(request, form, rule=rule)
+
+    form = AttendanceRuleForm(instance=rule)
+    if is_htmx_partial(request):
+        return _render_rule_edit_form(request, form, rule=rule)
+
+    return render(
+        request,
+        "attendance/rule_edit.html",
+        {"form": form, "rule": rule},
+    )
+
+
+def attendance_rule_edit(
+    request: HttpRequest, attendance_rule_id: int
+) -> HttpResponse:
+    return rule_edit(request, rule_id=attendance_rule_id)
+
+
+@login_required
+@require_permission(PermissionCodename.ATTENDANCE_DELETE)
+@require_http_methods(["DELETE"])
+def rule_delete_view(request: HttpRequest, rule_id: int) -> HttpResponse:
+    rule = get_object_or_404(AttendanceRule, pk=rule_id)
+    attendance_rule_delete(rule=rule)
+    response = HttpResponse("")
+    response["HX-Trigger"] = "ruleDeleted"
+    return response
+
+
+def attendance_rule_delete_view(
+    request: HttpRequest, attendance_rule_id: int
+) -> HttpResponse:
+    return rule_delete_view(request, rule_id=attendance_rule_id)
 
 
 @login_required

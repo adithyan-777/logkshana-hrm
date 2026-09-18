@@ -26,7 +26,7 @@
       id="assignment-list"
       class="data-table-wrap"
       hx-get="{% url 'assignment_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="assignmentCreated from:body"
+      hx-trigger="assignmentCreated, assignmentUpdated, assignmentDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -41,6 +41,7 @@
             <th>Start</th>
             <th>End</th>
             <th>Overwrite</th>
+            <th></th>
         </tr>
     </thead>
     <tbody>
@@ -60,6 +61,26 @@
             <td>{{ assignment.start_date }}</td>
             <td>{{ assignment.end_date }}</td>
             <td>{% if assignment.overwrite_existing %}Yes{% else %}No{% endif %}</td>
+            <td class="table-actions">
+                {% if can_edit %}
+                <a href="{% url 'assignment_edit' assignment.pk %}" class="btn-icon" title="Edit assignment" aria-label="Edit assignment {{ assignment.pk }}">
+                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
+                </a>
+                {% endif %}
+                {% if can_delete %}
+                <button
+                  type="button"
+                  class="btn-icon btn-icon--danger"
+                  title="Delete assignment"
+                  aria-label="Delete assignment {{ assignment.pk }}"
+                  hx-delete="{% url 'assignment_delete' assignment.pk %}"
+                  hx-confirm="Delete assignment {{ assignment.pk }}?"
+                  hx-swap="none"
+                >
+                    <i class="bx bx-trash admin-icon admin-icon--18"></i>
+                </button>
+                {% endif %}
+            </td>
         </tr>
         {% endfor %}
     </tbody>

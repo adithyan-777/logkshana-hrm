@@ -136,6 +136,22 @@
   transition-duration: var(--t-instant);
 }
 
+.btn-icon--danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+}
+
+/* Row action buttons in data tables */
+.table-actions {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.table-actions .btn-icon {
+  width: 32px;
+  height: 32px;
+}
+
 /* Cards & KPI tiles */
 .card {
   background: var(--bg-elevated);
@@ -1635,10 +1651,10 @@ div.dt-container button.dt-paging-button:focus-visible {
 
 .status-pill--pending {
   background: color-mix(in srgb, var(--warning) 14%, transparent);
-  color: light-dark(#a16207, var(--warning));
+  color: #a16207;
 }
 
-/* Attendance status pills (UI-only Logkshana-style) */
+/* Attendance status pills (UI-only pill style) */
 .status-pill--present {
   background: color-mix(in srgb, var(--success) 14%, transparent);
   color: var(--success);
@@ -1651,7 +1667,7 @@ div.dt-container button.dt-paging-button:focus-visible {
 
 .status-pill--late {
   background: color-mix(in srgb, var(--warning) 18%, transparent);
-  color: light-dark(#9a7b00, var(--warning));
+  color: #9a7b00;
 }
 
 .status-pill--incomplete {
@@ -1676,7 +1692,7 @@ div.dt-container button.dt-paging-button:focus-visible {
 
 .status-pill--early_out {
   background: color-mix(in srgb, var(--warning) 12%, transparent);
-  color: light-dark(#7c6a00, var(--warning));
+  color: #7c6a00;
 }
 
 .status-pill--day_off {
@@ -2132,37 +2148,6 @@ div.dt-container button.dt-paging-button:focus-visible {
   border-color: transparent;
   box-shadow: none;
 }
-
-/* Theme toggle */
-.theme-toggle {
-  display: inline-flex;
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  overflow: hidden;
-}
-
-.theme-toggle__btn {
-  width: 32px;
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
-  transition: var(--motion-interactive);
-}
-
-.theme-toggle__btn.is-active {
-  background: var(--accent);
-  color: #fff;
-  transform: none;
-}
-
-.theme-toggle__btn:hover {
-  background: var(--hover);
-  transform: none;
-}
-
-.theme-toggle__btn:active { transform: none; }
 
 /* HTMX indicator */
 .htmx-indicator {

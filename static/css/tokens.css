@@ -4,38 +4,38 @@
 */
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 
   /*
-    Dark:  sidebar/main-scroll #262626 · cards #1B1B1B · borders #3E3E38 · nav active #383838
-    Light: panels #FAF9F1 · elevated/shell #F3F0E7 · borders #ebebeb · nav active #E7E4DD
+    Light theme only: panels #FAF9F1 · elevated/shell #F3F0E7 ·
+    borders #ebebeb · nav active #E7E4DD
   */
-  --canvas:             light-dark(#FAF9F1, #1B1B1B);
-  --bg-shell:           light-dark(#F3F0E7, #1B1B1B);
-  --bg:                 light-dark(#FAF9F1, #262626);
-  --bg-sidebar:         light-dark(#FAF9F1, #262626);
-  --bg-elevated:        light-dark(#FAF9F1, #1B1B1B);
-  --bg-prompt:          light-dark(#F3F0E7, #1B1B1B);
-  --bg-muted:           light-dark(#F3F0E7, #1B1B1B);
-  --bg-popover:         light-dark(#FAF9F1, #1B1B1B);
+  --canvas:             #FAF9F1;
+  --bg-shell:           #F3F0E7;
+  --bg:                 #FAF9F1;
+  --bg-sidebar:         #FAF9F1;
+  --bg-elevated:        #FAF9F1;
+  --bg-prompt:          #F3F0E7;
+  --bg-muted:           #F3F0E7;
+  --bg-popover:         #FAF9F1;
   --surface:            var(--bg-elevated);
-  --surface-secondary:  light-dark(#E7E4DD, #383838);
+  --surface-secondary:  #E7E4DD;
 
   /* Interaction / nav */
-  --nav-active:         light-dark(#E7E4DD, #383838);
-  --hover:              light-dark(#E7E4DD, #383838);
-  --hover-strong:       light-dark(#ddd9cf, #424242);
-  --hover-subtle:       light-dark(#f0ede5, rgba(56, 56, 56, 0.72));
+  --nav-active:         #E7E4DD;
+  --hover:              #E7E4DD;
+  --hover-strong:       #ddd9cf;
+  --hover-subtle:       #f0ede5;
   --active-bg:          var(--nav-active);
 
   /* Borders / focus */
-  --border:             light-dark(#ebebeb, #3E3E38);
-  --border-header:      light-dark(#ebebeb, #3E3E38);
-  --input:              light-dark(#ebebeb, #3E3E38);
+  --border:             #ebebeb;
+  --border-header:      #ebebeb;
+  --input:              #ebebeb;
   --ring:               #e6987e;
 
   /* Text */
-  --text:               light-dark(#3E3E38, #C3C1BA);
+  --text:               #3E3E38;
   --text-muted:         #85837D;
   --text-dim:           #85837D;
   --text-faint:         #85837D;
@@ -46,18 +46,15 @@
   --accent:             #e6987e;
   --accent-hover:       #d4876c;
   --accent-pressed:     #c4785e;
-  --accent-muted:       light-dark(
-                          color-mix(in srgb, #e6987e 14%, #FAF9F1),
-                          color-mix(in srgb, #e6987e 18%, #262626)
-                        );
+  --accent-muted:       color-mix(in srgb, #e6987e 14%, #FAF9F1);
   --accent-warm:        #e6987e;
   --accent-warm-hover:  #d4876c;
 
   /* Semantic */
-  --success:            light-dark(#16a34a, #4ade80);
-  --warning:            light-dark(#ca8a04, #facc15);
-  --danger:             light-dark(#dc2626, #f87171);
-  --info:               light-dark(#2563eb, #60a5fa);
+  --success:            #16a34a;
+  --warning:            #ca8a04;
+  --danger:             #dc2626;
+  --info:               #2563eb;
 
   /* Layout */
   --sidebar-w:          268px;
@@ -144,11 +141,8 @@
   --sidebar-drawer-t:   320ms;
 
   /* Shadows */
-  --shadow-card:        light-dark(0 1px 2px rgb(28 25 23 / 0.04), none);
-  --shadow-popover:     light-dark(
-                          0 8px 24px rgb(28 25 23 / 0.1),
-                          0 12px 28px rgb(0 0 0 / 0.45)
-                        );
+  --shadow-card:        0 1px 2px rgb(28 25 23 / 0.04);
+  --shadow-popover:     0 8px 24px rgb(28 25 23 / 0.1);
   --shadow-popover-lg:  0 10px 15px -3px rgb(0 0 0 / 0.1),
                         0 4px 6px -4px rgb(0 0 0 / 0.1);
   --shadow-ring-soft:   0 0 0 1.8px rgb(0 0 0 / 0.08);
@@ -158,6 +152,3 @@
   --modal-backdrop-bg:   rgba(0, 0, 0, 0.72);
   --modal-backdrop-blur: 0px;
 }
-
-:root[data-theme="light"] { color-scheme: light; }
-:root[data-theme="dark"]  { color-scheme: dark; }

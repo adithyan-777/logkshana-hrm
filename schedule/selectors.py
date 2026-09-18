@@ -66,6 +66,36 @@ def temporary_schedule_list(*, search: str = "") -> QuerySet[TemporarySchedule]:
     return queryset
 
 
+def schedule_for_employee_on_date(
+    *,
+    employee,
+    day: date,
+) -> tuple[Shift | None, Timetable | None]:
+    """
+    Resolve the (shift, timetable) that applies to an employee on a
+    calendar date. Same resolution order as
+    ``timetable_for_employee_on_date``; temporary schedules carry no
+    shift so the shift side is None for those.
+    """
+    temporary = TemporarySchedule.objects.filter(
+        employee=employee,
+        date=day,
+        overrides_normal_schedule=True,
+    ).first()
+    if temporary is not None:
+        return None, temporary.timetable
+
+    assignment = _assignment_for_day(employee=employee, day=day)
+    if assignment is None:
+        return None, None
+
+    return assignment.shift, _timetable_for_shift_day(
+        shift=assignment.shift,
+        start_date=assignment.start_date,
+        day=day,
+    )
+
+
 def timetable_for_employee_on_date(
     *,
     employee,
@@ -88,23 +118,8 @@ def timetable_for_employee_on_date(
     weekday (Mon=1..Sun=7); every other cycle uses
     ((day - start_date).days % highest day_number) + 1.
     """
-    temporary = TemporarySchedule.objects.filter(
-        employee=employee,
-        date=day,
-        overrides_normal_schedule=True,
-    ).first()
-    if temporary is not None:
-        return temporary.timetable
-
-    assignment = _assignment_for_day(employee=employee, day=day)
-    if assignment is None:
-        return None
-
-    return _timetable_for_shift_day(
-        shift=assignment.shift,
-        start_date=assignment.start_date,
-        day=day,
-    )
+    _, timetable = schedule_for_employee_on_date(employee=employee, day=day)
+    return timetable
 
 
 def _assignment_for_day(*, employee, day: date) -> ScheduleAssignment | None:

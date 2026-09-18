@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django_tenants.utils import get_public_schema_name, schema_context
 
+from attendance.calculation import direction_from_gateway_status
 from attendance.models import AttendanceTransaction
 from attendance.services import attendance_transaction_create
 from companies.models import Branch, Company, Device
@@ -133,11 +134,17 @@ def attendance_log_create(
         if extra_raw_data:
             raw_data.update(extra_raw_data)
 
+        # Explicit check-out states from the device close the day's
+        # open period; everything else pairs by alternating IN/OUT.
+        # Recalculation runs inside attendance_transaction_create, so
+        # the employee's DailyAttendance is current before we return.
+        direction = direction_from_gateway_status(raw_data.get("status"))
+
         return attendance_transaction_create(
             employee=employee,
             external_id=external_id,
             timestamp=timestamp,
-            direction=AttendanceTransaction.Direction.UNKNOWN,
+            direction=direction,
             source=AttendanceTransaction.Source.BIOMETRIC,
             external_employee_id=employee_id,
             raw_data=raw_data,

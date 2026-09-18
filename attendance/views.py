@@ -652,6 +652,9 @@ def gateway_view(request: HttpRequest) -> HttpResponse:
     ``user_id`` (gateway PIN) maps to pattika's ``employee_id``; extra
     gateway fields are preserved in the punch's ``raw_data``. Replays are
     idempotent (same ``device:<serial>:<emp>:<timestamp>`` external id).
+    Each accepted punch also recalculates the employee's DailyAttendance
+    for the punch's attendance day (periods, worked/late/early/overtime
+    minutes, status).
     """
     from companies.services import attendance_log_create
 

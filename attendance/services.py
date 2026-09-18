@@ -1,11 +1,23 @@
+from datetime import datetime, time, timedelta
+
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django_tenants.utils import get_public_schema_name, schema_context
 
+from attendance.calculation import (
+    attendance_day_for_punch,
+    dedupe_punches,
+    direction_from_gateway_status,
+    minutes_between,
+    pair_punches,
+    summarize_pairs,
+)
 from attendance.integrations.gateway import device_gateway_attendance_fetch
 from attendance.models import (
     AttendanceCorrection,
+    AttendancePeriod,
     AttendanceRule,
     AttendanceTransaction,
     DailyAttendance,
@@ -14,6 +26,11 @@ from companies.selectors import device_get_by_serial_number
 from employees.models import Employee
 from employees.selectors import employee_get_by_emp_code
 from employees.services import employee_create
+from schedule.calculation import expected_datetimes
+from schedule.models import OvertimeRule, Timetable
+from schedule.selectors import schedule_for_employee_on_date
+
+DEFAULT_DAY_CHANGE_TIME = time(8, 0)
 
 
 @transaction.atomic
@@ -26,6 +43,7 @@ def attendance_transaction_create(
     source: str,
     external_employee_id: str = "",
     raw_data=None,
+    recalculate: bool = True,
 ) -> AttendanceTransaction:
     punch = AttendanceTransaction(
         employee=employee,
@@ -38,6 +56,11 @@ def attendance_transaction_create(
     )
     punch.full_clean()
     punch.save()
+    if recalculate:
+        recalculate_daily_attendance_for_punch(
+            employee=punch.employee,
+            timestamp=punch.timestamp,
+        )
     return punch
 
 
@@ -157,7 +180,10 @@ def attendance_transaction_update(
     source: str,
     external_employee_id: str = "",
     raw_data=None,
+    recalculate: bool = True,
 ) -> AttendanceTransaction:
+    old_employee = transaction.employee
+    old_timestamp = transaction.timestamp
     transaction.employee = employee
     transaction.external_id = external_id
     transaction.timestamp = timestamp
@@ -167,15 +193,35 @@ def attendance_transaction_update(
     transaction.raw_data = raw_data or {}
     transaction.full_clean()
     transaction.save()
+    if recalculate:
+        recalculate_daily_attendance_for_punch(
+            employee=transaction.employee,
+            timestamp=transaction.timestamp,
+        )
+        if (
+            old_employee.pk != transaction.employee.pk
+            or old_timestamp != transaction.timestamp
+        ):
+            recalculate_daily_attendance_for_punch(
+                employee=old_employee,
+                timestamp=old_timestamp,
+            )
     return transaction
 
 
 @transaction.atomic
 def attendance_transaction_delete(
-    *, transaction: AttendanceTransaction
+    *, transaction: AttendanceTransaction, recalculate: bool = True
 ) -> AttendanceTransaction:
     """Soft-deletes the punch (recoverable via all_objects)."""
+    employee = transaction.employee
+    timestamp = transaction.timestamp
     transaction.delete()
+    if recalculate:
+        recalculate_daily_attendance_for_punch(
+            employee=employee,
+            timestamp=timestamp,
+        )
     return transaction
 
 
@@ -308,6 +354,293 @@ rule_update = attendance_rule_update
 rule_delete = attendance_rule_delete
 
 
+def resolve_punch_day(*, employee, timestamp):
+    """Return the (day, shift, timetable) an attendance punch belongs to.
+
+    Early-morning punches fall on the previous attendance day per the
+    timetable's ``day_change_time`` (08:00 when unscheduled), so an
+    overnight check-out lands on the day the shift started.
+    """
+    ts = timestamp
+    if timezone.is_naive(ts):
+        ts = timezone.make_aware(ts)
+    local_date = timezone.localtime(ts).date()
+    shift, timetable = schedule_for_employee_on_date(
+        employee=employee, day=local_date
+    )
+    day_change = (
+        timetable.day_change_time
+        if timetable is not None
+        else DEFAULT_DAY_CHANGE_TIME
+    )
+    day = attendance_day_for_punch(timestamp=ts, day_change_time=day_change)
+    if day != local_date:
+        prev_shift, prev_timetable = schedule_for_employee_on_date(
+            employee=employee, day=day
+        )
+        if prev_timetable is not None:
+            shift, timetable = prev_shift, prev_timetable
+    return day, shift, timetable
+
+
+def recalculate_daily_attendance_for_punch(
+    *, employee, timestamp
+) -> DailyAttendance | None:
+    """Recompute the attendance day a single punch belongs to."""
+    day, _, _ = resolve_punch_day(employee=employee, timestamp=timestamp)
+    return recalculate_daily_attendance(employee=employee, day=day)
+
+
+def _unpaid_break_minutes(*, timetable, expected_in, expected_out) -> int:
+    total = 0
+    for brk in timetable.breaks.all():
+        if brk.paid:
+            continue
+        start = timezone.make_aware(
+            datetime.combine(expected_in.date(), brk.start_time)
+        )
+        end = timezone.make_aware(datetime.combine(expected_in.date(), brk.end_time))
+        if end <= start:
+            end += timedelta(days=1)
+        overlap = min(end, expected_out) - max(start, expected_in)
+        total += max(0, int(overlap.total_seconds() // 60))
+    return total
+
+
+def _expected_schedule(*, timetable, day):
+    """Return (expected_in, expected_out, scheduled_minutes) for the day.
+
+    Scheduled time is the expected span minus unpaid breaks. Days
+    without fixed timetable times carry no expectations.
+    """
+    if timetable is None:
+        return None, None, 0
+    expected_in, expected_out = expected_datetimes(timetable=timetable, day=day)
+    if expected_in is None or expected_out is None:
+        return expected_in, expected_out, 0
+    scheduled_minutes = max(
+        0,
+        minutes_between(expected_in, expected_out)
+        - _unpaid_break_minutes(
+            timetable=timetable,
+            expected_in=expected_in,
+            expected_out=expected_out,
+        ),
+    )
+    return expected_in, expected_out, scheduled_minutes
+
+
+def _overtime_minutes(*, timetable, worked_minutes, scheduled_minutes) -> int:
+    """Excess over scheduled time when the timetable's overtime rule allows it."""
+    try:
+        overtime_rule = timetable.overtime_rule if timetable is not None else None
+    except OvertimeRule.DoesNotExist:
+        return 0
+    if overtime_rule is None or not overtime_rule.enabled:
+        return 0
+    excess = worked_minutes - scheduled_minutes
+    if excess < overtime_rule.minimum_minutes:
+        return 0
+    if overtime_rule.maximum_minutes is not None:
+        return min(excess, overtime_rule.maximum_minutes)
+    return excess
+
+
+def _resolve_day_status(
+    *,
+    timetable,
+    rule,
+    summary,
+    late_minutes,
+    early_leave_minutes,
+) -> str:
+    """Derive the day's status from schedule, punches, and variances."""
+    if timetable is not None and timetable.work_type == Timetable.WorkType.OFF:
+        return DailyAttendance.Status.WORKED_HOLIDAY
+    if timetable is not None and timetable.work_type == Timetable.WorkType.OVERTIME:
+        return DailyAttendance.Status.OVERTIME
+    require_in = timetable.require_check_in if timetable is not None else True
+    require_out = timetable.require_check_out if timetable is not None else True
+    if (require_in and not summary.has_check_in) or (
+        require_out and not summary.has_check_out
+    ):
+        return DailyAttendance.Status.INCOMPLETE
+    if (
+        rule is not None
+        and rule.late_to_absence_minutes
+        and late_minutes >= rule.late_to_absence_minutes
+    ):
+        return DailyAttendance.Status.ABSENT
+    if late_minutes > 0:
+        return DailyAttendance.Status.LATE
+    if early_leave_minutes > 0:
+        return DailyAttendance.Status.EARLY_OUT
+    return DailyAttendance.Status.PRESENT
+
+
+def _day_variances(*, timetable, expected_in, expected_out, summary):
+    """Return (late_minutes, early_leave_minutes) against expectations."""
+    grace_in = timetable.late_in_grace_minutes if timetable is not None else 0
+    grace_out = timetable.early_out_grace_minutes if timetable is not None else 0
+    late_minutes = (
+        max(0, minutes_between(expected_in, summary.first_in) - grace_in)
+        if expected_in is not None and summary.first_in is not None
+        else 0
+    )
+    early_leave_minutes = (
+        max(0, minutes_between(summary.last_out, expected_out) - grace_out)
+        if expected_out is not None and summary.last_out is not None
+        else 0
+    )
+    return late_minutes, early_leave_minutes
+
+
+def _store_daily_result(
+    *,
+    employee,
+    day,
+    shift,
+    timetable,
+    existing,
+    summary,
+    expected_in,
+    expected_out,
+    scheduled_minutes,
+    late_minutes,
+    early_leave_minutes,
+    overtime_minutes,
+    status,
+) -> DailyAttendance:
+    """Upsert the DailyAttendance row and rebuild its periods."""
+    daily = existing if existing is not None else DailyAttendance(employee=employee, date=day)
+    daily.calculation_version = (
+        (existing.calculation_version or 0) + 1 if existing is not None else 1
+    )
+    daily.shift = shift
+    daily.timetable = timetable
+    daily.expected_in = expected_in
+    daily.expected_out = expected_out
+    daily.scheduled_minutes = scheduled_minutes
+    daily.first_in = summary.first_in
+    daily.last_out = summary.last_out
+    daily.worked_minutes = summary.worked_minutes
+    daily.break_minutes = summary.break_minutes
+    daily.late_minutes = late_minutes
+    daily.early_leave_minutes = early_leave_minutes
+    daily.overtime_minutes = overtime_minutes
+    daily.absent_minutes = (
+        scheduled_minutes if status == DailyAttendance.Status.ABSENT else 0
+    )
+    daily.status = status
+    daily.has_check_in = summary.has_check_in
+    daily.has_check_out = summary.has_check_out
+    daily.is_calculated = True
+    daily.calculated_at = timezone.now()
+    daily.full_clean()
+    daily.save()
+
+    AttendancePeriod.objects.filter(daily_attendance=daily).delete()
+    AttendancePeriod.objects.bulk_create(
+        AttendancePeriod(
+            daily_attendance=daily,
+            check_in=check_in,
+            check_out=check_out,
+            worked_minutes=(
+                minutes_between(check_in.timestamp, check_out.timestamp)
+                if check_in is not None and check_out is not None
+                else 0
+            ),
+            is_valid=check_in is not None and check_out is not None,
+        )
+        for check_in, check_out in summary.pairs
+    )
+    return daily
+
+
+def recalculate_daily_attendance(*, employee, day) -> DailyAttendance | None:
+    """Recompute one employee-day from its punches (idempotent).
+
+    Creates/updates the auto-calculated DailyAttendance and rebuilds
+    its AttendancePeriods from IN -> OUT pairing. Manual records
+    (``is_calculated=False``) are never touched. When no punches
+    remain, an auto record is removed and None is returned.
+    """
+    shift, timetable = schedule_for_employee_on_date(employee=employee, day=day)
+
+    existing = DailyAttendance.objects.filter(employee=employee, date=day).first()
+    if existing is not None and not existing.is_calculated:
+        return existing
+
+    day_change = (
+        timetable.day_change_time
+        if timetable is not None
+        else DEFAULT_DAY_CHANGE_TIME
+    )
+    window_start = timezone.make_aware(datetime.combine(day, day_change))
+    window_end = window_start + timedelta(days=1)
+    punches = list(
+        AttendanceTransaction.objects.filter(
+            employee=employee,
+            timestamp__gte=window_start,
+            timestamp__lt=window_end,
+        ).order_by("timestamp", "id")
+    )
+    if not punches:
+        if existing is not None:
+            existing.delete()
+        return None
+
+    rule = AttendanceRule.objects.filter(is_active=True).order_by("id").first()
+    duplicate_window = rule.duplicate_punch_window_minutes if rule is not None else 1
+    allow_multiple = (
+        timetable.multiple_in_out
+        if timetable is not None
+        else (rule.allow_multiple_in_out if rule is not None else False)
+    )
+
+    summary = summarize_pairs(
+        pair_punches(
+            dedupe_punches(punches, window_minutes=duplicate_window),
+            allow_multiple_in_out=allow_multiple,
+        )
+    )
+    expected_in, expected_out, scheduled_minutes = _expected_schedule(
+        timetable=timetable, day=day
+    )
+    late_minutes, early_leave_minutes = _day_variances(
+        timetable=timetable,
+        expected_in=expected_in,
+        expected_out=expected_out,
+        summary=summary,
+    )
+    status = _resolve_day_status(
+        timetable=timetable,
+        rule=rule,
+        summary=summary,
+        late_minutes=late_minutes,
+        early_leave_minutes=early_leave_minutes,
+    )
+    return _store_daily_result(
+        employee=employee,
+        day=day,
+        shift=shift,
+        timetable=timetable,
+        existing=existing,
+        summary=summary,
+        expected_in=expected_in,
+        expected_out=expected_out,
+        scheduled_minutes=scheduled_minutes,
+        late_minutes=late_minutes,
+        early_leave_minutes=early_leave_minutes,
+        overtime_minutes=_overtime_minutes(
+            timetable=timetable,
+            worked_minutes=summary.worked_minutes,
+            scheduled_minutes=scheduled_minutes,
+        ),
+        status=status,
+    )
+
+
 def _employee_get_or_create_for_device(*, emp_code: str, branch=None) -> Employee:
     employee = employee_get_by_emp_code(emp_code=emp_code)
     if employee is not None:
@@ -380,6 +713,9 @@ def device_attendance_pull(
     created = 0
     skipped = 0
     max_log_id = last_gateway_log_id
+    # (employee pk, attendance day) -> employee, recalculated once per
+    # day after the bulk insert instead of once per punch.
+    affected_days: dict = {}
 
     with schema_context(tenant_schema):
         for log in logs:
@@ -438,12 +774,20 @@ def device_attendance_pull(
                 employee=employee,
                 external_id=external_id,
                 timestamp=timestamp,
-                direction=AttendanceTransaction.Direction.UNKNOWN,
+                direction=direction_from_gateway_status(log.get("status")),
                 source=AttendanceTransaction.Source.BIOMETRIC,
                 external_employee_id=emp_code,
                 raw_data=log,
+                recalculate=False,
             )
             created += 1
+            day, _, _ = resolve_punch_day(employee=employee, timestamp=timestamp)
+            affected_days[(employee.pk, day)] = (employee, day)
+
+    with schema_context(tenant_schema):
+        for employee_pk, day in sorted(affected_days):
+            employee, _ = affected_days[(employee_pk, day)]
+            recalculate_daily_attendance(employee=employee, day=day)
 
     # Device state lives in public schema, so switch back before saving.
     with schema_context(get_public_schema_name()):

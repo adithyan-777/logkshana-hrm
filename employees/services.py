@@ -27,6 +27,19 @@ from employees.tasks import device_user_create_task
 User = get_user_model()
 
 
+def _validate_employee_password(*, password: str) -> str:
+    from django.contrib.auth.password_validation import validate_password
+
+    if not password:
+        raise ValidationError({"password": "Password is required."})
+    if len(password) < 8:
+        raise ValidationError(
+            {"password": "Password must be at least 8 characters long."}
+        )
+    validate_password(password)
+    return password
+
+
 def _generate_username(*, first_name: str, last_name: str) -> str:
     base = slugify(f"{first_name}.{last_name}") or "employee"
     username = base
@@ -51,23 +64,32 @@ def employee_create(
     hire_date=None,
     is_active: bool = True,
     sync_to_device: bool = True,
+    password: str | None = None,
 ) -> Employee:
     """Creates the Employee's User account with an auto-generated username
-    and the mobile number as the initial password. Mobile is required.
+    and the given password. Mobile is optional contact info and is never
+    used as a password.
     Returns the employee. The invite link flow can still be used to let the
     employee set a new password afterwards.
     """
+    from django.utils.crypto import get_random_string
+
     tenant = get_current_tenant()
     mobile = (mobile or "").strip()
-    if not mobile:
-        raise ValidationError({"mobile": "Mobile number is required."})
     username = _generate_username(first_name=first_name, last_name=last_name)
     user_email = email or f"{username}@{tenant.slug}.com"
+    if password:
+        _validate_employee_password(password=password)
+        login_password = password
+    else:
+        # Auto-created records (device punches, factories, seeds) get a
+        # random password; the invite/reset link can set a known one later.
+        login_password = get_random_string(12)
     with schema_context(get_public_schema_name()):
         user = TenantUser.objects.create_user(
             email=user_email,
             username=username,
-            password=mobile,
+            password=login_password,
             is_active=True,
         )
 
@@ -120,6 +142,7 @@ def employee_update(
     hire_date=None,
     is_active: bool = True,
     sync_to_device: bool = True,
+    password: str | None = None,
 ) -> Employee:
     old_emp_code = employee.emp_code
     employee.first_name = first_name
@@ -143,6 +166,15 @@ def employee_update(
         if user.is_active != is_active:
             user.is_active = is_active
             user_updates.append("is_active")
+        if password:
+            _validate_employee_password(password=password)
+            with schema_context(get_public_schema_name()):
+                user.set_password(password)
+                if user_updates:
+                    user.save(update_fields=[*user_updates, "password"])
+                else:
+                    user.save(update_fields=["password"])
+                user_updates = []
         if user_updates:
             with schema_context(get_public_schema_name()):
                 user.save(update_fields=user_updates)

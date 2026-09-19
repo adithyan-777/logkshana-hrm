@@ -21,11 +21,9 @@ class AttendanceTransactionForm(forms.ModelForm):
         model = AttendanceTransaction
         fields = [
             "employee",
-            "external_id",
             "timestamp",
             "direction",
             "source",
-            "external_employee_id",
         ]
         widgets = {
             "timestamp": DATETIME_INPUT,

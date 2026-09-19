@@ -6,6 +6,13 @@
 {% block page_content %}
 {% include "partials/tabs_reports.html#tabs_reports" %}
 
+{% if self_service %}
+{% if own_employee %}
+<p class="notice">Showing only your own timesheet ({{ own_employee.emp_code }}).</p>
+{% else %}
+<p class="notice">No employee profile is linked to this account. Ask an admin to link your login to your employee record.</p>
+{% endif %}
+{% endif %}
 <div class="report-toolbar">
   {% include "reports/partials/filter_form.html#filter_form" %}
 </div>

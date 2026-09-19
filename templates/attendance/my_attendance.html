@@ -21,6 +21,9 @@
 <div class="card card--table">
   <div class="card__body">
     <h2 class="card__title">Recent punches</h2>
+    {% if employee %}
+    <p><a href="{% url 'report_punch_log' %}">Full punch log in reports →</a></p>
+    {% endif %}
     {% if not employee %}
     <p class="empty-state">No employee profile is linked to this account ({{ request.user.email|default:request.user.username }}). Ask an admin to link your login to your employee record.</p>
     {% elif recent_punches %}

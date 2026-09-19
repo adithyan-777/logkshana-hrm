@@ -44,6 +44,7 @@ class EmployeeCreateTests(BaseTenantTestCase):
             email="jane@example.com",
             mobile="+97433555001",
             hire_date=date(2026, 1, 15),
+            password="SecurePass123!",
         )
 
         self.assertEqual(employee.first_name, "Jane")
@@ -52,7 +53,8 @@ class EmployeeCreateTests(BaseTenantTestCase):
         self.assertEqual(employee.position, position)
         self.assertIsNotNone(employee.user)
         self.assertTrue(employee.user.has_usable_password())
-        self.assertTrue(employee.user.check_password("+97433555001"))
+        self.assertTrue(employee.user.check_password("SecurePass123!"))
+        self.assertFalse(employee.user.check_password("+97433555001"))
         self.assertEqual(employee.user.username, "janedoe")
         self.assertEqual(employee.user.email, "jane@example.com")
         self.assertEqual(employee.role.name, "Employee")
@@ -137,14 +139,46 @@ class EmployeeCreateTests(BaseTenantTestCase):
         self.assertTrue(invite_link.startswith("http://"))
         self.assertIn("/accounts/password/reset/key/", invite_link)
 
-    def test_missing_mobile_raises(self):
-        with self.assertRaises(ValidationError):
-            employee_create(first_name="No", last_name="Phone", emp_code="E061")
+    def test_mobile_is_optional(self):
+        employee = employee_create(
+            first_name="No",
+            last_name="Phone",
+            emp_code="E061",
+            password="SecurePass123!",
+        )
 
+        self.assertEqual(employee.mobile, "")
+        self.assertTrue(employee.user.check_password("SecurePass123!"))
+
+    def test_short_password_raises(self):
         with self.assertRaises(ValidationError):
             employee_create(
-                first_name="Blank", last_name="Phone", emp_code="E062", mobile="  "
+                first_name="Short",
+                last_name="Password",
+                emp_code="E062",
+                password="short",
             )
+
+    def test_update_password_changes_login(self):
+        employee = employee_create(
+            first_name="Pw",
+            last_name="Change",
+            emp_code="E063",
+            password="OldPass123!",
+        )
+
+        employee_update(
+            employee=employee,
+            first_name="Pw",
+            last_name="Change",
+            emp_code="E063",
+            mobile=employee.mobile,
+            password="NewPass456!",
+        )
+
+        employee.user.refresh_from_db()
+        self.assertTrue(employee.user.check_password("NewPass456!"))
+        self.assertFalse(employee.user.check_password("OldPass123!"))
 
     def test_user_is_linked_to_current_tenant(self):
         employee = employee_create(

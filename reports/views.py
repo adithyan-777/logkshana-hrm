@@ -1,14 +1,17 @@
 from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
+from attendance.models import AttendanceTransaction
 from common.http import is_htmx_partial
 from common.pagination import paginate_queryset
 from employees.decorators import require_permission
 from employees.permission_catalog import PermissionCodename
+from employees.selectors import employee_get_for_user, user_has_permission
 from reports.columns import (
     ATTENDANCE_SUMMARY,
     DEPARTMENT_ATTENDANCE,
@@ -105,6 +108,29 @@ def _column_context(columns: list, report_key: str) -> dict:
     }
 
 
+def _self_service_scope(request: HttpRequest):
+    """Return (can_view_all, own_employee) for self-service reports.
+
+    Users with REPORTS_VIEW see everything. Users with only
+    ATTENDANCE_OWN_VIEW see their own records. Anyone else gets 403.
+    """
+    if user_has_permission(
+        user=request.user, codename=PermissionCodename.REPORTS_VIEW
+    ):
+        return True, None
+    if user_has_permission(
+        user=request.user, codename=PermissionCodename.ATTENDANCE_OWN_VIEW
+    ):
+        return False, employee_get_for_user(user=request.user)
+    raise PermissionDenied
+
+
+def _strip_company_filters(form) -> None:
+    """Hide company-wide filters for self-service users (server-side too)."""
+    for field_name in ("department", "employee"):
+        form.fields.pop(field_name, None)
+
+
 @login_required
 @require_permission(PermissionCodename.REPORTS_VIEW)
 @require_http_methods(["GET"])
@@ -168,18 +194,29 @@ def attendance_summary_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
-@require_permission(PermissionCodename.REPORTS_VIEW)
 @require_http_methods(["GET"])
 def individual_attendance_view(request: HttpRequest) -> HttpResponse:
+    can_view_all, own_employee = _self_service_scope(request)
     form = IndividualReportFilterForm(request.GET or None)
     date_from, date_to = current_month_range()
     employee_id = None
     queryset = []
 
+    if not can_view_all:
+        _strip_company_filters(form)
+
     if form.is_valid():
         date_from, date_to = form.cleaned_date_range()
-        if form.cleaned_data["employee"]:
-            employee_id = form.cleaned_data["employee"].pk
+        if can_view_all:
+            if form.cleaned_data["employee"]:
+                employee_id = form.cleaned_data["employee"].pk
+                queryset = individual_attendance_list(
+                    date_from=date_from,
+                    date_to=date_to,
+                    employee_id=employee_id,
+                )
+        elif own_employee is not None:
+            employee_id = own_employee.pk
             queryset = individual_attendance_list(
                 date_from=date_from,
                 date_to=date_to,
@@ -207,6 +244,8 @@ def individual_attendance_view(request: HttpRequest) -> HttpResponse:
         "date_from": date_from,
         "date_to": date_to,
         "employee_selected": employee_id is not None,
+        "self_service": not can_view_all,
+        "own_employee": own_employee,
     }
 
     if is_htmx_partial(request):
@@ -318,31 +357,42 @@ def exception_report_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
-@require_permission(PermissionCodename.REPORTS_VIEW)
 @require_http_methods(["GET"])
 def punch_log_view(request: HttpRequest) -> HttpResponse:
+    can_view_all, own_employee = _self_service_scope(request)
     form = DateRangeFilterForm(request.GET or None)
     date_from, date_to = current_month_range()
     department_id = None
     employee_id = None
 
+    if not can_view_all:
+        _strip_company_filters(form)
+
     if form.is_valid():
         date_from, date_to = form.cleaned_date_range()
-        department_id = (
-            form.cleaned_data["department"].pk
-            if form.cleaned_data["department"]
-            else None
-        )
-        employee_id = (
-            form.cleaned_data["employee"].pk if form.cleaned_data["employee"] else None
-        )
+        if can_view_all:
+            department_id = (
+                form.cleaned_data["department"].pk
+                if form.cleaned_data["department"]
+                else None
+            )
+            employee_id = (
+                form.cleaned_data["employee"].pk
+                if form.cleaned_data["employee"]
+                else None
+            )
+        elif own_employee is not None:
+            employee_id = own_employee.pk
 
-    queryset = punch_log_list(
-        date_from=date_from,
-        date_to=date_to,
-        department_id=department_id,
-        employee_id=employee_id,
-    )
+    if can_view_all or employee_id is not None:
+        queryset = punch_log_list(
+            date_from=date_from,
+            date_to=date_to,
+            department_id=department_id,
+            employee_id=employee_id,
+        )
+    else:
+        queryset = AttendanceTransaction.objects.none()
 
     export_response = _maybe_export(
         request,
@@ -358,6 +408,8 @@ def punch_log_view(request: HttpRequest) -> HttpResponse:
         **report_pagination_context(request, page_obj),
         "date_from": date_from,
         "date_to": date_to,
+        "self_service": not can_view_all,
+        "own_employee": own_employee,
     }
 
     if is_htmx_partial(request):

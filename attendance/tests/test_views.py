@@ -1,5 +1,4 @@
 from datetime import date
-from uuid import uuid4
 
 from django.urls import reverse
 from django.utils import timezone
@@ -104,14 +103,12 @@ class AttendanceTransactionViewTests(BaseTenantTestCase):
 
     def test_add_creates_transaction(self):
         employee = employee_factory(first_name="View", emp_code="AT300")
-        external_id = f"EXT-{uuid4().hex[:6]}"
         timestamp = timezone.now().strftime("%Y-%m-%dT%H:%M")
 
         response = self.client.post(
             reverse("attendance_transaction_add"),
             {
                 "employee": employee.pk,
-                "external_id": external_id,
                 "timestamp": timestamp,
                 "direction": "in",
                 "source": "manual",
@@ -122,9 +119,10 @@ class AttendanceTransactionViewTests(BaseTenantTestCase):
         self.assertEqual(
             response.headers.get("HX-Trigger"), "attendanceTransactionCreated"
         )
-        self.assertTrue(
-            AttendanceTransaction.objects.filter(external_id=external_id).exists()
-        )
+        punch = AttendanceTransaction.objects.filter(employee=employee).first()
+        self.assertIsNotNone(punch)
+        self.assertTrue(punch.external_id.startswith("manual:"))
+        self.assertEqual(punch.external_employee_id, "AT300")
 
 
 class DailyAttendanceViewTests(BaseTenantTestCase):

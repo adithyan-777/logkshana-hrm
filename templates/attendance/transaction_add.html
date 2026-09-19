@@ -55,18 +55,6 @@
         </div>
     </div>
 
-    <div class="field-row">
-        <div class="field">
-            <label for="{{ form.external_id.id_for_label }}">External ID *</label>
-            {{ form.external_id }}
-            {% if form.external_id.errors %}<span class="error">{{ form.external_id.errors }}</span>{% endif %}
-        </div>
-        <div class="field">
-            <label for="{{ form.external_employee_id.id_for_label }}">External employee ID</label>
-            {{ form.external_employee_id }}
-        </div>
-    </div>
-
     <button type="submit">Record Punch</button>
 </form>
 {% endpartialdef transaction_form %}

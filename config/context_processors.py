@@ -33,6 +33,7 @@ def navigation(request):
             "leave": True,
             "schedule": True,
             "reports": True,
+            "reports_self": True,
             "departments": True,
             "positions": True,
             "roles": True,
@@ -76,6 +77,8 @@ def navigation(request):
             "leave": can(PermissionCodename.LEAVE_VIEW),
             "schedule": can(PermissionCodename.SCHEDULE_VIEW),
             "reports": can(PermissionCodename.REPORTS_VIEW),
+            "reports_self": can(PermissionCodename.REPORTS_VIEW)
+            or can(PermissionCodename.ATTENDANCE_OWN_VIEW),
             "departments": can(PermissionCodename.DEPARTMENTS_VIEW),
             "positions": can(PermissionCodename.POSITIONS_VIEW),
             "roles": can(PermissionCodename.ROLES_VIEW),

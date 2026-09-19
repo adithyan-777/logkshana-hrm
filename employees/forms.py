@@ -5,6 +5,13 @@ from employees.permission_catalog import permissions_grouped_choices
 
 
 class EmployeeForm(forms.ModelForm):
+    password = forms.CharField(
+        required=False,
+        min_length=8,
+        widget=forms.PasswordInput(render_value=False),
+        help_text="Min 8 characters. On edit, leave blank to keep the current password.",
+    )
+
     class Meta:
         model = Employee
         fields = [
@@ -27,7 +34,24 @@ class EmployeeForm(forms.ModelForm):
         self.fields["department"].queryset = Department.objects.order_by("name")
         self.fields["position"].queryset = Position.objects.order_by("title")
         self.fields["first_name"].required = True
-        self.fields["mobile"].required = True
+        self.fields["mobile"].required = False
+        # Password is required when creating, optional when editing.
+        if self.instance is None or not self.instance.pk:
+            self.fields["password"].required = True
+            self.fields["password"].help_text = "Min 8 characters."
+        else:
+            self.fields["password"].required = False
+
+    def clean_password(self):
+        password = self.cleaned_data.get("password") or ""
+        is_create = self.instance is None or not self.instance.pk
+        if is_create and not password:
+            raise forms.ValidationError("Password is required.")
+        if password and len(password) < 8:
+            raise forms.ValidationError(
+                "Password must be at least 8 characters long."
+            )
+        return password
 
 
 class DepartmentForm(forms.ModelForm):

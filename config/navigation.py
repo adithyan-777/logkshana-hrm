@@ -692,10 +692,16 @@ def command_palette_for(request: HttpRequest) -> list[dict[str, str]]:
         "temporary_list": PermissionCodename.SCHEDULE_VIEW,
         "report_hub": PermissionCodename.REPORTS_VIEW,
         "report_attendance_summary": PermissionCodename.REPORTS_VIEW,
-        "report_individual_attendance": PermissionCodename.REPORTS_VIEW,
+        "report_individual_attendance": (
+            PermissionCodename.REPORTS_VIEW,
+            PermissionCodename.ATTENDANCE_OWN_VIEW,
+        ),
         "report_department_attendance": PermissionCodename.REPORTS_VIEW,
         "report_exceptions": PermissionCodename.REPORTS_VIEW,
-        "report_punch_log": PermissionCodename.REPORTS_VIEW,
+        "report_punch_log": (
+            PermissionCodename.REPORTS_VIEW,
+            PermissionCodename.ATTENDANCE_OWN_VIEW,
+        ),
         "report_overtime": PermissionCodename.REPORTS_VIEW,
         "report_leave": PermissionCodename.REPORTS_VIEW,
         "account_profile": None,
@@ -710,8 +716,14 @@ def command_palette_for(request: HttpRequest) -> list[dict[str, str]]:
     for entry in COMMAND_PALETTE:
         if allowed is not None:
             perm = palette_permissions.get(entry["url_name"])
-            if perm is not None and perm not in allowed:
-                continue
+            if perm is not None:
+                needed = (
+                    tuple(perm)
+                    if isinstance(perm, (tuple, list, set, frozenset))
+                    else (perm,)
+                )
+                if not any(codename in allowed for codename in needed):
+                    continue
         try:
             url = reverse(entry["url_name"])
         except NoReverseMatch:

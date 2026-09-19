@@ -45,6 +45,19 @@ class AttendanceTransactionCreateTests(BaseTenantTestCase):
             AttendanceTransaction.objects.filter(external_id="EXT-001").exists()
         )
 
+    def test_derives_ids_from_employee_when_omitted(self):
+        employee = employee_factory(first_name="Auto", emp_code="AT101")
+
+        transaction = attendance_transaction_create(
+            employee=employee,
+            timestamp=timezone.now(),
+            direction=AttendanceTransaction.Direction.IN,
+            source=AttendanceTransaction.Source.MANUAL,
+        )
+
+        self.assertTrue(transaction.external_id.startswith("manual:"))
+        self.assertEqual(transaction.external_employee_id, "AT101")
+
 
 class DailyAttendanceCreateTests(BaseTenantTestCase):
     def test_creates_daily_record(self):

@@ -2,9 +2,10 @@ from datetime import date, datetime
 
 from django.urls import reverse
 from django.utils import timezone
+from django_tenants.test.client import TenantClient
 
 from attendance.models import DailyAttendance, OvertimeRecord
-from common.tests.base import BaseTenantTestCase
+from common.tests.base import TEST_PASSWORD, BaseTenantTestCase
 from common.tests.factories import (
     attendance_transaction_factory,
     daily_attendance_factory,
@@ -312,6 +313,93 @@ class ReportViewTests(BaseTenantTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Ind")
+
+
+class ReportSelfServiceTests(BaseTenantTestCase):
+    """Employees with only ATTENDANCE_OWN_VIEW can see their own records
+    in the punch-log and individual reports, nothing else."""
+
+    def _employee_client(self, *, first_name="Self", emp_code="RS-001"):
+        employee = employee_factory(first_name=first_name, emp_code=emp_code)
+        user = employee.user
+        user.set_password(TEST_PASSWORD)
+        user.save()
+        client = TenantClient(self.tenant)
+        self.assertTrue(client.login(email=user.email, password=TEST_PASSWORD))
+        return employee, client
+
+    def test_punch_log_shows_only_own_punches(self):
+        employee, client = self._employee_client()
+        own_punch = attendance_transaction_factory(employee=employee)
+        other = employee_factory(first_name="OtherPerson", emp_code="RS-OTH")
+        other_punch = attendance_transaction_factory(employee=other)
+
+        response = client.get(
+            reverse("report_punch_log"),
+            {"date_from": "2026-09-01", "date_to": "2026-09-30"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "only your own punches")
+        self.assertContains(response, own_punch.external_id)
+        self.assertNotContains(response, other_punch.external_id)
+
+    def test_punch_log_ignores_employee_spoof_param(self):
+        employee, client = self._employee_client(emp_code="RS-002")
+        own_punch = attendance_transaction_factory(employee=employee)
+        other = employee_factory(first_name="OtherPerson", emp_code="RS-OTH2")
+        other_punch = attendance_transaction_factory(employee=other)
+
+        response = client.get(
+            reverse("report_punch_log"),
+            {
+                "date_from": "2026-09-01",
+                "date_to": "2026-09-30",
+                "employee": other.pk,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, own_punch.external_id)
+        self.assertNotContains(response, other_punch.external_id)
+
+    def test_individual_auto_selects_own_employee(self):
+        employee, client = self._employee_client(emp_code="RS-003")
+        daily_attendance_factory(
+            employee=employee,
+            date=date(2026, 9, 5),
+            status=DailyAttendance.Status.PRESENT,
+        )
+        other = employee_factory(first_name="OtherPerson", emp_code="RS-OTH3")
+        daily_attendance_factory(
+            employee=other,
+            date=date(2026, 9, 6),
+            status=DailyAttendance.Status.ABSENT,
+        )
+
+        response = client.get(
+            reverse("report_individual_attendance"),
+            {"date_from": "2026-09-01", "date_to": "2026-09-30"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["employee_selected"])
+        self.assertEqual(len(response.context["report_rows"]), 1)
+        self.assertContains(response, "only your own timesheet")
+
+    def test_other_reports_still_forbidden(self):
+        _employee, client = self._employee_client(emp_code="RS-004")
+
+        for url_name in (
+            "report_hub",
+            "report_attendance_summary",
+            "report_department_attendance",
+            "report_exceptions",
+            "report_overtime",
+            "report_leave",
+        ):
+            response = client.get(reverse(url_name))
+            self.assertEqual(response.status_code, 403, msg=url_name)
 
 
 class ReportPaginationTests(BaseTenantTestCase):

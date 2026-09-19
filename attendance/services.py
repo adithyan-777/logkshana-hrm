@@ -37,14 +37,20 @@ DEFAULT_DAY_CHANGE_TIME = time(8, 0)
 def attendance_transaction_create(
     *,
     employee,
-    external_id: str,
+    external_id: str | None = None,
     timestamp,
     direction: str,
     source: str,
-    external_employee_id: str = "",
+    external_employee_id: str | None = None,
     raw_data=None,
     recalculate: bool = True,
 ) -> AttendanceTransaction:
+    from uuid import uuid4
+
+    if external_employee_id is None:
+        external_employee_id = employee.emp_code or ""
+    if not external_id:
+        external_id = f"manual:{uuid4().hex}"
     punch = AttendanceTransaction(
         employee=employee,
         external_id=external_id,
@@ -174,18 +180,24 @@ def attendance_transaction_update(
     *,
     transaction: AttendanceTransaction,
     employee,
-    external_id: str,
+    external_id: str | None = None,
     timestamp,
     direction: str,
     source: str,
-    external_employee_id: str = "",
+    external_employee_id: str | None = None,
     raw_data=None,
     recalculate: bool = True,
 ) -> AttendanceTransaction:
     old_employee = transaction.employee
     old_timestamp = transaction.timestamp
     transaction.employee = employee
-    transaction.external_id = external_id
+    # external_id is a stable record identifier: keep the existing one
+    # unless an explicit replacement is given. The employee link is
+    # always (re-)derived from the employee instance.
+    if external_id:
+        transaction.external_id = external_id
+    if external_employee_id is None:
+        external_employee_id = employee.emp_code or ""
     transaction.timestamp = timestamp
     transaction.direction = direction
     transaction.source = source
@@ -651,9 +663,8 @@ def _employee_get_or_create_for_device(*, emp_code: str, branch=None) -> Employe
         last_name=emp_code,
         emp_code=emp_code,
         branch=branch,
-        # Punch-only record: no phone known, fall back to the device PIN
-        # as the initial password (mobile is required by employee_create).
-        mobile=emp_code,
+        # Punch-only record: no phone/password known; employee_create
+        # generates a random password (invite link can set a known one).
         sync_to_device=False,
     )
 

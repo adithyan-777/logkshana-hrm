@@ -90,9 +90,15 @@
     </div>
 
     <div class="field">
-        <label for="{{ form.mobile.id_for_label }}">Mobile *</label>
+        <label for="{{ form.mobile.id_for_label }}">Mobile</label>
         {{ form.mobile }}
         {% if form.mobile.errors %}<span class="error">{{ form.mobile.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.password.id_for_label }}">Password *</label>
+        {{ form.password }}
+        {% if form.password.errors %}<span class="error">{{ form.password.errors }}</span>{% endif %}
     </div>
 
     <div class="field">

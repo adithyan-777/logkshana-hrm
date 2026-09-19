@@ -33,6 +33,34 @@ class EmployeeFormTests(BaseTenantTestCase):
                 "department": department.pk,
                 "email": "valid@example.com",
                 "mobile": "+97433555200",
+                "password": "SecurePass123!",
+                "is_active": True,
+            }
+        )
+
+        self.assertTrue(form.is_valid())
+
+    def test_requires_password_on_create(self):
+        form = EmployeeForm(
+            data={
+                "first_name": "NoPassword",
+                "last_name": "Employee",
+                "emp_code": "E201",
+                "mobile": "+97433555201",
+                "is_active": True,
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("password", form.errors)
+
+    def test_mobile_is_optional(self):
+        form = EmployeeForm(
+            data={
+                "first_name": "NoMobile",
+                "last_name": "Employee",
+                "emp_code": "E202",
+                "password": "SecurePass123!",
                 "is_active": True,
             }
         )
@@ -85,6 +113,7 @@ class EmployeeViewTests(BaseTenantTestCase):
                 "emp_code": emp_code,
                 "email": "new.hire@example.com",
                 "mobile": "+97433555222",
+                "password": "SecurePass123!",
                 "is_active": "on",
             },
         )

@@ -50,11 +50,9 @@ class AttendanceTransactionEditDeleteTests(
             reverse("transaction_edit", args=[punch.pk]),
             {
                 "employee": punch.employee.pk,
-                "external_id": "TX-ED-POST",
                 "timestamp": timestamp,
                 "direction": "out",
                 "source": "manual",
-                "external_employee_id": "",
             },
         )
 
@@ -62,6 +60,8 @@ class AttendanceTransactionEditDeleteTests(
         self.assertEqual(response.headers.get("HX-Trigger"), "transactionUpdated")
         punch.refresh_from_db()
         self.assertEqual(punch.direction, AttendanceTransaction.Direction.OUT)
+        self.assertEqual(punch.external_id, "TX-ED-POST")
+        self.assertEqual(punch.external_employee_id, punch.employee.emp_code)
 
     def test_delete_soft_deletes_and_triggers(self):
         punch = attendance_transaction_factory(external_id="TX-ED-DEL")

@@ -78,6 +78,7 @@ def _get_or_create_employee(
     mobile: str = "",
     hire_date=None,
     branch=None,
+    password: str = "DemoPass123!",
 ) -> Employee:
     employee = Employee.objects.filter(emp_code=emp_code).first()
     if employee:
@@ -96,6 +97,7 @@ def _get_or_create_employee(
         mobile=mobile,
         hire_date=hire_date,
         sync_to_device=False,
+        password=password,
     )
     if branch is not None:
         employee.branch = branch

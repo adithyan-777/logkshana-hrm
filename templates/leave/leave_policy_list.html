@@ -89,7 +89,7 @@
     {% if search %}
     No leave policies match "{{ search }}".
     {% else %}
-    No leave policies yet. <a href="{% url 'leave_policy_add' %}">Add the first policy</a>.
+    No leave policies yet. {% url 'leave_policy_add' as leave_policy_add_url %}{% include "partials/drawer_link.html" with url=leave_policy_add_url title="Add leave policy" label="Add the first policy" %}.
     {% endif %}
 </p>
 {% endif %}

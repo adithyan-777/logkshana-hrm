@@ -10,8 +10,8 @@
     <span class="card__title">Add daily record</span>
   </div>
   <div class="card__body">
-    <div id="daily-form-container">
-      {% partialdef daily_form inline %}
+    {% partialdef daily_form inline %}
+<div id="daily-form-container">
 {% if success_message %}
 <div id="form-messages" class="message success">
     {{ success_message }}
@@ -25,7 +25,7 @@
     id="daily-form"
     hx-post="{% url 'daily_attendance_add' %}"
     hx-target="#daily-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -59,8 +59,8 @@
 
     <button type="submit">Add Daily Record</button>
 </form>
+</div>
 {% endpartialdef daily_form %}
-    </div>
   </div>
 </div>
 {% endblock %}

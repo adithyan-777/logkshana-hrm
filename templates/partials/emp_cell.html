@@ -1,0 +1,9 @@
+{% load avatar %}
+{# Round letter avatar + name. Usage: {% include "partials/emp_cell.html" with employee=row.employee %} #}
+<span class="emp-cell">
+  {% avatar employee size="sm" %}
+  <span class="emp-cell__text">
+    <span class="emp-cell__name">{{ employee.full_name }}</span>
+    {% if sub %}<span class="emp-cell__sub">{{ sub }}</span>{% endif %}
+  </span>
+</span>

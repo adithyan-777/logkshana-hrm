@@ -87,7 +87,7 @@
     {% if search %}
     No holidays match "{{ search }}".
     {% else %}
-    No holidays yet. <a href="{% url 'holiday_add' %}">Add the first holiday</a>.
+    No holidays yet. {% url 'holiday_add' as holiday_add_url %}{% include "partials/drawer_link.html" with url=holiday_add_url title="Add holiday" label="Add the first holiday" %}.
     {% endif %}
 </p>
 {% endif %}

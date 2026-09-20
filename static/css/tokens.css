@@ -1,60 +1,62 @@
 /*
-  Design tokens — Promptly surfaces + peach accent (#e6987e).
-  Typography/layout scale can stay Promptly-inspired; brand color is warm peach.
+  Design tokens — ITTISAL maroon (#8A1538) with rose-tinted neutrals.
 */
 
 :root {
-  color-scheme: light;
+  color-scheme: light dark;
 
   /*
-    Light theme only: panels #FAF9F1 · elevated/shell #F3F0E7 ·
-    borders #ebebeb · nav active #E7E4DD
+    Dark:  sidebar/main-scroll #262626 · cards #1B1B1B · borders #3E3E38 · nav active #383838
+    Light: panels #FAF7F8 · elevated/shell #F3EFF1 · borders #E8E0E3 · nav active #EBE4E7
   */
-  --canvas:             #FAF9F1;
-  --bg-shell:           #F3F0E7;
-  --bg:                 #FAF9F1;
-  --bg-sidebar:         #FAF9F1;
-  --bg-elevated:        #FAF9F1;
-  --bg-prompt:          #F3F0E7;
-  --bg-muted:           #F3F0E7;
-  --bg-popover:         #FAF9F1;
+  --canvas:             light-dark(#FAF7F8, #1B1B1B);
+  --bg-shell:           light-dark(#F3EFF1, #1B1B1B);
+  --bg:                 light-dark(#FAF7F8, #262626);
+  --bg-sidebar:         light-dark(#FAF7F8, #262626);
+  --bg-elevated:        light-dark(#FFFBFC, #1B1B1B);
+  --bg-prompt:          light-dark(#F3EFF1, #1B1B1B);
+  --bg-muted:           light-dark(#F3EFF1, #1B1B1B);
+  --bg-popover:         light-dark(#FFFBFC, #1B1B1B);
   --surface:            var(--bg-elevated);
-  --surface-secondary:  #E7E4DD;
+  --surface-secondary:  light-dark(#EBE4E7, #383838);
 
   /* Interaction / nav */
-  --nav-active:         #E7E4DD;
-  --hover:              #E7E4DD;
-  --hover-strong:       #ddd9cf;
-  --hover-subtle:       #f0ede5;
+  --nav-active:         light-dark(#EBE4E7, #383838);
+  --hover:              light-dark(#EBE4E7, #383838);
+  --hover-strong:       light-dark(#E0D6DA, #424242);
+  --hover-subtle:       light-dark(#F5F0F2, rgba(56, 56, 56, 0.72));
   --active-bg:          var(--nav-active);
 
   /* Borders / focus */
-  --border:             #ebebeb;
-  --border-header:      #ebebeb;
-  --input:              #ebebeb;
-  --ring:               #e6987e;
+  --border:             light-dark(#E8E0E3, #3E3E38);
+  --border-header:      light-dark(#E8E0E3, #3E3E38);
+  --input:              light-dark(#E8E0E3, #3E3E38);
+  --ring:               #8A1538;
 
   /* Text */
-  --text:               #3E3E38;
-  --text-muted:         #85837D;
-  --text-dim:           #85837D;
-  --text-faint:         #85837D;
-  --text-warm:          #e6987e;
+  --text:               light-dark(#3A2F33, #C3C1BA);
+  --text-muted:         #8A7F84;
+  --text-dim:           #8A7F84;
+  --text-faint:         #8A7F84;
+  --text-warm:          #8A1538;
   --text-inverse:       #ffffff;
 
-  /* Brand — peach/orange */
-  --accent:             #e6987e;
-  --accent-hover:       #d4876c;
-  --accent-pressed:     #c4785e;
-  --accent-muted:       color-mix(in srgb, #e6987e 14%, #FAF9F1);
-  --accent-warm:        #e6987e;
-  --accent-warm-hover:  #d4876c;
+  /* Brand — ITTISAL maroon */
+  --accent:             #8A1538;
+  --accent-hover:       light-dark(#731230, #A31C44);
+  --accent-pressed:     light-dark(#5C0E28, #8A1538);
+  --accent-muted:       light-dark(
+                          color-mix(in srgb, #8A1538 12%, #FAF7F8),
+                          color-mix(in srgb, #8A1538 22%, #262626)
+                        );
+  --accent-warm:        #8A1538;
+  --accent-warm-hover:  light-dark(#731230, #A31C44);
 
   /* Semantic */
-  --success:            #16a34a;
-  --warning:            #ca8a04;
-  --danger:             #dc2626;
-  --info:               #2563eb;
+  --success:            light-dark(#16a34a, #4ade80);
+  --warning:            light-dark(#ca8a04, #facc15);
+  --danger:             light-dark(#dc2626, #f87171);
+  --info:               light-dark(#2563eb, #60a5fa);
 
   /* Layout */
   --sidebar-w:          268px;
@@ -141,14 +143,23 @@
   --sidebar-drawer-t:   320ms;
 
   /* Shadows */
-  --shadow-card:        0 1px 2px rgb(28 25 23 / 0.04);
-  --shadow-popover:     0 8px 24px rgb(28 25 23 / 0.1);
+  --shadow-card:        light-dark(0 1px 2px rgb(28 25 23 / 0.04), none);
+  --shadow-popover:     light-dark(
+                          0 8px 24px rgb(28 25 23 / 0.1),
+                          0 12px 28px rgb(0 0 0 / 0.45)
+                        );
   --shadow-popover-lg:  0 10px 15px -3px rgb(0 0 0 / 0.1),
                         0 4px 6px -4px rgb(0 0 0 / 0.1);
   --shadow-ring-soft:   0 0 0 1.8px rgb(0 0 0 / 0.08);
   --shadow-focus:       0 0 0 2px var(--bg), 0 0 0 4px color-mix(in srgb, var(--accent) 45%, transparent);
 
-  /* Modal */
-  --modal-backdrop-bg:   rgba(0, 0, 0, 0.72);
-  --modal-backdrop-blur: 0px;
+  /* Modal / overlay backdrops — soft dim; blur does the heavy lifting */
+  --modal-backdrop-bg:   rgb(0 0 0 / 0.32);
+  --modal-backdrop-blur: 10px;
+  --modal-backdrop-filter: blur(var(--modal-backdrop-blur)) saturate(1.2);
+  --modal-backdrop-t:    280ms;
+  --modal-backdrop-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
+
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"]  { color-scheme: dark; }

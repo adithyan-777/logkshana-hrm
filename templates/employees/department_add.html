@@ -8,8 +8,8 @@
     <span class="card__title">Add department</span>
   </div>
   <div class="card__body">
-    <div id="department-form-container">
-      {% partialdef department_form inline %}
+    {% partialdef department_form inline %}
+<div id="department-form-container">
 {% if success_message %}
 <div id="form-messages" class="message success">
     {{ success_message }}
@@ -23,7 +23,7 @@
     id="department-form"
     hx-post="{% url 'department_add' %}"
     hx-target="#department-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -51,8 +51,8 @@
 
     <button type="submit">Add Department</button>
 </form>
+</div>
 {% endpartialdef department_form %}
-    </div>
   </div>
 </div>
 {% endblock %}

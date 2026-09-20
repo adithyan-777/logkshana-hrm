@@ -76,7 +76,7 @@
     {% if search %}
     No departments match "{{ search }}".
     {% else %}
-    No departments yet. <a href="{% url 'department_add' %}">Add the first department</a>.
+    No departments yet. {% url 'department_add' as department_add_url %}{% include "partials/drawer_link.html" with url=department_add_url title="Add department" label="Add the first department" %}.
     {% endif %}
 </p>
 {% endif %}

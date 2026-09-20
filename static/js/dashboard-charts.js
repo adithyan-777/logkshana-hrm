@@ -22,12 +22,27 @@
         }
     }
 
+    function themeColors() {
+        try {
+            const cs = getComputedStyle(document.documentElement);
+            const text = cs.getPropertyValue("--text").trim() || (document.documentElement.getAttribute("data-theme") === "dark" ? "#C3C1BA" : "#3E3E38");
+            const grid = cs.getPropertyValue("--border").trim() || "#ebebeb";
+            return { text, grid };
+        } catch (_) {
+            return { text: "#85837D", grid: "#ebebeb" };
+        }
+    }
+
     function initAttendanceChart() {
         const panel = getPanel();
         if (!panel || typeof Chart === "undefined") {
             return;
         }
-
+        const colors = themeColors();
+        if (typeof Chart !== "undefined" && Chart.defaults) {
+            Chart.defaults.color = colors.text;
+            Chart.defaults.borderColor = colors.grid;
+        }
         const dataElement = panel.querySelector("#attendance-chart-data");
         const canvas = panel.querySelector("#attendance-chart");
         const emptyState = panel.querySelector("#attendance-chart-empty");
@@ -99,5 +114,9 @@
         if (isChartPanel(event.detail.target) || document.getElementById("attendance-chart")) {
             initAttendanceChart();
         }
+    });
+
+    window.addEventListener("themechange", function () {
+        initAttendanceChart();
     });
 })();

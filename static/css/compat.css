@@ -34,13 +34,30 @@
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--input);
   border-radius: var(--r-md);
-  background: var(--bg-prompt);
+  background-color: var(--bg-prompt);
   color: var(--text);
   font: inherit;
   box-shadow: none;
   appearance: none;
   -webkit-appearance: none;
   transition: var(--motion-interactive);
+}
+
+.field select,
+.report-filters select,
+.form-field select {
+  padding-right: calc(var(--space-3) + 22px);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%238A7F84' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px 16px;
+  cursor: pointer;
+}
+
+:root[data-theme="dark"] .field select,
+:root[data-theme="dark"] .report-filters select,
+:root[data-theme="dark"] .form-field select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%23C3C1BA' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 .field input:not([type="checkbox"]):not([type="radio"]):focus,
@@ -145,7 +162,8 @@
   margin: 0 0 var(--space-3);
 }
 
-form button[type="submit"]:not(.btn) {
+.app form button[type="submit"]:not(.btn),
+#modal-body form button[type="submit"]:not(.btn) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -155,14 +173,16 @@ form button[type="submit"]:not(.btn) {
   border-radius: var(--r-md);
   border: 1px solid transparent;
   background: var(--accent);
-  color: #fff;
+  color: var(--text-inverse, #fff);
   font-size: var(--control-font);
   font-weight: 500;
   cursor: pointer;
   margin-top: var(--space-3);
+  transition: var(--motion-interactive);
 }
 
-form button[type="submit"]:not(.btn):hover {
+.app form button[type="submit"]:not(.btn):hover,
+#modal-body form button[type="submit"]:not(.btn):hover {
   background: var(--accent-hover);
 }
 

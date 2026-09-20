@@ -47,7 +47,7 @@
     <tbody>
         {% for request in page_obj %}
         <tr>
-            <td>{{ request.employee.full_name }}</td>
+            <td>{% include "partials/emp_cell.html" with employee=request.employee %}</td>
             <td>{{ request.leave_type.name }}</td>
             <td>{{ request.start_date }}</td>
             <td>{{ request.end_date }}</td>
@@ -85,7 +85,7 @@
     {% if search %}
     No leave requests match "{{ search }}".
     {% else %}
-    No leave requests yet. <a href="{% url 'leave_request_add' %}">Add the first request</a>.
+    No leave requests yet. {% url 'leave_request_add' as leave_request_add_url %}{% include "partials/drawer_link.html" with url=leave_request_add_url title="Add leave request" label="Add the first request" %}.
     {% endif %}
 </p>
 {% endif %}

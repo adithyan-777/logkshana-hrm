@@ -6,7 +6,7 @@
 {% block content %}
 <div class="login-card">
   <div class="login-card__brand">
-    <span class="login-card__logo"><i class="bx bx-robot"></i></span>
+    {% include "partials/login_brand_logo.html" %}
     <h1 class="login-card__title">{% trans "Sign Out" %}</h1>
     <p class="login-card__subtitle">{% trans "Are you sure you want to sign out?" %}</p>
   </div>

@@ -10,8 +10,8 @@
     <span class="card__title">Add leave type</span>
   </div>
   <div class="card__body">
-    <div id="leave-type-form-container">
-      {% partialdef leave_type_form inline %}
+    {% partialdef leave_type_form inline %}
+<div id="leave-type-form-container">
 {% if success_message %}
 <div id="form-messages" class="message success">
     {{ success_message }}
@@ -25,7 +25,7 @@
     id="leave-type-form"
     hx-post="{% url 'leave_type_add' %}"
     hx-target="#leave-type-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -78,8 +78,8 @@
 
     <button type="submit">Add Leave Type</button>
 </form>
+</div>
 {% endpartialdef leave_type_form %}
-    </div>
   </div>
 </div>
 {% endblock %}

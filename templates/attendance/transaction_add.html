@@ -10,8 +10,8 @@
     <span class="card__title">Record punch</span>
   </div>
   <div class="card__body">
-    <div id="transaction-form-container">
-      {% partialdef transaction_form inline %}
+    {% partialdef transaction_form inline %}
+<div id="transaction-form-container">
 {% if success_message %}
 <div id="form-messages" class="message success">
     {{ success_message }}
@@ -25,7 +25,7 @@
     id="transaction-form"
     hx-post="{% url 'attendance_transaction_add' %}"
     hx-target="#transaction-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -57,8 +57,8 @@
 
     <button type="submit">Record Punch</button>
 </form>
+</div>
 {% endpartialdef transaction_form %}
-    </div>
   </div>
 </div>
 {% endblock %}

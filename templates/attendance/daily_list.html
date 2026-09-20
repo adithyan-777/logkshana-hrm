@@ -48,7 +48,7 @@
         {% for record in page_obj %}
         <tr>
             <td>{{ record.day }}</td>
-            <td>{{ record.employee.full_name }}</td>
+            <td>{% include "partials/emp_cell.html" with employee=record.employee %}</td>
             <td><span class="badge status-{{ record.status }}">{{ record.get_status_display }}</span></td>
             <td>{{ record.worked_minutes }}m</td>
             <td>{{ record.late_minutes }}m</td>
@@ -83,7 +83,7 @@
     {% if search %}
     No daily records match "{{ search }}".
     {% else %}
-    No daily attendance yet. <a href="{% url 'daily_attendance_add' %}">Add the first record</a>.
+    No daily attendance yet. {% url 'daily_attendance_add' as daily_attendance_add_url %}{% include "partials/drawer_link.html" with url=daily_attendance_add_url title="Add daily record" label="Add the first record" %}.
     {% endif %}
 </p>
 {% endif %}

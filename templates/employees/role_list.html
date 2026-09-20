@@ -53,7 +53,7 @@
     {% if search %}
     No roles match "{{ search }}".
     {% else %}
-    No roles yet. <a href="{% url 'role_add' %}">Add the first role</a>.
+    No roles yet. {% url 'role_add' as role_add_url %}{% include "partials/drawer_link.html" with url=role_add_url title="Add role" label="Add the first role" %}.
     {% endif %}
 </p>
 {% endif %}

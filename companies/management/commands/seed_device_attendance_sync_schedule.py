@@ -47,8 +47,7 @@ class Command(BaseCommand):
         task_status = "created" if created else "updated"
 
         self.stdout.write(
-            f"Interval schedule ({minutes} min): {schedule_status} "
-            f"(id={schedule.id})"
+            f"Interval schedule ({minutes} min): {schedule_status} (id={schedule.id})"
         )
         self.stdout.write(
             f"Periodic task '{TASK_NAME}': {task_status} "

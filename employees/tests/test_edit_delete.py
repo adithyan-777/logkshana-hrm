@@ -24,9 +24,7 @@ class EmployeeDeleteTests(EditDeleteTestMixin, BaseTenantTestCase):
         employee = employee_factory(first_name="Gone", emp_code="E-DEL-1")
         user_id = employee.user_id
 
-        response = self.client.delete(
-            reverse("employee_delete", args=[employee.pk])
-        )
+        response = self.client.delete(reverse("employee_delete", args=[employee.pk]))
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get("HX-Trigger"), "employeeDeleted")
@@ -41,9 +39,7 @@ class EmployeeDeleteTests(EditDeleteTestMixin, BaseTenantTestCase):
         employee = employee_factory(first_name="Stay", emp_code="E-DEL-2")
         self._login_as_plain_user(emp_code="E-DEL-NOPERM")
 
-        response = self.client.delete(
-            reverse("employee_delete", args=[employee.pk])
-        )
+        response = self.client.delete(reverse("employee_delete", args=[employee.pk]))
 
         self.assertEqual(response.status_code, 403)
         self.assertTrue(Employee.objects.filter(pk=employee.pk).exists())
@@ -58,9 +54,7 @@ class DepartmentEditDeleteTests(EditDeleteTestMixin, BaseTenantTestCase):
     def test_edit_get_200(self):
         department = department_factory(name="EditMe", code="EDM")
 
-        response = self.client.get(
-            reverse("department_edit", args=[department.pk])
-        )
+        response = self.client.get(reverse("department_edit", args=[department.pk]))
 
         self.assertEqual(response.status_code, 200)
 
@@ -88,9 +82,7 @@ class DepartmentEditDeleteTests(EditDeleteTestMixin, BaseTenantTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get("HX-Trigger"), "departmentDeleted")
         self.assertFalse(Department.objects.filter(pk=department.pk).exists())
-        self.assertTrue(
-            Department.all_objects.filter(pk=department.pk).exists()
-        )
+        self.assertTrue(Department.all_objects.filter(pk=department.pk).exists())
 
     def test_delete_without_perm_forbidden(self):
         department = department_factory(name="Stay", code="STAY")
@@ -104,9 +96,7 @@ class DepartmentEditDeleteTests(EditDeleteTestMixin, BaseTenantTestCase):
         self.assertTrue(Department.objects.filter(pk=department.pk).exists())
 
     def test_delete_missing_returns_404(self):
-        response = self.client.delete(
-            reverse("department_delete", args=[999999])
-        )
+        response = self.client.delete(reverse("department_delete", args=[999999]))
 
         self.assertEqual(response.status_code, 404)
 
@@ -136,9 +126,7 @@ class PositionEditDeleteTests(EditDeleteTestMixin, BaseTenantTestCase):
     def test_delete_soft_deletes_and_triggers(self):
         position = position_factory(title="Gone", code="GONE")
 
-        response = self.client.delete(
-            reverse("position_delete", args=[position.pk])
-        )
+        response = self.client.delete(reverse("position_delete", args=[position.pk]))
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get("HX-Trigger"), "positionDeleted")
@@ -149,9 +137,7 @@ class PositionEditDeleteTests(EditDeleteTestMixin, BaseTenantTestCase):
         position = position_factory(title="Stay", code="STAY")
         self._login_as_plain_user(emp_code="E-POS-NOPERM")
 
-        response = self.client.delete(
-            reverse("position_delete", args=[position.pk])
-        )
+        response = self.client.delete(reverse("position_delete", args=[position.pk]))
 
         self.assertEqual(response.status_code, 403)
         self.assertTrue(Position.objects.filter(pk=position.pk).exists())

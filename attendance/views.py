@@ -197,9 +197,7 @@ def transaction_edit(request: HttpRequest, transaction_id: int) -> HttpResponse:
         form = AttendanceTransactionForm(request.POST, instance=transaction)
         _configure_datetime_fields(form)
         if form.is_valid():
-            attendance_transaction_update(
-                **form.cleaned_data, transaction=transaction
-            )
+            attendance_transaction_update(**form.cleaned_data, transaction=transaction)
             response = _render_transaction_edit_form(
                 request,
                 AttendanceTransactionForm(instance=transaction),
@@ -242,9 +240,7 @@ def transaction_delete_view(request: HttpRequest, transaction_id: int) -> HttpRe
 def attendance_transaction_delete_view(
     request: HttpRequest, attendance_transaction_id: int
 ) -> HttpResponse:
-    return transaction_delete_view(
-        request, transaction_id=attendance_transaction_id
-    )
+    return transaction_delete_view(request, transaction_id=attendance_transaction_id)
 
 
 @login_required
@@ -327,15 +323,11 @@ def daily_edit(request: HttpRequest, daily_id: int) -> HttpResponse:
             response["HX-Trigger"] = "dailyUpdated"
             return response
 
-        return _render_daily_edit_form(
-            request, form, daily_attendance=daily_attendance
-        )
+        return _render_daily_edit_form(request, form, daily_attendance=daily_attendance)
 
     form = DailyAttendanceForm(instance=daily_attendance)
     if is_htmx_partial(request):
-        return _render_daily_edit_form(
-            request, form, daily_attendance=daily_attendance
-        )
+        return _render_daily_edit_form(request, form, daily_attendance=daily_attendance)
 
     return render(
         request,
@@ -585,9 +577,7 @@ def rule_edit(request: HttpRequest, rule_id: int) -> HttpResponse:
     )
 
 
-def attendance_rule_edit(
-    request: HttpRequest, attendance_rule_id: int
-) -> HttpResponse:
+def attendance_rule_edit(request: HttpRequest, attendance_rule_id: int) -> HttpResponse:
     return rule_edit(request, rule_id=attendance_rule_id)
 
 
@@ -639,6 +629,7 @@ def my_attendance_view(request: HttpRequest) -> HttpResponse:
 
     return render(request, "attendance/my_attendance.html", context)
 
+
 @csrf_exempt
 @require_http_methods(["POST"])
 @require_gateway_secret
@@ -663,7 +654,7 @@ def gateway_view(request: HttpRequest) -> HttpResponse:
 
     try:
         payload = json.loads(request.body or b"")
-    except (json.JSONDecodeError, UnicodeDecodeError):
+    except json.JSONDecodeError, UnicodeDecodeError:
         return JsonResponse({"detail": "Invalid JSON body."}, status=400)
 
     is_batch = isinstance(payload, list)

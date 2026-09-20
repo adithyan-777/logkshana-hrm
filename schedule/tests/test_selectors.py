@@ -174,7 +174,9 @@ class TimetableForEmployeeOnDateTests(BaseTenantTestCase):
             shift_days=[{"day_number": 1, "timetable": self.morning}],
         )
 
-        resolved = timetable_for_employee_on_date(employee=self.employee, day=self.monday)
+        resolved = timetable_for_employee_on_date(
+            employee=self.employee, day=self.monday
+        )
 
         self.assertEqual(resolved, self.morning)
 
@@ -256,7 +258,9 @@ class TimetableForEmployeeOnDateTests(BaseTenantTestCase):
             shift_days=[{"day_number": 1, "timetable": self.night}],
         )
 
-        resolved = timetable_for_employee_on_date(employee=self.employee, day=self.monday)
+        resolved = timetable_for_employee_on_date(
+            employee=self.employee, day=self.monday
+        )
 
         self.assertEqual(resolved, self.night)
 
@@ -273,7 +277,9 @@ class TimetableForEmployeeOnDateTests(BaseTenantTestCase):
             reason="Covering the night shift",
         )
 
-        resolved = timetable_for_employee_on_date(employee=self.employee, day=self.monday)
+        resolved = timetable_for_employee_on_date(
+            employee=self.employee, day=self.monday
+        )
 
         self.assertEqual(resolved, self.night)
 
@@ -291,7 +297,9 @@ class TimetableForEmployeeOnDateTests(BaseTenantTestCase):
             overrides_normal_schedule=False,
         )
 
-        resolved = timetable_for_employee_on_date(employee=self.employee, day=self.monday)
+        resolved = timetable_for_employee_on_date(
+            employee=self.employee, day=self.monday
+        )
 
         self.assertEqual(resolved, self.morning)
 
@@ -318,9 +326,7 @@ class TimetableForEmployeeOnDateTests(BaseTenantTestCase):
             self.morning,
         )
         self.assertIsNone(
-            timetable_for_employee_on_date(
-                employee=self.employee, day=date(2026, 3, 8)
-            )
+            timetable_for_employee_on_date(employee=self.employee, day=date(2026, 3, 8))
         )
         self.assertIsNone(
             timetable_for_employee_on_date(
@@ -401,7 +407,9 @@ class TimetableForEmployeeOnDateTests(BaseTenantTestCase):
             shift_days=[],
         )
 
-        resolved = timetable_for_employee_on_date(employee=self.employee, day=self.monday)
+        resolved = timetable_for_employee_on_date(
+            employee=self.employee, day=self.monday
+        )
 
         self.assertIsNone(resolved)
 
@@ -473,7 +481,9 @@ class TimetableForEmployeeOnDateTests(BaseTenantTestCase):
             shift_days=[{"day_number": 1, "timetable": self.night}],
         )
 
-        resolved = timetable_for_employee_on_date(employee=self.employee, day=self.monday)
+        resolved = timetable_for_employee_on_date(
+            employee=self.employee, day=self.monday
+        )
         expected_in, expected_out = expected_datetimes(
             timetable=resolved, day=self.monday
         )

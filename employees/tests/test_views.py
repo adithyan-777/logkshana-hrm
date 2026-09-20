@@ -67,6 +67,34 @@ class EmployeeFormTests(BaseTenantTestCase):
 
         self.assertTrue(form.is_valid())
 
+    def test_rejects_common_password(self):
+        form = EmployeeForm(
+            data={
+                "first_name": "Common",
+                "last_name": "Password",
+                "emp_code": "E203",
+                "password": "password123",
+                "is_active": True,
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("password", form.errors)
+
+    def test_rejects_numeric_password(self):
+        form = EmployeeForm(
+            data={
+                "first_name": "Numeric",
+                "last_name": "Password",
+                "emp_code": "E204",
+                "password": "9876543210",
+                "is_active": True,
+            }
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("password", form.errors)
+
 
 class EmployeeViewTests(BaseTenantTestCase):
     def test_list_requires_login(self):

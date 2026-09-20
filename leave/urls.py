@@ -5,7 +5,9 @@ from leave import views
 urlpatterns = [
     path("types/", views.leave_type_list_view, name="leave_type_list"),
     path("types/add/", views.leave_type_add, name="leave_type_add"),
-    path("types/<int:leave_type_id>/edit/", views.leave_type_edit, name="leave_type_edit"),
+    path(
+        "types/<int:leave_type_id>/edit/", views.leave_type_edit, name="leave_type_edit"
+    ),
     path(
         "types/<int:leave_type_id>/delete/",
         views.leave_type_delete_view,

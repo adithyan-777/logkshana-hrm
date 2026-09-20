@@ -4,25 +4,24 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('companies', '0002_initial'),
+        ("companies", "0002_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='device',
-            name='last_gateway_log_id',
+            model_name="device",
+            name="last_gateway_log_id",
             field=models.PositiveIntegerField(default=0),
         ),
         migrations.AddField(
-            model_name='device',
-            name='last_sync_error',
+            model_name="device",
+            name="last_sync_error",
             field=models.TextField(blank=True),
         ),
         migrations.AddField(
-            model_name='device',
-            name='last_synced_at',
+            model_name="device",
+            name="last_synced_at",
             field=models.DateTimeField(blank=True, null=True),
         ),
     ]

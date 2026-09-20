@@ -204,7 +204,9 @@ def department_list_view(request: HttpRequest) -> HttpResponse:
     )
 
     if is_htmx_partial(request):
-        return render(request, "employees/department_list.html#department_table", context)
+        return render(
+            request, "employees/department_list.html#department_table", context
+        )
 
     return render(request, "employees/department_list.html", context)
 
@@ -478,7 +480,9 @@ def permission_list_view(request: HttpRequest) -> HttpResponse:
     )
 
     if is_htmx_partial(request):
-        return render(request, "employees/permission_list.html#permission_table", context)
+        return render(
+            request, "employees/permission_list.html#permission_table", context
+        )
 
     return render(request, "employees/permission_list.html", context)
 

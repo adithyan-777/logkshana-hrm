@@ -330,9 +330,7 @@ def schedule_assignment_update(
 
 
 @transaction.atomic
-def schedule_assignment_delete(
-    *, assignment: ScheduleAssignment
-) -> ScheduleAssignment:
+def schedule_assignment_delete(*, assignment: ScheduleAssignment) -> ScheduleAssignment:
     """Soft-deletes the assignment (recoverable via all_objects)."""
     assignment.delete()
     return assignment
@@ -380,9 +378,7 @@ def temporary_schedule_update(
 
 
 @transaction.atomic
-def temporary_schedule_delete(
-    *, temporary: TemporarySchedule
-) -> TemporarySchedule:
+def temporary_schedule_delete(*, temporary: TemporarySchedule) -> TemporarySchedule:
     """Soft-deletes the temporary schedule (recoverable via all_objects)."""
     temporary.delete()
     return temporary

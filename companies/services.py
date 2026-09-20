@@ -103,7 +103,9 @@ def attendance_log_create(
         tenant_schema = device.company.schema_name
         if tenant_schema == get_public_schema_name():
             raise ValidationError(
-                {"serial_number": "Device is assigned to the public schema; reassign it to a real company/tenant."}
+                {
+                    "serial_number": "Device is assigned to the public schema; reassign it to a real company/tenant."
+                }
             )
 
     with schema_context(tenant_schema):
@@ -119,7 +121,9 @@ def attendance_log_create(
         if gateway_log_id is not None:
             external_id = f"gateway:{gateway_log_id}"
         else:
-            external_id = f"device:{serial_number}:{employee_id}:{timestamp.isoformat()}"
+            external_id = (
+                f"device:{serial_number}:{employee_id}:{timestamp.isoformat()}"
+            )
         existing = AttendanceTransaction.objects.filter(external_id=external_id).first()
         if existing is not None:
             return existing

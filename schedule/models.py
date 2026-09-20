@@ -19,13 +19,8 @@ class Timetable(BaseModel):
         NORMAL = "normal", "Normal"
         FLEXIBLE = "flexible", "Flexible"
 
-    class WorkType(models.TextChoices):
-        WORK = "work", "Work"
-        OFF = "off", "Day Off"
-        OVERTIME = "overtime", "Overtime"
-
     name = models.CharField(max_length=100)
-    code = models.CharField(max_length=50)
+    code = models.CharField(max_length=50, blank=True, null=True)
 
     type = models.CharField(
         max_length=20,
@@ -33,6 +28,7 @@ class Timetable(BaseModel):
         default=Type.NORMAL,
     )
 
+    check_out_cross_days = models.PositiveBigIntegerField(default=0)
     # Normal timetable
     check_in = models.TimeField(null=True, blank=True)
     check_out = models.TimeField(null=True, blank=True)
@@ -44,41 +40,15 @@ class Timetable(BaseModel):
         help_text="Required working minutes for flexible timetable.",
     )
 
-    work_type = models.CharField(
-        max_length=20,
-        choices=WorkType.choices,
-        default=WorkType.WORK,
-    )
-
-    # How many workdays this timetable represents.
-    workday = models.DecimalField(
-        max_digits=4,
-        decimal_places=2,
-        default=1,
-    )
-
     # Allowed punch windows
     check_in_start = models.TimeField(null=True, blank=True)
     check_in_end = models.TimeField(null=True, blank=True)
 
+
     check_out_start = models.TimeField(null=True, blank=True)
     check_out_end = models.TimeField(null=True, blank=True)
 
-    # Cross-day shift.
-    # 0 = same day, 1 = next day, etc.
-    check_in_cross_days = models.PositiveSmallIntegerField(default=0)
-
-    check_out_cross_days = models.PositiveSmallIntegerField(default=0)
-
-    # Attendance rules
-    require_check_in = models.BooleanField(default=True)
-    require_check_out = models.BooleanField(default=True)
-
-    allow_late_in = models.BooleanField(default=False)
-    allow_early_out = models.BooleanField(default=False)
-
-    late_in_grace_minutes = models.PositiveIntegerField(default=0)
-    early_out_grace_minutes = models.PositiveIntegerField(default=0)
+    breakTime = models.BooleanField(default=True)
 
     # Attendance calculation
     multiple_in_out = models.BooleanField(default=False)
@@ -188,9 +158,9 @@ class Shift(BaseModel):
     """
 
     class CycleUnit(models.TextChoices):
-        DAY = "day", "Day"
-        WEEK = "week", "Week"
-        MONTH = "month", "Month"
+        DAY = "day", "Day"  # type: ignore[assignment]
+        WEEK = "week", "Week"  # type: ignore[assignment]
+        MONTH = "month", "Month"  # type: ignore[assignment]
 
     name = models.CharField(max_length=100)
     code = models.CharField(max_length=50)
@@ -278,9 +248,9 @@ class ScheduleAssignment(BaseModel):
     """
 
     class AssignmentType(models.TextChoices):
-        EMPLOYEE = "employee", "Employee"
-        DEPARTMENT = "department", "Department"
-        GROUP = "group", "Group"
+        EMPLOYEE = "employee", "Employee"  # type: ignore[assignment]
+        DEPARTMENT = "department", "Department"  # type: ignore[assignment]
+        GROUP = "group", "Group"  # type: ignore[assignment]
 
     assignment_type = models.CharField(
         max_length=20,

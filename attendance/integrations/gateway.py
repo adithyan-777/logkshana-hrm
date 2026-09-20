@@ -52,7 +52,9 @@ def device_gateway_attendance_fetch(
 ) -> list[dict]:
     base_url = settings.DEVICE_GATEWAY_BASE_URL
     if not base_url:
-        raise ValidationError({"device_gateway": "DEVICE_GATEWAY_BASE_URL is not configured."})
+        raise ValidationError(
+            {"device_gateway": "DEVICE_GATEWAY_BASE_URL is not configured."}
+        )
 
     params = {"serial_number": serial_number}
     if after_id is not None:
@@ -72,32 +74,48 @@ def device_gateway_attendance_fetch(
             # Include gateway URL in the HTTPError message for debugging
             # while preserving original code/reason for retry logic.
             try:
-                body = exc.read().decode(errors="ignore")[:500] if hasattr(exc, "read") else ""
+                body = (
+                    exc.read().decode(errors="ignore")[:500]
+                    if hasattr(exc, "read")
+                    else ""
+                )
             except Exception:
                 body = ""
             detail = f" body: {body}" if body else ""
             # Re-raise with enriched message but same code so caller sees URL + code
             # Keep original exception chain for debugging
             raise HTTPError(
-                exc.url, exc.code, f"{exc.msg} for {url}.{detail} (base: {base_url})", exc.headers, exc.fp
+                exc.url,
+                exc.code,
+                f"{exc.msg} for {url}.{detail} (base: {base_url})",
+                exc.headers,
+                exc.fp,
             ) from exc
         # 4xx — permanent, wrap as ValidationError (no retry)
         try:
-            body = exc.read().decode(errors="ignore")[:500] if hasattr(exc, "read") else ""
+            body = (
+                exc.read().decode(errors="ignore")[:500] if hasattr(exc, "read") else ""
+            )
         except Exception:
             body = ""
         detail = f" body: {body}" if body else ""
         raise ValidationError(
-            {"device_gateway": f"Gateway returned HTTP {exc.code}.{detail} for {url} (base: {base_url})"}
+            {
+                "device_gateway": f"Gateway returned HTTP {exc.code}.{detail} for {url} (base: {base_url})"
+            }
         ) from exc
     except (URLError, TimeoutError, OSError) as exc:
         # Transient network errors — re-raise directly so Celery can retry
         # Add context about the base URL for debugging
         if isinstance(exc, URLError):
-            raise URLError(f"Gateway unreachable at {base_url} ({url}): {exc.reason}") from exc
+            raise URLError(
+                f"Gateway unreachable at {base_url} ({url}): {exc.reason}"
+            ) from exc
         raise
 
     if not isinstance(payload, list):
-        raise ValidationError({"device_gateway": "Gateway returned an invalid payload."})
+        raise ValidationError(
+            {"device_gateway": "Gateway returned an invalid payload."}
+        )
 
     return payload

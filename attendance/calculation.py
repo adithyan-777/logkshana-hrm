@@ -42,7 +42,7 @@ def direction_from_gateway_status(status) -> str:
     """
     try:
         code = int(status)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return "unknown"
     return "out" if code in _GATEWAY_OUT_STATUSES else "unknown"
 

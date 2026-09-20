@@ -33,9 +33,7 @@ def attendance_summary_row_dicts(rows) -> list[dict]:
     ]
 
 
-def attendance_summary_report_data(
-    rows, columns: list[ReportColumn]
-) -> ReportData:
+def attendance_summary_report_data(rows, columns: list[ReportColumn]) -> ReportData:
     return project_report_data(
         title="Attendance Summary",
         columns=columns,
@@ -88,9 +86,7 @@ def department_attendance_row_dicts(rows) -> list[dict]:
     ]
 
 
-def department_attendance_report_data(
-    rows, columns: list[ReportColumn]
-) -> ReportData:
+def department_attendance_report_data(rows, columns: list[ReportColumn]) -> ReportData:
     return project_report_data(
         title="Department Attendance",
         columns=columns,

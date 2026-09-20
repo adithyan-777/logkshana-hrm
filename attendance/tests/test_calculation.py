@@ -159,9 +159,7 @@ class AttendanceDayForPunchTests(SimpleTestCase):
     def test_extreme_day_change_time_pulls_back_evening_punch(self):
         punch = datetime(2026, 3, 10, 23, 0, tzinfo=QATAR)
 
-        day = attendance_day_for_punch(
-            timestamp=punch, day_change_time=time(23, 59)
-        )
+        day = attendance_day_for_punch(timestamp=punch, day_change_time=time(23, 59))
 
         self.assertEqual(day, date(2026, 3, 9))
 

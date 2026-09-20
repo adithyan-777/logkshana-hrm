@@ -59,18 +59,12 @@ def timetable_post_data(timetable, **overrides):
 
 class TimetableEditDeleteTests(BaseTenantTestCase):
     def test_edit_get_200(self):
-        timetable = timetable_factory(
-            name="Morning", code=f"TT-{uuid4().hex[:6]}"
-        )
-        response = self.client.get(
-            reverse("timetable_edit", args=[timetable.pk])
-        )
+        timetable = timetable_factory(name="Morning", code=f"TT-{uuid4().hex[:6]}")
+        response = self.client.get(reverse("timetable_edit", args=[timetable.pk]))
         self.assertEqual(response.status_code, 200)
 
     def test_edit_post_updates_and_triggers(self):
-        timetable = timetable_factory(
-            name="Morning", code=f"TT-{uuid4().hex[:6]}"
-        )
+        timetable = timetable_factory(name="Morning", code=f"TT-{uuid4().hex[:6]}")
         response = self.client.post(
             reverse("timetable_edit", args=[timetable.pk]),
             timetable_post_data(timetable, name="Evening Updated"),
@@ -81,30 +75,22 @@ class TimetableEditDeleteTests(BaseTenantTestCase):
         self.assertEqual(timetable.name, "Evening Updated")
 
     def test_delete_soft_deletes_and_triggers(self):
-        timetable = timetable_factory(
-            name="Morning", code=f"TT-{uuid4().hex[:6]}"
-        )
-        response = self.client.delete(
-            reverse("timetable_delete", args=[timetable.pk])
-        )
+        timetable = timetable_factory(name="Morning", code=f"TT-{uuid4().hex[:6]}")
+        response = self.client.delete(reverse("timetable_delete", args=[timetable.pk]))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get("HX-Trigger"), "timetableDeleted")
         self.assertFalse(Timetable.objects.filter(pk=timetable.pk).exists())
         self.assertTrue(Timetable.all_objects.filter(pk=timetable.pk).exists())
 
     def test_delete_without_perm_403(self):
-        timetable = timetable_factory(
-            name="Morning", code=f"TT-{uuid4().hex[:6]}"
-        )
+        timetable = timetable_factory(name="Morning", code=f"TT-{uuid4().hex[:6]}")
         plain = make_plain_user(
             self,
             email=f"plain_tt_{uuid4().hex[:6]}@example.com",
             username=f"plain_tt_{uuid4().hex[:6]}",
         )
         self.login_as(user=plain)
-        response = self.client.delete(
-            reverse("timetable_delete", args=[timetable.pk])
-        )
+        response = self.client.delete(reverse("timetable_delete", args=[timetable.pk]))
         self.assertEqual(response.status_code, 403)
         self.assertTrue(Timetable.objects.filter(pk=timetable.pk).exists())
 
@@ -135,20 +121,14 @@ class ShiftEditDeleteTests(BaseTenantTestCase):
         return data
 
     def test_edit_get_200(self):
-        shift = shift_factory(
-            name="Week", code=f"SH-{uuid4().hex[:6]}"
-        )
+        shift = shift_factory(name="Week", code=f"SH-{uuid4().hex[:6]}")
         response = self.client.get(reverse("shift_edit", args=[shift.pk]))
         self.assertEqual(response.status_code, 200)
 
     def test_edit_post_updates_and_triggers(self):
-        shift = shift_factory(
-            name="Week", code=f"SH-{uuid4().hex[:6]}"
-        )
+        shift = shift_factory(name="Week", code=f"SH-{uuid4().hex[:6]}")
         day = shift.days.get()
-        new_timetable = timetable_factory(
-            name="Evening", code=f"EV-{uuid4().hex[:6]}"
-        )
+        new_timetable = timetable_factory(name="Evening", code=f"EV-{uuid4().hex[:6]}")
         response = self.client.post(
             reverse("shift_edit", args=[shift.pk]),
             self._shift_post_data(shift, day, new_timetable),
@@ -161,9 +141,7 @@ class ShiftEditDeleteTests(BaseTenantTestCase):
         self.assertEqual(shift.days.get().timetable_id, new_timetable.pk)
 
     def test_edit_post_removing_day_soft_deletes_it(self):
-        shift = shift_factory(
-            name="Week", code=f"SH-{uuid4().hex[:6]}"
-        )
+        shift = shift_factory(name="Week", code=f"SH-{uuid4().hex[:6]}")
         day = shift.days.get()
         formset = build_shift_day_formset(instance=shift)
         prefix = formset.prefix
@@ -192,9 +170,7 @@ class ShiftEditDeleteTests(BaseTenantTestCase):
         self.assertTrue(ShiftDay.all_objects.filter(pk=day.pk).exists())
 
     def test_delete_soft_deletes_shift_and_days(self):
-        shift = shift_factory(
-            name="Week", code=f"SH-{uuid4().hex[:6]}"
-        )
+        shift = shift_factory(name="Week", code=f"SH-{uuid4().hex[:6]}")
         day_pk = shift.days.get().pk
         response = self.client.delete(reverse("shift_delete", args=[shift.pk]))
         self.assertEqual(response.status_code, 200)
@@ -205,9 +181,7 @@ class ShiftEditDeleteTests(BaseTenantTestCase):
         self.assertTrue(ShiftDay.all_objects.filter(pk=day_pk).exists())
 
     def test_delete_without_perm_403(self):
-        shift = shift_factory(
-            name="Week", code=f"SH-{uuid4().hex[:6]}"
-        )
+        shift = shift_factory(name="Week", code=f"SH-{uuid4().hex[:6]}")
         plain = make_plain_user(
             self,
             email=f"plain_sh_{uuid4().hex[:6]}@example.com",
@@ -226,9 +200,7 @@ class ShiftEditDeleteTests(BaseTenantTestCase):
 class AssignmentEditDeleteTests(BaseTenantTestCase):
     def setUp(self):
         super().setUp()
-        self.shift = shift_factory(
-            name="Week", code=f"SH-{uuid4().hex[:6]}"
-        )
+        self.shift = shift_factory(name="Week", code=f"SH-{uuid4().hex[:6]}")
         self.employee = employee_factory(
             first_name="Assign", emp_code=f"EA-{uuid4().hex[:6]}"
         )
@@ -331,9 +303,7 @@ class TemporaryEditDeleteTests(BaseTenantTestCase):
         return data
 
     def test_edit_get_200(self):
-        response = self.client.get(
-            reverse("temporary_edit", args=[self.temporary.pk])
-        )
+        response = self.client.get(reverse("temporary_edit", args=[self.temporary.pk]))
         self.assertEqual(response.status_code, 200)
 
     def test_edit_post_updates_and_triggers(self):
@@ -370,9 +340,7 @@ class TemporaryEditDeleteTests(BaseTenantTestCase):
             reverse("temporary_delete", args=[self.temporary.pk])
         )
         self.assertEqual(response.status_code, 403)
-        self.assertTrue(
-            TemporarySchedule.objects.filter(pk=self.temporary.pk).exists()
-        )
+        self.assertTrue(TemporarySchedule.objects.filter(pk=self.temporary.pk).exists())
 
     def test_delete_missing_404(self):
         response = self.client.delete(reverse("temporary_delete", args=[999999]))

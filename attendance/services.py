@@ -274,9 +274,7 @@ def daily_attendance_update(
 
 
 @transaction.atomic
-def daily_attendance_delete(
-    *, daily_attendance: DailyAttendance
-) -> DailyAttendance:
+def daily_attendance_delete(*, daily_attendance: DailyAttendance) -> DailyAttendance:
     """Soft-deletes the daily record (recoverable via all_objects)."""
     daily_attendance.delete()
     return daily_attendance
@@ -377,13 +375,9 @@ def resolve_punch_day(*, employee, timestamp):
     if timezone.is_naive(ts):
         ts = timezone.make_aware(ts)
     local_date = timezone.localtime(ts).date()
-    shift, timetable = schedule_for_employee_on_date(
-        employee=employee, day=local_date
-    )
+    shift, timetable = schedule_for_employee_on_date(employee=employee, day=local_date)
     day_change = (
-        timetable.day_change_time
-        if timetable is not None
-        else DEFAULT_DAY_CHANGE_TIME
+        timetable.day_change_time if timetable is not None else DEFAULT_DAY_CHANGE_TIME
     )
     day = attendance_day_for_punch(timestamp=ts, day_change_time=day_change)
     if day != local_date:
@@ -524,7 +518,11 @@ def _store_daily_result(
     status,
 ) -> DailyAttendance:
     """Upsert the DailyAttendance row and rebuild its periods."""
-    daily = existing if existing is not None else DailyAttendance(employee=employee, date=day)
+    daily = (
+        existing
+        if existing is not None
+        else DailyAttendance(employee=employee, date=day)
+    )
     daily.calculation_version = (
         (existing.calculation_version or 0) + 1 if existing is not None else 1
     )
@@ -584,9 +582,7 @@ def recalculate_daily_attendance(*, employee, day) -> DailyAttendance | None:
         return existing
 
     day_change = (
-        timetable.day_change_time
-        if timetable is not None
-        else DEFAULT_DAY_CHANGE_TIME
+        timetable.day_change_time if timetable is not None else DEFAULT_DAY_CHANGE_TIME
     )
     window_start = timezone.make_aware(datetime.combine(day, day_change))
     window_end = window_start + timedelta(days=1)
@@ -691,7 +687,9 @@ def device_attendance_pull(
         tenant_schema = device.company.schema_name
         if tenant_schema == get_public_schema_name():
             raise ValidationError(
-                {"serial_number": "Device is assigned to the public schema; reassign it to a real company/tenant."}
+                {
+                    "serial_number": "Device is assigned to the public schema; reassign it to a real company/tenant."
+                }
             )
         # Capture branch/id while still in public schema; Branch is shared.
         device_branch_id = device.branch_id
@@ -717,7 +715,9 @@ def device_attendance_pull(
 
         if isinstance(exc, (HTTPError, URLError, TimeoutError, OSError)):
             with schema_context(get_public_schema_name()):
-                device_sync_state_update(device=device, error=f"{type(exc).__name__}: {exc}")
+                device_sync_state_update(
+                    device=device, error=f"{type(exc).__name__}: {exc}"
+                )
             raise
         raise
 

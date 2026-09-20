@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -15,15 +14,35 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='ReportColumnPreference',
+            name="ReportColumnPreference",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('report_key', models.CharField(max_length=64)),
-                ('columns', models.JSONField(default=list)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='report_column_preferences', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("report_key", models.CharField(max_length=64)),
+                ("columns", models.JSONField(default=list)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="report_column_preferences",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'constraints': [models.UniqueConstraint(fields=('user', 'report_key'), name='unique_report_column_preference')],
+                "constraints": [
+                    models.UniqueConstraint(
+                        fields=("user", "report_key"),
+                        name="unique_report_column_preference",
+                    )
+                ],
             },
         ),
     ]

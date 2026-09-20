@@ -153,7 +153,9 @@ def _assignment_for_day(*, employee, day: date) -> ScheduleAssignment | None:
     )
 
 
-def _timetable_for_shift_day(*, shift: Shift, start_date: date, day: date) -> Timetable | None:
+def _timetable_for_shift_day(
+    *, shift: Shift, start_date: date, day: date
+) -> Timetable | None:
     shift_days = list(shift.days.all())
     if not shift_days:
         return None

@@ -597,7 +597,9 @@ class Command(BaseCommand):
             "Note: *.localhost resolves to 127.0.0.1 on modern systems; "
             "other names need DNS or a /etc/hosts entry."
         )
-        self.stdout.write(f"Owner login: {options['owner_email']} (change the seeded password!)")
+        self.stdout.write(
+            f"Owner login: {options['owner_email']} (change the seeded password!)"
+        )
         self.stdout.write("Sample logins use employee usernames like ahmed.al-rashid")
         self.stdout.write("Demo employee codes: DEMO-001 .. DEMO-004")
 
@@ -626,7 +628,9 @@ class Command(BaseCommand):
             defaults={"is_staff": True},
         )
 
-    def _resolve_tenant(self, *, schema_name: str | None, owner) -> tuple[Company, bool]:
+    def _resolve_tenant(
+        self, *, schema_name: str | None, owner
+    ) -> tuple[Company, bool]:
         tenant_model = get_tenant_model()
         public_schema = get_public_schema_name()
 

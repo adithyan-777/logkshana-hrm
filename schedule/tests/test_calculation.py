@@ -42,7 +42,8 @@ class ExpectedDatetimesTests(SimpleTestCase):
         )
 
         expected_in, expected_out = expected_datetimes(
-            timetable=timetable, day=date(2026, 3, 9)  # Monday
+            timetable=timetable,
+            day=date(2026, 3, 9),  # Monday
         )
 
         self.assertEqual(timezone.localtime(expected_in).date(), date(2026, 3, 9))
@@ -120,9 +121,7 @@ class ExpectedDatetimesTests(SimpleTestCase):
             check_out_cross_days=1,
         )
 
-        _, expected_out = expected_datetimes(
-            timetable=timetable, day=date(2026, 1, 31)
-        )
+        _, expected_out = expected_datetimes(timetable=timetable, day=date(2026, 1, 31))
 
         self.assertEqual(timezone.localtime(expected_out).date(), date(2026, 2, 1))
 
@@ -146,9 +145,7 @@ class ExpectedDatetimesTests(SimpleTestCase):
             check_out_cross_days=1,
         )
 
-        _, expected_out = expected_datetimes(
-            timetable=timetable, day=date(2028, 2, 28)
-        )
+        _, expected_out = expected_datetimes(timetable=timetable, day=date(2028, 2, 28))
 
         self.assertEqual(timezone.localtime(expected_out).date(), date(2028, 2, 29))
 
@@ -159,8 +156,6 @@ class ExpectedDatetimesTests(SimpleTestCase):
             check_out_cross_days=1,
         )
 
-        _, expected_out = expected_datetimes(
-            timetable=timetable, day=date(2027, 2, 28)
-        )
+        _, expected_out = expected_datetimes(timetable=timetable, day=date(2027, 2, 28))
 
         self.assertEqual(timezone.localtime(expected_out).date(), date(2027, 3, 1))

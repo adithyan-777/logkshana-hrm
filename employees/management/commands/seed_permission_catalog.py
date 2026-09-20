@@ -1,5 +1,9 @@
 from django.core.management.base import BaseCommand, CommandError
-from django_tenants.utils import get_public_schema_name, get_tenant_model, schema_context
+from django_tenants.utils import (
+    get_public_schema_name,
+    get_tenant_model,
+    schema_context,
+)
 
 from employees.services import permission_catalog_ensure
 
@@ -24,7 +28,9 @@ class Command(BaseCommand):
         with schema_context(public_schema):
             if schema_name:
                 if schema_name == public_schema:
-                    raise CommandError("Permission catalog is tenant-scoped, not public.")
+                    raise CommandError(
+                        "Permission catalog is tenant-scoped, not public."
+                    )
                 try:
                     tenants = [tenant_model.objects.get(schema_name=schema_name)]
                 except tenant_model.DoesNotExist as exc:
@@ -32,9 +38,7 @@ class Command(BaseCommand):
                         f"No tenant with schema '{schema_name}'."
                     ) from exc
             else:
-                tenants = list(
-                    tenant_model.objects.exclude(schema_name=public_schema)
-                )
+                tenants = list(tenant_model.objects.exclude(schema_name=public_schema))
 
         if not tenants:
             self.stdout.write("No tenants found.")

@@ -206,9 +206,7 @@ class RecalculationTests(BaseTenantTestCase):
 
     def test_duplicate_taps_within_window_count_once(self):
         self.push(at=aware(2026, 9, 2, 9, 0), gateway_log_id=51)
-        self.push(
-            at=datetime(2026, 9, 2, 9, 0, 30, tzinfo=QATAR), gateway_log_id=52
-        )
+        self.push(at=datetime(2026, 9, 2, 9, 0, 30, tzinfo=QATAR), gateway_log_id=52)
         self.push(at=aware(2026, 9, 2, 18), status=1, gateway_log_id=53)
 
         daily = self.daily()
@@ -250,9 +248,9 @@ class RecalculationTests(BaseTenantTestCase):
         attendance_transaction_delete(transaction=out)
 
         self.assertEqual(self.daily().status, DailyAttendance.Status.INCOMPLETE)
-        self.assertEqual(AttendancePeriod.objects.filter(
-            daily_attendance=self.daily()
-        ).count(), 1)
+        self.assertEqual(
+            AttendancePeriod.objects.filter(daily_attendance=self.daily()).count(), 1
+        )
 
     def test_day_off_punch_is_worked_holiday(self):
         off = timetable_factory(
@@ -329,9 +327,7 @@ class OvernightRecalculationTests(BaseTenantTestCase):
             extra_raw_data={"status": 1},
         )
 
-        daily = DailyAttendance.objects.get(
-            employee=self.employee, date=self.monday
-        )
+        daily = DailyAttendance.objects.get(employee=self.employee, date=self.monday)
         self.assertEqual(daily.status, DailyAttendance.Status.PRESENT)
         self.assertEqual(daily.worked_minutes, 495)
         self.assertFalse(

@@ -27,17 +27,27 @@ from employees.tasks import device_user_create_task
 User = get_user_model()
 
 
-def _validate_employee_password(*, password: str) -> str:
+def _validate_employee_password(*, password: str, user=None) -> str:
+    """Run the configured Django password validators (settings
+    AUTH_PASSWORD_VALIDATORS: similarity, min length, common, numeric).
+
+    Passing the (possibly unsaved) user enables the similarity check
+    against username/email/name. Raises field-keyed ValidationError.
+    """
     from django.contrib.auth.password_validation import validate_password
 
     if not password:
         raise ValidationError({"password": "Password is required."})
-    if len(password) < 8:
-        raise ValidationError(
-            {"password": "Password must be at least 8 characters long."}
-        )
-    validate_password(password)
+    try:
+        validate_password(password, user=user)
+    except ValidationError as exc:
+        raise ValidationError({"password": exc.messages})
     return password
+
+
+def _password_check_user(*, username: str = "", email: str = ""):
+    """Unsaved user instance so validators can check similarity."""
+    return TenantUser(username=username or "", email=email or "")
 
 
 def _generate_username(*, first_name: str, last_name: str) -> str:
@@ -79,7 +89,10 @@ def employee_create(
     username = _generate_username(first_name=first_name, last_name=last_name)
     user_email = email or f"{username}@{tenant.slug}.com"
     if password:
-        _validate_employee_password(password=password)
+        _validate_employee_password(
+            password=password,
+            user=_password_check_user(username=username, email=user_email),
+        )
         login_password = password
     else:
         # Auto-created records (device punches, factories, seeds) get a
@@ -167,7 +180,7 @@ def employee_update(
             user.is_active = is_active
             user_updates.append("is_active")
         if password:
-            _validate_employee_password(password=password)
+            _validate_employee_password(password=password, user=user)
             with schema_context(get_public_schema_name()):
                 user.set_password(password)
                 if user_updates:
@@ -295,24 +308,37 @@ def device_user_create(*, employee: Employee, serial_number: str) -> None:
         if 500 <= exc.code < 600:
             # Transient 5xx (502 etc.) — let caller retry (Celery autoretry)
             try:
-                body = exc.read().decode(errors="ignore")[:500] if hasattr(exc, "read") else ""
+                body = (
+                    exc.read().decode(errors="ignore")[:500]
+                    if hasattr(exc, "read")
+                    else ""
+                )
             except Exception:
                 body = ""
             detail = f" body: {body}" if body else ""
             raise HTTPError(
-                exc.url, exc.code, f"{exc.msg} for {url}.{detail} (base: {settings.DEVICE_GATEWAY_BASE_URL})",
-                exc.headers, exc.fp
+                exc.url,
+                exc.code,
+                f"{exc.msg} for {url}.{detail} (base: {settings.DEVICE_GATEWAY_BASE_URL})",
+                exc.headers,
+                exc.fp,
             ) from exc
         try:
-            body = exc.read().decode(errors="ignore")[:500] if hasattr(exc, "read") else ""
+            body = (
+                exc.read().decode(errors="ignore")[:500] if hasattr(exc, "read") else ""
+            )
         except Exception:
             body = ""
         detail = f" body: {body}" if body else ""
-        raise ValidationError({"device": f"Gateway returned HTTP {exc.code}.{detail} for {url}"}) from exc
+        raise ValidationError(
+            {"device": f"Gateway returned HTTP {exc.code}.{detail} for {url}"}
+        ) from exc
     except (URLError, TimeoutError, OSError) as exc:
         # Transient — re-raise for retry
         if isinstance(exc, URLError):
-            raise URLError(f"Gateway unreachable at {settings.DEVICE_GATEWAY_BASE_URL} ({url}): {exc.reason}") from exc
+            raise URLError(
+                f"Gateway unreachable at {settings.DEVICE_GATEWAY_BASE_URL} ({url}): {exc.reason}"
+            ) from exc
         raise
 
 

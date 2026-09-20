@@ -159,6 +159,40 @@ class EmployeeCreateTests(BaseTenantTestCase):
                 password="short",
             )
 
+    def test_common_password_raises(self):
+        with self.assertRaises(ValidationError) as ctx:
+            employee_create(
+                first_name="Common",
+                last_name="Password",
+                emp_code="E064",
+                password="password123",
+            )
+
+        self.assertIn("password", ctx.exception.message_dict)
+
+    def test_numeric_password_raises(self):
+        with self.assertRaises(ValidationError) as ctx:
+            employee_create(
+                first_name="Numeric",
+                last_name="Password",
+                emp_code="E065",
+                password="9876543210",
+            )
+
+        self.assertIn("password", ctx.exception.message_dict)
+
+    def test_password_similar_to_email_raises(self):
+        with self.assertRaises(ValidationError) as ctx:
+            employee_create(
+                first_name="Alex",
+                last_name="Anderson",
+                emp_code="E066",
+                email="alexanderson@example.com",
+                password="alexanderson",
+            )
+
+        self.assertIn("password", ctx.exception.message_dict)
+
     def test_update_password_changes_login(self):
         employee = employee_create(
             first_name="Pw",

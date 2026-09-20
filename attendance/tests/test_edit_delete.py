@@ -70,12 +70,8 @@ class AttendanceTransactionEditDeleteTests(
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get("HX-Trigger"), "transactionDeleted")
-        self.assertFalse(
-            AttendanceTransaction.objects.filter(pk=punch.pk).exists()
-        )
-        self.assertTrue(
-            AttendanceTransaction.all_objects.filter(pk=punch.pk).exists()
-        )
+        self.assertFalse(AttendanceTransaction.objects.filter(pk=punch.pk).exists())
+        self.assertTrue(AttendanceTransaction.all_objects.filter(pk=punch.pk).exists())
 
     def test_delete_without_perm_forbidden(self):
         punch = attendance_transaction_factory(external_id="TX-ED-403")
@@ -84,9 +80,7 @@ class AttendanceTransactionEditDeleteTests(
         response = self.client.delete(reverse("transaction_delete", args=[punch.pk]))
 
         self.assertEqual(response.status_code, 403)
-        self.assertTrue(
-            AttendanceTransaction.objects.filter(pk=punch.pk).exists()
-        )
+        self.assertTrue(AttendanceTransaction.objects.filter(pk=punch.pk).exists())
 
     def test_delete_missing_id_404(self):
         response = self.client.delete(reverse("transaction_delete", args=[999999]))
@@ -196,9 +190,7 @@ class AttendanceCorrectionEditDeleteTests(
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get("HX-Trigger"), "correctionDeleted")
-        self.assertFalse(
-            AttendanceCorrection.objects.filter(pk=correction.pk).exists()
-        )
+        self.assertFalse(AttendanceCorrection.objects.filter(pk=correction.pk).exists())
         self.assertTrue(
             AttendanceCorrection.all_objects.filter(pk=correction.pk).exists()
         )
@@ -212,9 +204,7 @@ class AttendanceCorrectionEditDeleteTests(
         )
 
         self.assertEqual(response.status_code, 403)
-        self.assertTrue(
-            AttendanceCorrection.objects.filter(pk=correction.pk).exists()
-        )
+        self.assertTrue(AttendanceCorrection.objects.filter(pk=correction.pk).exists())
 
     def test_delete_missing_id_404(self):
         response = self.client.delete(reverse("correction_delete", args=[999999]))

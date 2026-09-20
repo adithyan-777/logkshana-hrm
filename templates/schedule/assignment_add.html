@@ -10,8 +10,8 @@
     <span class="card__title">Add assignment</span>
   </div>
   <div class="card__body">
-    <div id="assignment-form-container">
-      {% partialdef assignment_form inline %}
+    {% partialdef assignment_form inline %}
+<div id="assignment-form-container">
 {% if success_message %}
 <div id="form-messages" class="message success">
     {{ success_message }}
@@ -25,7 +25,7 @@
     id="assignment-form"
     hx-post="{% url 'assignment_add' %}"
     hx-target="#assignment-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -77,8 +77,8 @@
 
     <button type="submit">Add Assignment</button>
 </form>
+</div>
 {% endpartialdef assignment_form %}
-    </div>
   </div>
 </div>
 {% endblock %}

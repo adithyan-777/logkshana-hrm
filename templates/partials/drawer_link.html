@@ -1,0 +1,11 @@
+{# Open a create form in the right drawer instead of navigating away.
+   Required: url, title, label. Optional: class, size (default|wide). #}
+<a
+  {% if class %}class="{{ class }}"{% endif %}
+  href="{{ url }}"
+  hx-get="{{ url }}"
+  hx-target="#modal-body"
+  hx-swap="innerHTML"
+  hx-boost="false"
+  @click="$store.ui.openModal('{{ title|escapejs }}', '{{ size|default:'default'|escapejs }}')"
+>{{ label }}</a>

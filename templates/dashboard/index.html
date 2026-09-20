@@ -152,7 +152,15 @@
       </div>
       <div class="card__body">
         <div class="dash-actions">
-          <a class="dash-action" href="{% url 'attendance_transaction_add' %}">
+          <a
+            class="dash-action"
+            href="{% url 'attendance_transaction_add' %}"
+            hx-get="{% url 'attendance_transaction_add' %}"
+            hx-target="#modal-body"
+            hx-swap="innerHTML"
+            hx-boost="false"
+            @click="$store.ui.openModal('Record punch')"
+          >
             <i class="bx bx-walking"></i>
             <span>Record punch</span>
           </a>

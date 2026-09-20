@@ -10,8 +10,8 @@
     <span class="card__title">Add shift</span>
   </div>
   <div class="card__body">
-    <div id="shift-form-container">
-      {% partialdef shift_form inline %}
+    {% partialdef shift_form inline %}
+<div id="shift-form-container">
 {% if success_message %}
 <div id="form-messages" class="message success">
     {{ success_message }}
@@ -25,7 +25,7 @@
     id="shift-form"
     hx-post="{% url 'shift_add' %}"
     hx-target="#shift-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -110,8 +110,8 @@
 
     <button type="submit">Add Shift</button>
 </form>
+</div>
 {% endpartialdef shift_form %}
-    </div>
   </div>
 </div>
 {% endblock %}

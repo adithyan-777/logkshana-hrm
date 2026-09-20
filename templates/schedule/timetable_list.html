@@ -91,7 +91,7 @@
     {% if search %}
     No timetables match "{{ search }}".
     {% else %}
-    No timetables yet. <a href="{% url 'timetable_add' %}">Add the first timetable</a>.
+    No timetables yet. {% url 'timetable_add' as timetable_add_url %}{% include "partials/drawer_link.html" with url=timetable_add_url title="Add timetable" label="Add the first timetable" %}.
     {% endif %}
 </p>
 {% endif %}

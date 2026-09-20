@@ -10,8 +10,8 @@
     <span class="card__title">Add timetable</span>
   </div>
   <div class="card__body">
-    <div id="timetable-form-container">
-      {% partialdef timetable_form inline %}
+    {% partialdef timetable_form inline %}
+<div id="timetable-form-container">
 {% if success_message %}
 <div id="form-messages" class="message success">
     {{ success_message }}
@@ -25,7 +25,7 @@
     id="timetable-form"
     hx-post="{% url 'timetable_add' %}"
     hx-target="#timetable-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -191,8 +191,8 @@
 
     <button type="submit">Add Timetable</button>
 </form>
+</div>
 {% endpartialdef timetable_form %}
-    </div>
   </div>
 </div>
 {% endblock %}

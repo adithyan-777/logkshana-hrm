@@ -10,8 +10,8 @@
     <span class="card__title">Add temporary schedule</span>
   </div>
   <div class="card__body">
-    <div id="temporary-form-container">
-      {% partialdef temporary_form inline %}
+    {% partialdef temporary_form inline %}
+<div id="temporary-form-container">
 {% if success_message %}
 <div id="form-messages" class="message success">
     {{ success_message }}
@@ -25,7 +25,7 @@
     id="temporary-form"
     hx-post="{% url 'temporary_add' %}"
     hx-target="#temporary-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -64,8 +64,8 @@
 
     <button type="submit">Add Temporary Schedule</button>
 </form>
+</div>
 {% endpartialdef temporary_form %}
-    </div>
   </div>
 </div>
 {% endblock %}

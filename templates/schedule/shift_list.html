@@ -89,7 +89,7 @@
     {% if search %}
     No shifts match "{{ search }}".
     {% else %}
-    No shifts yet. <a href="{% url 'shift_add' %}">Add the first shift</a>.
+    No shifts yet. {% url 'shift_add' as shift_add_url %}{% include "partials/drawer_link.html" with url=shift_add_url title="Add shift" label="Add the first shift" size="wide" %}.
     {% endif %}
 </p>
 {% endif %}

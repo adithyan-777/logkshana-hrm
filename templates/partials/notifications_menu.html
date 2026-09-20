@@ -49,7 +49,7 @@
       </a>
       <a class="notify-menu__item" href="{% url 'report_overtime' %}" @click="$store.ui.closeMenus()">
         <span class="notify-menu__icon notify-menu__icon--accent">
-          <i class="bx bx-time-five admin-icon admin-icon--18"></i>
+          <i class="bx bx-timer admin-icon admin-icon--18"></i>
         </span>
         <span class="notify-menu__copy">
           <span class="notify-menu__label">Overtime pending</span>
@@ -59,7 +59,7 @@
       </a>
       <a class="notify-menu__item" href="{% url 'report_exceptions' %}" @click="$store.ui.closeMenus()">
         <span class="notify-menu__icon notify-menu__icon--danger">
-          <i class="bx bx-error-circle admin-icon admin-icon--18"></i>
+          <i class="bx bx-alert-circle admin-icon admin-icon--18"></i>
         </span>
         <span class="notify-menu__copy">
           <span class="notify-menu__label">Missing punches</span>
@@ -72,7 +72,7 @@
     <div class="notify-menu__footer">
       <a class="notify-menu__link" href="{% url 'daily_attendance_list' %}" @click="$store.ui.closeMenus()">
         View attendance
-        <i class="bx bx-right-arrow-alt admin-icon admin-icon--18"></i>
+        <i class="bx bx-arrow-right admin-icon admin-icon--18"></i>
       </a>
     </div>
   </div>

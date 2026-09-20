@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
-from common.http import is_htmx_partial
+from common.http import is_htmx_partial, set_hx_trigger
 from common.pagination import list_pagination_context
 from employees.decorators import require_permission
 from employees.permission_catalog import PermissionCodename
@@ -182,7 +182,11 @@ def timetable_add(request: HttpRequest) -> HttpResponse:
                 TimetableForm(),
                 success_message=f"Timetable “{form.cleaned_data['name']}” created.",
             )
-            response["HX-Trigger"] = "timetableCreated"
+            set_hx_trigger(
+                response,
+                event="timetableCreated",
+                toast=f"Timetable “{form.cleaned_data['name']}” created.",
+            )
             return response
 
         return _render_timetable_form(request, form)
@@ -282,7 +286,11 @@ def shift_add(request: HttpRequest) -> HttpResponse:
                 build_shift_day_formset(),
                 success_message=f"Shift “{form.cleaned_data['name']}” created.",
             )
-            response["HX-Trigger"] = "shiftCreated"
+            set_hx_trigger(
+                response,
+                event="shiftCreated",
+                toast=f"Shift “{form.cleaned_data['name']}” created.",
+            )
             return response
 
         return _render_shift_form(request, form, formset)
@@ -392,7 +400,11 @@ def assignment_add(request: HttpRequest) -> HttpResponse:
                 ScheduleAssignmentForm(),
                 success_message="Schedule assignment created.",
             )
-            response["HX-Trigger"] = "assignmentCreated"
+            set_hx_trigger(
+                response,
+                event="assignmentCreated",
+                toast="Schedule assignment created.",
+            )
             return response
 
         return _render_assignment_form(request, form)
@@ -484,7 +496,11 @@ def temporary_add(request: HttpRequest) -> HttpResponse:
                 TemporaryScheduleForm(),
                 success_message="Temporary schedule created.",
             )
-            response["HX-Trigger"] = "temporaryCreated"
+            set_hx_trigger(
+                response,
+                event="temporaryCreated",
+                toast="Temporary schedule created.",
+            )
             return response
 
         return _render_temporary_form(request, form)

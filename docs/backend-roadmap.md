@@ -1,16 +1,17 @@
-# Pattika backend roadmap
+# ITTISAL HRMS — Backend roadmap
 
-Keep the current visual system and Django backend. Sequence identity first, then access control and flags, then devices. Do **not** mix this work with the Datastar frontend rewrite — both touch `templates/base.html`, navigation, and views.
+Keep the current visual system (Alpine + HTMX shell) and Django backend. Sequence **RBAC and product flags**, then **devices / punch ingest**. Frontend SPA work is already on the Alpine track — do not start a parallel Datastar rewrite.
 
-**Out of scope here:** CSS/layout redesign, Datastar Pro, switching the web process to ASGI, changing attendance calculation rules, services/selectors/models except where this plan names them.
+**Stack note:** Django **6.0.x** (`>=6.0,<6.1`), Python **3.14+**, package name `pattika`.
+
+**Out of scope here:** CSS redesign, switching the web process to ASGI, changing attendance calculation rules, services/selectors/models except where this plan names them.
 
 ```mermaid
 flowchart TD
-  spike["1. Compatibility spike"] --> identity["2. Tenant users / membership"]
-  identity --> rbac["3. RBAC"]
-  rbac --> waffle["4. Waffle switches"]
-  waffle --> celery["5. Celery + Device + pull service"]
-  celery --> pyzk["6. pyzk on the worker"]
+  done["Done: tenant-users + waffle + Celery scaffold"] --> rbac["1. RBAC enforcement"]
+  rbac --> waffle["2. Waffle module gates in UI/nav"]
+  waffle --> device["3. Device model + pull / gateway"]
+  device --> pyzk["4. pyzk or on-site collector"]
 ```
 
 ---
@@ -19,64 +20,48 @@ flowchart TD
 
 | Area | State |
 |------|--------|
-| Tenancy | `django-tenants` only. Users live in the **public** schema (`django.contrib.auth` in `SHARED_APPS`). No membership check — a user created on tenant A can log in on tenant B’s domain. |
-| Employees | Tenant-schema `Employee` with optional `OneToOne` to `User`. `employee_create` always creates a public User + invite link. Punch-only staff still get login accounts. |
-| RBAC | `Role` / `Permission` models exist (unapplied `employees/migrations/0003_permission_role_employee_role.py`). `Employee.role` is set. Views are `login_required` only. Sidebar and command palette show everything. |
-| Attendance | Provider-agnostic `AttendanceTransaction` (`external_id`, `external_employee_id`, `raw_data`, `source=biometric`). Ingest service: `attendance_transaction_create`. No `Device` model, no unique punch key. |
-| Flags | None. |
-| Jobs | No Celery. WSGI only (`config/wsgi.py`). |
-| `emp_code` | Indexed, **not unique**. |
+| Tenancy | `django-tenants` + **`django-tenant-users`**. `AUTH_USER_MODEL = users.TenantUser`. `TenantAccessMiddleware` enabled. |
+| Identity | Public-schema users; tenant membership via tenant-users. `Employee.user` optional. |
+| RBAC | `Role` / `Permission` models and catalog seeding exist; **view/nav enforcement incomplete** — treat as next priority. |
+| Attendance | Provider-agnostic `AttendanceTransaction` + gateway endpoints. Device sync schedule command exists; harden uniqueness / Device model still needed. |
+| Flags | **django-waffle** installed + middleware. Wire switches into nav/modules next. |
+| Jobs | **Celery** + Redis + beat/results + `tenant-schemas-celery` in deps/Docker. Expand device pull tasks. |
+| Frontend shell | Alpine + HTMX SPA ([alpine-spa.md](alpine-spa.md)) — not Datastar. |
+| `emp_code` | Indexed; confirm uniqueness rules per tenant. |
 
 ---
 
 ## Priority order
 
-1. Compatibility spike (`django-tenant-users`, waffle, Celery/Redis on Django 6.1 + Python 3.14)
-2. Tenant identity / membership
-3. RBAC enforcement
-4. Waffle (per-tenant module switches)
-5. Celery worker + beat + `Device` + pull service
-6. Real pyzk (only if the worker can reach the clocks)
-
-Datastar stays a **separate track** after identity is stable, or after this sequence.
+1. ~~Compatibility spike~~ — **done** (tenant-users, waffle, Celery on Django 6.0 + Python 3.14)
+2. ~~Tenant identity / membership foundation~~ — **largely done**; finish employee invite ↔ membership edge cases
+3. **RBAC enforcement** (decorators, selectors, filter sidebar/palette)
+4. **Waffle** — gate Leave / Schedule / Reports / Devices in UI
+5. **Celery device pull** + `Device` model + unique punch keys
+6. **Real pyzk** or on-site collector (network-dependent)
 
 ---
 
-## 1. Compatibility spike (1–2 days)
+## 0. Compatibility spike — completed
 
-Do this before writing migrations.
+Already in tree:
 
-### django-tenant-users
+- `users.TenantUser`, `tenant_users` in `SHARED_APPS` / `TENANT_APPS`
+- `TenantAccessMiddleware`, `UserBackend`
+- `waffle` + `WaffleMiddleware`
+- Celery app, beat, results, Docker worker/beat services
 
-The package wants:
-
-- Custom `AUTH_USER_MODEL` inheriting `UserProfile` (email is the username)
-- `Company` inheriting `TenantBase` instead of `TenantMixin`
-- `tenant_users.permissions` in **both** `SHARED_APPS` and `TENANT_APPS`
-- `TenantAccessMiddleware` so non-members get 404 on another company’s domain
-- `provision_tenant()` / `tenant.add_user()` instead of raw `create_tenant`
-
-Go/no-go: if it installs and `provision_tenant` + `add_user` work on a throwaway branch, use it. If not, implement a thin `TenantMembership` (`user`, `company`, `is_owner`, `role`) in the public schema plus middleware. That is most of the value without fighting the package.
-
-### waffle
-
-Confirm Django 6.1 install. Prefer **Switches** in `TENANT_APPS` (per-company on/off). If it fights the stack, a `Company.features` JSONField is enough.
-
-### Celery
-
-Confirm Redis locally and `celery -A config worker` starts against this project.
-
-### Devices / network (blocks pyzk, not Celery scaffold)
+### Devices / network (still blocks real pyzk)
 
 ZKTeco talk is TCP **4370** on the LAN. A cloud WSGI/Celery process generally cannot reach `192.168.x.x`.
 
 | Option | When |
 |--------|------|
-| **A. App on-prem** (same network as devices) | Simplest: Celery worker + pyzk. |
-| **B. On-site collector** | Cloud SaaS. Agent pulls the device and POSTs punches. |
-| **C. ADMS / BioTime push** | Newer firmware; `pyzk` often does **not** work. |
+| **A. App on-prem** (same network as devices) | Celery worker + pyzk |
+| **B. On-site collector** | Cloud SaaS; agent POSTs punches to gateway |
+| **C. ADMS / BioTime push** | Newer firmware; `pyzk` often does **not** work |
 
-Confirm exact clock models. `pyzk` is unofficial and already failing on some ADMS-default machines.
+Confirm exact clock models.
 
 ---
 
@@ -96,8 +81,8 @@ Keep `Employee.user` nullable. Factory workers punch; they should not get accoun
 
 Concrete work:
 
-1. Custom user model **now**. Stock `auth.User` is still in use; changing `AUTH_USER_MODEL` later is painful.
-2. Switch allauth to **email login**. Today `ACCOUNT_LOGIN_METHODS = {"username"}`.
+1. Custom user model is in place (`users.TenantUser`). Keep it.
+2. Prefer **email login** via allauth if not already the only method.
 3. Change `employee_create`:
    - create/get user by email
    - `tenant.add_user(user)` (or create `TenantMembership`)
@@ -371,7 +356,7 @@ Do not calculate daily attendance inside the pull. Ingest raw punches first.
 
 ## What to pause
 
-- **Datastar rewrite** — same files as RBAC nav and waffle-gated chrome. Sequence: identity → RBAC/waffle → either Datastar or devices, not both at once.
+- **Datastar / alternate SPA rewrite** — Alpine+HTMX shell already ships. Do not parallelize another frontend rewrite with RBAC/nav work.
 - **Employee self-service portal** — needs RBAC “Employee” role first.
 - **Approve/reject UI** — natural follow-on once `leave.approve` exists.
 - **Putting `auth` in `TENANT_APPS`** — opposite of django-tenant-users.
@@ -382,15 +367,11 @@ Do not calculate daily attendance inside the pull. Ingest raw punches first.
 
 **Now (this week)**
 
-1. Compatibility spike: `django-tenant-users` + waffle + Celery/Redis on Django 6.1.
-2. Device/network decision: on-prem pyzk vs collector vs ADMS.
-3. Confirm clock models.
+1. Device/network decision: on-prem pyzk vs collector vs ADMS.
+2. Confirm clock models.
+3. Close remaining membership/invite edge cases in `employee_create`.
 
-**Next (identity PR)**
-
-Custom user, `TenantBase` / membership, middleware, `employee_create` + tests. No roles yet.
-
-**Then (RBAC PR)**
+**Next (RBAC PR)**
 
 Seed permissions, decorator, selector scoping, filter sidebar/palette. Apply/fix `0003`.
 
@@ -410,4 +391,4 @@ Redis, `config/celery.py`, `Device`, unique `emp_code` / punch `external_id`, pu
 |----------|----------|
 | [frontend-features.md](frontend-features.md) | Current UI behaviour, auth gaps |
 | [ui-shell-plan.md](ui-shell-plan.md) | Role-aware nav (phase 4) |
-| Datastar rewrite plan | Frontend interactivity swap — separate track |
+| [alpine-spa.md](alpine-spa.md) | Current SPA shell (HTMX + Alpine) |

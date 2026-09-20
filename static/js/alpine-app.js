@@ -117,6 +117,7 @@
       toasts: [],
       modalOpen: false,
       modalTitle: "Dialog",
+      modalSize: "default",
       toggleMenu(name) {
         this.menu = this.menu === name ? null : name;
       },
@@ -138,19 +139,33 @@
       dismiss(id) {
         this.toasts = this.toasts.filter((item) => item.id !== id);
       },
-      openModal(title) {
+      openModal(title, size) {
         if (title) this.modalTitle = title;
+        if (size) this.modalSize = size;
         this.modalOpen = true;
       },
       closeModal() {
         this.modalOpen = false;
+        this.modalSize = "default";
         const body = document.getElementById("modal-body");
         if (body) body.innerHTML = "";
       },
     });
 
     Alpine.store("theme", {
-      prefs: themeApi() ? themeApi().readPrefs() : { layout: "compact", scale: "md", sidebarVariant: "inset", sidebarMode: "default" },
+      prefs: themeApi() ? themeApi().readPrefs() : { mode: "system", layout: "compact", scale: "md", sidebarVariant: "inset", sidebarMode: "default" },
+      get resolved() {
+        const api = themeApi();
+        if (api && api.resolveTheme) return api.resolveTheme(this.prefs.mode);
+        if (typeof window !== "undefined" && window.matchMedia) {
+          try {
+            if (this.prefs.mode === "dark") return "dark";
+            if (this.prefs.mode === "light") return "light";
+            return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          } catch (_) {}
+        }
+        return this.prefs.mode === "dark" ? "dark" : "light";
+      },
       set(key, value) {
         const api = themeApi();
         if (api) {
@@ -166,6 +181,15 @@
           api.resetPrefs();
           this.prefs = api.readPrefs();
         }
+      },
+      toggle() {
+        const api = themeApi();
+        if (api && api.quickToggleTheme) {
+          api.quickToggleTheme();
+          this.prefs = api.readPrefs();
+          return;
+        }
+        this.prefs = { ...this.prefs, mode: this.resolved === "dark" ? "light" : "dark" };
       },
       refresh() {
         const api = themeApi();

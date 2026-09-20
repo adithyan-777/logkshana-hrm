@@ -50,7 +50,7 @@
             <td>{{ assignment.get_assignment_type_display }}</td>
             <td>
                 {% if assignment.employee %}
-                {{ assignment.employee.full_name }}
+                {% include "partials/emp_cell.html" with employee=assignment.employee %}
                 {% elif assignment.department %}
                 {{ assignment.department.name }}
                 {% else %}
@@ -91,7 +91,7 @@
     {% if search %}
     No assignments match "{{ search }}".
     {% else %}
-    No schedule assignments yet. <a href="{% url 'assignment_add' %}">Add the first assignment</a>.
+    No schedule assignments yet. {% url 'assignment_add' as assignment_add_url %}{% include "partials/drawer_link.html" with url=assignment_add_url title="Add assignment" label="Add the first assignment" %}.
     {% endif %}
 </p>
 {% endif %}

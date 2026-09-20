@@ -46,7 +46,7 @@
     <tbody>
         {% for transaction in page_obj %}
         <tr>
-            <td>{{ transaction.employee.full_name }}</td>
+            <td>{% include "partials/emp_cell.html" with employee=transaction.employee %}</td>
             <td>{{ transaction.timestamp }}</td>
             <td>{{ transaction.get_direction_display }}</td>
             <td>{{ transaction.get_source_display }}</td>
@@ -81,7 +81,7 @@
     {% if search %}
     No punches match "{{ search }}".
     {% else %}
-    No punches yet. <a href="{% url 'attendance_transaction_add' %}">Record the first punch</a>.
+    No punches yet. {% url 'attendance_transaction_add' as attendance_transaction_add_url %}{% include "partials/drawer_link.html" with url=attendance_transaction_add_url title="Record punch" label="Record the first punch" %}.
     {% endif %}
 </p>
 {% endif %}

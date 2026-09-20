@@ -55,7 +55,7 @@
     {% if search %}
     No permissions match "{{ search }}".
     {% else %}
-    No permissions yet. <a href="{% url 'permission_add' %}">Add the first permission</a>.
+    No permissions yet. {% url 'permission_add' as permission_add_url %}{% include "partials/drawer_link.html" with url=permission_add_url title="Add permission" label="Add the first permission" %}.
     {% endif %}
 </p>
 {% endif %}

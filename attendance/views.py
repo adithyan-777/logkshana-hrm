@@ -43,7 +43,7 @@ from attendance.services import (
     daily_attendance_delete,
     daily_attendance_update,
 )
-from common.http import is_htmx_partial
+from common.http import is_htmx_partial, set_hx_trigger
 from common.pagination import list_pagination_context
 from employees.decorators import require_permission
 from employees.permission_catalog import PermissionCodename
@@ -164,7 +164,11 @@ def transaction_add(request: HttpRequest) -> HttpResponse:
                 form,
                 success_message="Attendance transaction recorded.",
             )
-            response["HX-Trigger"] = "attendanceTransactionCreated"
+            set_hx_trigger(
+                response,
+                event="attendanceTransactionCreated",
+                toast="Attendance transaction recorded.",
+            )
             return response
 
         return _render_transaction_form(request, form)
@@ -285,7 +289,11 @@ def daily_add(request: HttpRequest) -> HttpResponse:
                 DailyAttendanceForm(),
                 success_message="Daily attendance record created.",
             )
-            response["HX-Trigger"] = "dailyAttendanceCreated"
+            set_hx_trigger(
+                response,
+                event="dailyAttendanceCreated",
+                toast="Daily attendance record created.",
+            )
             return response
 
         return _render_daily_form(request, form)
@@ -413,7 +421,11 @@ def correction_add(request: HttpRequest) -> HttpResponse:
                 form,
                 success_message="Attendance correction submitted.",
             )
-            response["HX-Trigger"] = "attendanceCorrectionCreated"
+            set_hx_trigger(
+                response,
+                event="attendanceCorrectionCreated",
+                toast="Attendance correction submitted.",
+            )
             return response
 
         return _render_correction_form(request, form)
@@ -534,7 +546,11 @@ def rule_add(request: HttpRequest) -> HttpResponse:
                 AttendanceRuleForm(),
                 success_message=f"Rule “{form.cleaned_data['name']}” created.",
             )
-            response["HX-Trigger"] = "attendanceRuleCreated"
+            set_hx_trigger(
+                response,
+                event="attendanceRuleCreated",
+                toast=f"Rule “{form.cleaned_data['name']}” created.",
+            )
             return response
 
         return _render_rule_form(request, form)

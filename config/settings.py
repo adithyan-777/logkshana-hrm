@@ -98,6 +98,11 @@ TEMPLATES = [
         "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
+            "libraries": {
+                # Explicit so {% load avatar %} works even if the process
+                # started before employees.templatetags was discoverable.
+                "avatar": "employees.templatetags.avatar",
+            },
             "context_processors": [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",

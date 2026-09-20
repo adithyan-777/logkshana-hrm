@@ -89,7 +89,7 @@
     {% if search %}
     No leave types match "{{ search }}".
     {% else %}
-    No leave types yet. <a href="{% url 'leave_type_add' %}">Add the first leave type</a>.
+    No leave types yet. {% url 'leave_type_add' as leave_type_add_url %}{% include "partials/drawer_link.html" with url=leave_type_add_url title="Add leave type" label="Add the first leave type" %}.
     {% endif %}
 </p>
 {% endif %}

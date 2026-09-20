@@ -48,7 +48,7 @@
         {% for correction in page_obj %}
         <tr>
             <td>{{ correction.date }}</td>
-            <td>{{ correction.employee.full_name }}</td>
+            <td>{% include "partials/emp_cell.html" with employee=correction.employee %}</td>
             <td>{{ correction.check_in|default:"—" }}</td>
             <td>{{ correction.check_out|default:"—" }}</td>
             <td><span class="badge status-{{ correction.status }}">{{ correction.get_status_display }}</span></td>
@@ -83,7 +83,7 @@
     {% if search %}
     No corrections match "{{ search }}".
     {% else %}
-    No corrections yet. <a href="{% url 'attendance_correction_add' %}">Submit the first correction</a>.
+    No corrections yet. {% url 'attendance_correction_add' as attendance_correction_add_url %}{% include "partials/drawer_link.html" with url=attendance_correction_add_url title="Submit correction" label="Submit the first correction" %}.
     {% endif %}
 </p>
 {% endif %}

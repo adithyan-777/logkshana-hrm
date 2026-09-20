@@ -1,10 +1,14 @@
 # ITTISAL HRMS — Frontend Handoff
 
-Reference for styling the Django server-rendered UI.
+Reference for styling and extending the Django server-rendered UI.
 
 **App name:** ITTISAL HRMS  
-**Stack:** Django templates, HTMX 2.0.4, **jQuery DataTables**, vanilla JS, `static/css/app.css`  
-**Auth:** django-allauth
+**Stack:** Django templates · HTMX · Alpine.js · Flatpickr · Chart.js · DataTables · vanilla JS  
+**CSS:** modular files under `static/css/` (source of truth: `tokens.css`)  
+**Auth:** django-allauth + django-tenant-users  
+**Brand:** accent `#8A1538` · wordmark `static/brand/hrms-wordmark.svg` · favicon `static/brand/icon.svg`
+
+**Related:** [README.md](README.md) · [frontend-features.md](frontend-features.md) · [alpine-spa.md](alpine-spa.md)
 
 **Quick jump:** [CSS handoff guide](#css-handoff-guide) · [Layout & CSS classes](#layout--css-classes) · [Forms reference](#forms-reference) · [Nice to haves](#nice-to-haves) · [Site map](#site-map) · [DataTables integration](#datatables-integration) · [Tables reference](#tables-reference)
 
@@ -19,89 +23,68 @@ What a frontend dev needs to get started. Detailed table column specs and DataTa
 | Detail | Why | Where |
 |--------|-----|-------|
 | Page inventory | Know every screen | [Site map](#site-map) |
-| Layout structure | Sidebar + header + content vs standalone login | `templates/layouts/app_shell.html`, `base.html` |
-| CSS class names | Templates already use these — style them, don't rename | `static/css/app.css`, [Key CSS classes](#key-css-classes) |
-| Table headers & column count | Column widths, sort types, `data-order` attrs | [Tables reference](#tables-reference), [DataTables integration](#datatables-integration) |
+| Layout structure | Sidebar + `#spa-view` vs standalone login | `templates/base.html`, `layouts/app_shell.html` |
+| CSS class names | Style existing classes — don't rename | `static/css/*.css`, [Key CSS classes](#key-css-classes) |
+| Design tokens | Brand, surfaces, motion | `static/css/tokens.css` |
+| Table headers & column count | Widths, sort types, `data-order` | [Tables reference](#tables-reference) |
 | Form fields & labels | Input sizing, grids, required markers | [Forms reference](#forms-reference) |
-| Component variants | Badges, messages, empty states | `.badge`, `.message`, `.empty-state` |
-| DataTables UI | Length filter, search, paginate controls | `.dataTables_wrapper` and children |
+| Component variants | Badges, alerts, empty states | `.badge`, `.alert`, `.empty-state` |
+| DataTables UI | Length / search / paginate | `.dataTables_wrapper` / `.dt-container` |
+| Date/time fields | Flatpickr (Clear / Today / Done) | `static/js/date-picker.js`, `flatpickr-theme.css` |
 
 ### Must have — behavior & constraints
 
 | Detail | Notes |
 |--------|-------|
-| **DataTables on all data tables** | 21 read-only tables use DataTables — see [DataTables integration](#datatables-integration). Replaces list `.search-input` and `.pagination`. |
-| **HTMX partial updates** | List containers still swap via HTMX after add forms. **Destroy + re-init** DataTable after each swap. Keep stable list container IDs. |
-| **Backend page size** | Django paginates **25 rows** per request today. Client-side DT only sees current page unless server-side DT is added. |
-| **Responsive breakpoint** | Mobile sidebar drawer at **max-width 900px**. DataTables **Responsive** extension for table columns. |
-| **Two layout modes** | `body.app-body` (full app) vs `body.standalone-page` (login, centered max 960px). |
-| **Sticky header** | `.app-header` is sticky. Use **FixedHeader** extension for table `<thead>`, not the app header. |
-| **Wide report tables** | Up to 10 columns — FixedHeader + horizontal scroll in `.dataTables_wrapper` |
-| **Sidebar width** | Fixed **240px** on desktop; slides in as overlay on mobile. |
+| **SPA shell** | HTMX `hx-boost` into `#spa-view`. See [alpine-spa.md](alpine-spa.md). |
+| **DataTables** | Read-only list/report tables — see [DataTables integration](#datatables-integration). |
+| **HTMX partials** | Destroy + re-init DataTables after list swaps. `initDatePickers()` runs on `htmx:afterSettle`. |
+| **Page size** | Django paginates **25** rows (`common/pagination.py`). |
+| **Breakpoint** | Mobile sidebar drawer at **max-width 768px**. |
+| **Layouts** | `body.app` (authenticated) vs `body.standalone-page` (auth). |
+| **Right drawer** | `.admin-modal` follows `data-sidebar-variant`: **default** (flush) or **inset** (gap + radius). |
+| **Sidebar width** | `--sidebar-w` ≈ **268px**; icon mode ~**52–64px**; prefs in `ittisal-ui-prefs`. |
 
-### Should have — visual system (decisions needed)
+### Design system (current)
 
-There is no formal design system yet — only functional CSS. Decide or inherit defaults for:
+| Token | Value / notes |
+|-------|----------------|
+| Primary / accent | `#8A1538` (`--accent`) |
+| Accent hover | `#731230` light / `#A31C44` dark |
+| Surfaces (light) | `#FAF7F8` canvas · `#FFFBFC` elevated · `#F3EFF1` muted |
+| Surfaces (dark) | `#262626` panels · `#1B1B1B` elevated · `#3E3E38` borders |
+| Text | `--text` / `--text-muted` / `--text-inverse` |
+| Font | Geist Variable (`--font-sans`) |
+| Radius | `--r-sm` 8 · `--r-md` 10 · `--r-card` 16 · `--r-shell` 20 |
+| Backdrop | `--modal-backdrop-blur: 10px` |
 
-| Token | Current value | Dev should define |
-|-------|---------------|-------------------|
-| Primary | `#1d4ed8` | Brand primary + hover (`#1e40af`) |
-| Text | `#111827` | Body, muted (`#6b7280`), labels (`#4b5563`) |
-| Background | `#f9fafb` | Page bg, card bg (`#fff`), sidebar (`#111827`) |
-| Borders | `#e5e7eb` | Dividers, inputs, cards |
-| Font | `system-ui, sans-serif` | Family + scale (h1 1.25rem, badges 0.75rem, etc.) |
-| Radius | `0.375rem` / `0.5rem` | Consistent radius tokens |
-| Spacing | Ad hoc | Scale (4 / 8 / 12 / 16 / 24px…) |
-| Shadows | Almost none | Cards, dropdowns, elevated panels |
-| Focus rings | Not styled | Keyboard accessibility on all interactive elements |
+**CSS load order:** `tokens` → `base` → `motion` → `layout` → `sidebar` → `components` → Flatpickr → `flatpickr-theme` → `utilities` → `compat` → `date-picker`
 
-Suggested approach: define CSS variables in `:root` at the top of `app.css` and refactor hardcoded values to use them.
+### States & edge cases
 
-### Should have — states & edge cases
+| State | Class / element |
+|-------|-----------------|
+| Empty table | `.empty-state` |
+| Validation | `.form-error`, `.alert--error` |
+| Success | `.message.success` / `.alert--success` |
+| Active nav | `.quick-action.is-active` |
+| Primary link button | `.btn--primary` must use `--text-inverse` (white) |
+| Mobile overlay | `.backdrop` |
 
-Style these explicitly — they appear on many pages:
+### Handoff checklist
 
-| State | Class / element | Pages |
-|-------|-----------------|-------|
-| Empty table | `.empty-state` | All list + report pages |
-| Field validation | `.error` on field, `.message.error` on form | All add forms |
-| Success after submit | `.message.success` | All HTMX add forms |
-| Active nav link | `.sidebar-link.is-active` | Sidebar |
-| Alert KPI | `.kpi-card-alert` | Dashboard pending counts |
-| Disabled pagination | `.pagination-disabled` | Legacy — remove when DT replaces `.pagination` |
-| Missing badge CSS | `.status-early_out`, `.status-auto_approved`, etc. | Daily attendance, overtime reports |
-| Collapsed sidebar group | `.sidebar-group[open]` | Leave, Schedule, Reports nav |
-| Mobile overlay | `.sidebar-overlay` + `[hidden]` | ≤900px viewport |
+- [ ] This document + [alpine-spa.md](alpine-spa.md)
+- [ ] Running app / screenshots
+- [ ] Brand assets in `static/brand/`
+- [ ] DataTables Phase 1 (client) vs Phase 2 (server JSON)
 
-### Handoff checklist (give the dev)
+### Suggested build order
 
-- [ ] This document (`docs/frontend-handoff.md`)
-- [ ] Running app access (or screenshots of each page type)
-- [ ] Brand inputs — logo, colors, font (optional; defaults exist)
-- [ ] Target devices — desktop-first vs mobile-first
-- [ ] Design reference — Figma/mockup if available
-- [ ] Scope — DataTables client-side (Phase 1) vs server-side JSON APIs (Phase 2)
-- [ ] Backend coordination — add `id` + `.datatable` to tables, `data-order` on badge/num cells
-
-### Suggested CSS build order
-
-1. CSS variables / design tokens in `:root`
-2. App shell — sidebar, header, breadcrumbs, mobile drawer
-3. Typography + base element styles
-4. Buttons (`.btn`, `.btn-primary`) + form inputs (`.field`, `.field-row`)
-5. **DataTables** — base CSS + `datatables-overrides.css`; init helper; per-table config from [Tables reference](#tables-reference)
-6. Badges + messages + empty states (badges render inside DT cells)
-7. Form sections (`.form-section`) + formset table (not DT)
-8. Report filters (`.report-filters`) — keep above DT result tables
-9. Dashboard KPI cards
-10. Login page + Django flash messages
-11. Nice-to-haves (see below)
+1. Tokens → shell → typography → buttons/forms → Flatpickr → DataTables → badges/alerts → modal variants → dashboard → login
 
 ### What the dev does NOT need
 
-- Django/Python business logic
-- REST API contracts (server-rendered HTML only)
-- Database schema (field types are in [Forms reference](#forms-reference))
+- Full Django business logic · public REST contracts for main UI · DB schema (see Forms reference)
 
 ---
 
@@ -111,62 +94,53 @@ Style these explicitly — they appear on many pages:
 
 | Mode | Body class | Used for |
 |------|------------|----------|
-| App shell | `app-body` | All authenticated pages |
-| Standalone | `standalone-page` | Login only |
+| App shell | `app` | Authenticated pages |
+| Standalone | `standalone-page` | Login, password reset, public gate |
 
 ### App shell structure
 
 ```
-.app-layout
-  .sidebar          ← dark nav, 240px
-  .app-main
-    .app-header     ← sticky: toggle, breadcrumbs, h1, .btn-primary, username
-    .app-content    ← max-width 1200px, page body
+body.app
+  .sidebar                 ← persists across SPA navigations
+  #spa-view.main           ← HTMX-swapped
+    .topbar
+    .main-scroll > .page-content
+  #app-modal.admin-modal   ← right drawer
+  command palette / toasts
 ```
 
 ### Key CSS classes
 
-| Class | Purpose |
-|-------|---------|
-| `.employee-table`, `.data-table`, `.datatable` | Data tables (DT init on `.datatable`) |
-| `.formset-table` | Inline formset only — **no DataTables** |
-| `.field`, `.field-row`, `.field.checkbox` | Form layout |
-| `.form-section` | Fieldset card with legend |
-| `.search-input` | **Deprecated** on list pages when DT search is active |
-| `.report-filters` | Report filter panel (keep — separate from DT search) |
-| `.badge`, `.badge.status-*` | Status pills inside table cells |
-| `.message.success`, `.message.error` | Form feedback |
-| `.empty-state` | No results (when table not rendered) |
-| `.pagination` | **Deprecated** when DataTables pagination is active |
-| `.dataTables_wrapper`, `.dataTables_filter`, etc. | DataTables injected UI |
-| `.dashboard-kpis`, `.kpi-card` | Dashboard metrics |
-| `.btn.btn-primary` | Header action button |
+| Class | Role |
+|-------|------|
+| `.sidebar`, `.brand-mark` | Nav + logo |
+| `.topbar` | Breadcrumbs + tools |
+| `.btn`, `.btn--primary`, `.btn--soft` | Actions |
+| `.form-input`, `.form-select`, `.field` | Forms |
+| `.admin-modal` | Right drawer |
+| `.flatpickr-calendar` | Date/time popup |
+| `.dataTables_wrapper`, `.dt-container` | Tables |
+| `.dashboard-kpis`, `.kpi-card` | Dashboard |
 
 ### Badge modifiers in use
 
 `.active`, `.inactive`, `.status-draft`, `.status-pending`, `.status-approved`, `.status-rejected`, `.status-cancelled`, `.status-present`, `.status-absent`, `.status-late`, `.status-incomplete`, `.status-leave`
 
-Additional attendance statuses in data but **no CSS yet:** `early_out`, `day_off`, `holiday`, `overtime`, `worked_holiday`, `auto_approved`
+Also in data: `early_out`, `day_off`, `holiday`, `overtime`, `worked_holiday`, `auto_approved`
 
-### Current color palette (from `app.css`)
+### Current color palette (from `tokens.css`)
 
-| Role | Hex |
-|------|-----|
-| Primary / active link | `#1d4ed8` |
-| Primary hover | `#1e40af` |
-| Body text | `#111827` |
-| Muted text | `#6b7280` |
-| Label text | `#4b5563` |
-| Page background | `#f9fafb` |
-| Card / table bg | `#ffffff` |
-| Border | `#e5e7eb` |
-| Sidebar bg | `#111827` |
-| Sidebar text | `#d1d5db` / `#e5e7eb` |
-| Success bg / text | `#dcfce7` / `#166534` |
-| Error bg / text | `#fee2e2` / `#991b1b` |
-| Warning badge bg / text | `#fef3c7` / `#92400e` |
-| Alert KPI border / bg | `#fcd34d` / `#fffbeb` |
-| Overlay | `rgba(17, 24, 39, 0.45)` |
+| Role | Value |
+|------|-------|
+| Primary / accent | `#8A1538` |
+| Accent hover (light) | `#731230` |
+| Body text (light) | `#3A2F33` |
+| Muted text | `#8A7F84` |
+| Page background (light) | `#FAF7F8` |
+| Elevated / card (light) | `#FFFBFC` |
+| Border (light) | `#E8E0E3` |
+| Inverse text | `#ffffff` |
+| Overlay | `--modal-backdrop-bg` + blur |
 
 ### HTMX swap targets (do not remove or rename)
 
@@ -186,9 +160,7 @@ Additional attendance statuses in data but **no CSS yet:** `early_out`, `day_off
 | Assignments | `#assignment-list` | `#assignment-form-container` | `assignmentCreated` |
 | Temporary | `#temporary-list` | `#temporary-form-container` | `temporaryCreated` |
 
-Pagination in HTMX mode uses `hx-target` pointing at the list container — **will be removed** when DataTables replaces server pagination. Until migration is complete, destroy DT before HTMX swap and re-init after.
-
-Style `htmx-request` on list targets for loading feedback during refresh.
+Destroy DataTables before HTMX swap and re-init after. Style `htmx-request` on list targets for loading feedback.
 
 ---
 
@@ -196,7 +168,9 @@ Style `htmx-request` on list targets for loading feedback during refresh.
 
 Every form in the app. **Label** is the exact text shown to the user in the template. **Field name** is the Django form field / HTML `name` attribute.
 
-Form CSS: fields use `.field`, checkboxes use `.field.checkbox`, grouped sections use `.form-section` with `<legend>`, side-by-side fields use `.field-row`.
+Form CSS: fields use `.field` / `.form-field`, checkboxes use `.field.checkbox`, grouped sections use `.form-section` with `<legend>`, side-by-side fields use `.field-row`.
+
+**Date / time / datetime-local:** enhanced by Flatpickr (class `has-flatpickr`). Popup footer: **Clear**, **Today**, **Done**. Values stay Django-compatible (`Y-m-d`, `Y-m-dTH:i`, `H:i`).
 
 ---
 
@@ -206,9 +180,9 @@ Form CSS: fields use `.field`, checkboxes use `.field.checkbox`, grouped section
 |---|---|
 | **Page URL** | `/accounts/login/` |
 | **Template** | `templates/account/login.html` |
-| **Layout** | Standalone (no sidebar) |
+| **Layout** | Standalone (no sidebar) — brand wordmark |
 | **Submit button** | "Sign In" |
-| **Note** | Rendered via django-allauth `{{ form.as_p }}` — typically Login, Password, Remember me |
+| **Note** | django-allauth login form (email/username + password) |
 
 ---
 
@@ -714,7 +688,7 @@ Most table UX (sort, search, paginate, responsive) is handled by DataTables. Rem
 
 | Enhancement | Notes |
 |-------------|-------|
-| Icon-only collapsed mode | Planned in ui-shell-plan — 240px → 64px + localStorage |
+| Icon-only collapsed mode | Shipped — theme customizer sidebar mode + `ittisal-ui-prefs` |
 | Badge counts on nav items | Pending leave, corrections (not implemented) |
 | User avatar in footer | Replace plain username in header |
 
@@ -786,17 +760,20 @@ List pages show a primary action button in the header (e.g. "Add employee" → `
 
 | What | Path |
 |------|------|
-| CSS | `static/css/app.css` |
-| DataTables overrides (proposed) | `static/css/datatables-overrides.css` |
-| JS | `static/js/app.js` |
-| DataTables init (proposed) | `static/js/datatables-init.js` |
-| Shell layout | `templates/layouts/app_shell.html` |
+| Design tokens | `static/css/tokens.css` |
+| CSS modules | `static/css/{base,layout,sidebar,components,compat,utilities,motion}.css` |
+| Flatpickr | `static/css/vendor/flatpickr.min.css`, `flatpickr-theme.css`, `js/vendor/flatpickr.min.js`, `js/date-picker.js` |
+| Brand | `static/brand/hrms-wordmark.svg`, `static/brand/icon.svg` |
+| Alpine / SPA | `static/js/alpine-app.js`, `static/js/theme.js` |
+| Charts | `static/js/vendor/chart.umd.min.js`, `dashboard-charts.js` |
+| Shell | `templates/base.html`, `layouts/app_shell.html` |
+| Drawer / modal | `templates/partials/modal.html` |
 | Table partials | `templates/{app}/partials/*_table.html` |
 | Form partials | `templates/{app}/partials/*_form.html` |
 | Report filters | `templates/reports/partials/filter_form.html` |
-| Pagination (legacy) | `templates/partials/pagination.html` |
-| Form Python defs | `{app}/forms.py` |
-| Page size constant | `common/pagination.py` (`DEFAULT_PAGE_SIZE = 25`) |
+| Pagination | `templates/partials/pagination.html` |
+| Forms | `{app}/forms.py` |
+| Page size | `common/pagination.py` (`DEFAULT_PAGE_SIZE = 25`) |
 
 ---
 

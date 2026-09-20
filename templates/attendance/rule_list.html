@@ -87,7 +87,7 @@
     {% if search %}
     No rules match "{{ search }}".
     {% else %}
-    No attendance rules yet. <a href="{% url 'attendance_rule_add' %}">Add the first rule</a>.
+    No attendance rules yet. {% url 'attendance_rule_add' as attendance_rule_add_url %}{% include "partials/drawer_link.html" with url=attendance_rule_add_url title="Add rule" label="Add the first rule" %}.
     {% endif %}
 </p>
 {% endif %}

@@ -47,7 +47,7 @@
         {% for item in page_obj %}
         <tr>
             <td>{{ item.date }}</td>
-            <td>{{ item.employee.full_name }}</td>
+            <td>{% include "partials/emp_cell.html" with employee=item.employee %}</td>
             <td>{{ item.timetable.name }}</td>
             <td>{{ item.reason|default:"—" }}</td>
             <td>{% if item.overrides_normal_schedule %}Yes{% else %}No{% endif %}</td>
@@ -81,7 +81,7 @@
     {% if search %}
     No temporary schedules match "{{ search }}".
     {% else %}
-    No temporary schedules yet. <a href="{% url 'temporary_add' %}">Add the first override</a>.
+    No temporary schedules yet. {% url 'temporary_add' as temporary_add_url %}{% include "partials/drawer_link.html" with url=temporary_add_url title="Add temporary schedule" label="Add the first override" %}.
     {% endif %}
 </p>
 {% endif %}

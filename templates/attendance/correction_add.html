@@ -10,8 +10,8 @@
     <span class="card__title">Submit correction</span>
   </div>
   <div class="card__body">
-    <div id="correction-form-container">
-      {% partialdef correction_form inline %}
+    {% partialdef correction_form inline %}
+<div id="correction-form-container">
 {% if success_message %}
 <div id="form-messages" class="message success">
     {{ success_message }}
@@ -25,7 +25,7 @@
     id="correction-form"
     hx-post="{% url 'attendance_correction_add' %}"
     hx-target="#correction-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -70,8 +70,8 @@
 
     <button type="submit">Submit Correction</button>
 </form>
+</div>
 {% endpartialdef correction_form %}
-    </div>
   </div>
 </div>
 {% endblock %}

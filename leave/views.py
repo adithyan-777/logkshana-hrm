@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
-from common.http import is_htmx_partial
+from common.http import is_htmx_partial, set_hx_trigger
 from common.pagination import list_pagination_context
 from employees.decorators import require_permission
 from employees.permission_catalog import PermissionCodename
@@ -156,7 +156,11 @@ def leave_type_add(request: HttpRequest) -> HttpResponse:
                 LeaveTypeForm(),
                 success_message=f"Leave type “{form.cleaned_data['name']}” created.",
             )
-            response["HX-Trigger"] = "leaveTypeCreated"
+            set_hx_trigger(
+                response,
+                event="leaveTypeCreated",
+                toast=f"Leave type “{form.cleaned_data['name']}” created.",
+            )
             return response
 
         return _render_leave_type_form(request, form)
@@ -248,7 +252,11 @@ def leave_policy_add(request: HttpRequest) -> HttpResponse:
                 LeavePolicyForm(),
                 success_message=f"Leave policy “{form.cleaned_data['name']}” created.",
             )
-            response["HX-Trigger"] = "leavePolicyCreated"
+            set_hx_trigger(
+                response,
+                event="leavePolicyCreated",
+                toast=f"Leave policy “{form.cleaned_data['name']}” created.",
+            )
             return response
 
         return _render_leave_policy_form(request, form)
@@ -340,7 +348,11 @@ def leave_request_add(request: HttpRequest) -> HttpResponse:
                 LeaveRequestForm(),
                 success_message="Leave request created.",
             )
-            response["HX-Trigger"] = "leaveRequestCreated"
+            set_hx_trigger(
+                response,
+                event="leaveRequestCreated",
+                toast="Leave request created.",
+            )
             return response
 
         return _render_leave_request_form(request, form)
@@ -434,7 +446,11 @@ def holiday_add(request: HttpRequest) -> HttpResponse:
                 HolidayForm(),
                 success_message=f"Holiday “{form.cleaned_data['name']}” created.",
             )
-            response["HX-Trigger"] = "holidayCreated"
+            set_hx_trigger(
+                response,
+                event="holidayCreated",
+                toast=f"Holiday “{form.cleaned_data['name']}” created.",
+            )
             return response
 
         return _render_holiday_form(request, form)

@@ -10,8 +10,8 @@
     <span class="card__title">Add leave request</span>
   </div>
   <div class="card__body">
-    <div id="leave-request-form-container">
-      {% partialdef leave_request_form inline %}
+    {% partialdef leave_request_form inline %}
+<div id="leave-request-form-container">
 {% if success_message %}
 <div id="form-messages" class="message success">
     {{ success_message }}
@@ -25,7 +25,7 @@
     id="leave-request-form"
     hx-post="{% url 'leave_request_add' %}"
     hx-target="#leave-request-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -92,8 +92,8 @@
 
     <button type="submit">Add Leave Request</button>
 </form>
+</div>
 {% endpartialdef leave_request_form %}
-    </div>
   </div>
 </div>
 {% endblock %}

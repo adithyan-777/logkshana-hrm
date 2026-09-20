@@ -27,8 +27,17 @@
                 title="Reset to defaults"
                 aria-label="Reset theme settings"
                 @click="$store.theme.reset()">
-          <i class="bx bx-reset admin-icon admin-icon--18"></i>
+          <i class="bx bx-refresh-cw admin-icon admin-icon--18"></i>
         </button>
+      </div>
+    </div>
+
+    <div class="theme-customizer__section">
+      <div class="theme-customizer__label">Color Mode</div>
+      <div class="seg" role="radiogroup" aria-label="Color mode">
+        <button type="button" class="seg__btn" role="radio" @click="$store.theme.set('mode', 'light')" :class="{ 'is-active': $store.theme.prefs.mode === 'light' }" :aria-checked="$store.theme.prefs.mode === 'light'">Light</button>
+        <button type="button" class="seg__btn" role="radio" @click="$store.theme.set('mode', 'dark')" :class="{ 'is-active': $store.theme.prefs.mode === 'dark' }" :aria-checked="$store.theme.prefs.mode === 'dark'">Dark</button>
+        <button type="button" class="seg__btn" role="radio" @click="$store.theme.set('mode', 'system')" :class="{ 'is-active': $store.theme.prefs.mode === 'system' }" :aria-checked="$store.theme.prefs.mode === 'system'">System</button>
       </div>
     </div>
 
@@ -55,6 +64,7 @@
         <button type="button" class="seg__btn" role="radio" @click="$store.theme.set('sidebarVariant', 'default')" :class="{ 'is-active': $store.theme.prefs.sidebarVariant === 'default' }" :aria-checked="$store.theme.prefs.sidebarVariant === 'default'">Default</button>
         <button type="button" class="seg__btn" role="radio" @click="$store.theme.set('sidebarVariant', 'inset')" :class="{ 'is-active': $store.theme.prefs.sidebarVariant === 'inset' }" :aria-checked="$store.theme.prefs.sidebarVariant === 'inset'">Inset</button>
       </div>
+      <p class="theme-customizer__subtitle" style="margin-top: var(--space-2);">Also applies to the right drawer.</p>
     </div>
 
     <div class="theme-customizer__section">

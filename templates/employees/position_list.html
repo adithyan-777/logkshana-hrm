@@ -76,7 +76,7 @@
     {% if search %}
     No positions match "{{ search }}".
     {% else %}
-    No positions yet. <a href="{% url 'position_add' %}">Add the first position</a>.
+    No positions yet. {% url 'position_add' as position_add_url %}{% include "partials/drawer_link.html" with url=position_add_url title="Add position" label="Add the first position" %}.
     {% endif %}
 </p>
 {% endif %}

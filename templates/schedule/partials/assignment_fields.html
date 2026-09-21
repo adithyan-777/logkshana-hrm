@@ -1,0 +1,54 @@
+{% comment %}
+Shared assignment fields for add/edit forms. Shows Employee OR Department
+based on the assignment type — only one of them ever applies.
+Expects: form
+{% endcomment %}
+<div
+  x-data="{ atype: '{{ form.assignment_type.value|default:'employee' }}' }"
+  @change="if ($event.target.id === '{{ form.assignment_type.id_for_label }}') atype = $event.target.value"
+>
+  <div class="field">
+    <label class="form-label" for="{{ form.assignment_type.id_for_label }}">Who is this for? *</label>
+    {{ form.assignment_type }}
+    {% if form.assignment_type.errors %}<span class="error">{{ form.assignment_type.errors }}</span>{% endif %}
+    <p class="help-text" x-show="atype === 'employee'" x-cloak>One person follows this shift.</p>
+    <p class="help-text" x-show="atype === 'department'" x-cloak>Everyone in the department follows this shift.</p>
+  </div>
+
+  <div class="field">
+    <label class="form-label" for="{{ form.shift.id_for_label }}">Shift *</label>
+    {{ form.shift }}
+    {% if form.shift.errors %}<span class="error">{{ form.shift.errors }}</span>{% endif %}
+  </div>
+
+  <div class="field-row">
+    <div class="field">
+      <label class="form-label" for="{{ form.start_date.id_for_label }}">Start date *</label>
+      {{ form.start_date }}
+      {% if form.start_date.errors %}<span class="error">{{ form.start_date.errors }}</span>{% endif %}
+    </div>
+    <div class="field">
+      <label class="form-label" for="{{ form.end_date.id_for_label }}">End date *</label>
+      {{ form.end_date }}
+      {% if form.end_date.errors %}<span class="error">{{ form.end_date.errors }}</span>{% endif %}
+    </div>
+  </div>
+
+  <div class="field" x-show="atype === 'employee'" x-cloak>
+    <label class="form-label" for="{{ form.employee.id_for_label }}">Employee *</label>
+    {{ form.employee }}
+    {% if form.employee.errors %}<span class="error">{{ form.employee.errors }}</span>{% endif %}
+  </div>
+
+  <div class="field" x-show="atype === 'department'" x-cloak>
+    <label class="form-label" for="{{ form.department.id_for_label }}">Department *</label>
+    {{ form.department }}
+    {% if form.department.errors %}<span class="error">{{ form.department.errors }}</span>{% endif %}
+  </div>
+
+  <label class="form-switch" title="New assignment replaces overlapping ones for the same person or department">
+    {{ form.overwrite_existing }}
+    <span class="form-switch__ui" aria-hidden="true"></span>
+    <span class="form-switch__label">Replace overlapping assignments</span>
+  </label>
+</div>

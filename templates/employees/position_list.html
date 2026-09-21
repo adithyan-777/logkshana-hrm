@@ -48,9 +48,8 @@
             <td>{{ position.parent|default:"—" }}</td>
             <td class="table-actions">
                 {% if can_edit %}
-                <a href="{% url 'position_edit' position.pk %}" class="btn-icon" title="Edit position" aria-label="Edit {{ position.title }}">
-                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
-                </a>
+                {% url 'position_edit' position.pk as position_edit_url %}
+                {% include "partials/drawer_link.html" with url=position_edit_url title="Edit position" icon="bx-edit" class="btn-icon" %}
                 {% endif %}
                 {% if can_delete %}
                 <button

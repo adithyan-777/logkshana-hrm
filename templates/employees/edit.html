@@ -25,7 +25,7 @@
 </p>
 {% endif %}
 
-<form
+<form class="tt-form-shell"
     id="employee-edit-form"
     hx-post="{% url 'employee_edit' employee.pk %}"
     hx-target="#employee-edit-form-container"
@@ -93,14 +93,15 @@
         {% if form.hire_date.errors %}<span class="error">{{ form.hire_date.errors }}</span>{% endif %}
     </div>
 
-    <div class="field checkbox">
-        {{ form.is_active }}
-        <label for="{{ form.is_active.id_for_label }}">Active</label>
-        {% if form.is_active.errors %}<span class="error">{{ form.is_active.errors }}</span>{% endif %}
-    </div>
+    <label class="form-switch">
+                {{ form.is_active }}
+                <span class="form-switch__ui" aria-hidden="true"></span>
+                <span class="form-switch__label">Active</span>
+            </label>
+    {% if form.is_active.errors %}<span class="error">{{ form.is_active.errors }}</span>{% endif %}
 
-    <div class="form-actions" style="display:flex; gap: var(--space-2); margin-top: var(--space-3);">
-        <button type="submit">Save changes</button>
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Save changes</button>
         <a class="btn btn--ghost" href="{% url 'employee_list' %}">Cancel</a>
     </div>
 </form>

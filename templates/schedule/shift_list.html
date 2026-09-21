@@ -61,9 +61,8 @@
             </td>
             <td class="table-actions">
                 {% if can_edit %}
-                <a href="{% url 'shift_edit' shift.pk %}" class="btn-icon" title="Edit shift" aria-label="Edit {{ shift.name }}">
-                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
-                </a>
+                {% url 'shift_edit' shift.pk as shift_edit_url %}
+                {% include "partials/drawer_link.html" with url=shift_edit_url title="Edit shift" icon="bx-edit" class="btn-icon" size="wide" %}
                 {% endif %}
                 {% if can_delete %}
                 <button

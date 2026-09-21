@@ -1,5 +1,7 @@
 from django import forms
 
+from common.forms import apply_form_field_ui
+
 from employees.models import Department, Employee, Permission, Position, Role
 from employees.permission_catalog import permissions_grouped_choices
 
@@ -41,6 +43,8 @@ class EmployeeForm(forms.ModelForm):
             self.fields["password"].help_text = "Min 8 characters."
         else:
             self.fields["password"].required = False
+        apply_form_field_ui(self)
+
 
     def clean_password(self):
         password = self.cleaned_data.get("password") or ""
@@ -62,6 +66,7 @@ class DepartmentForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["parent"].queryset = Department.objects.order_by("name")
+        apply_form_field_ui(self)
 
 
 class PositionForm(forms.ModelForm):
@@ -72,12 +77,18 @@ class PositionForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["parent"].queryset = Position.objects.order_by("title")
+        apply_form_field_ui(self)
 
 
 class PermissionForm(forms.ModelForm):
     class Meta:
         model = Permission
         fields = ["codename", "name", "description"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        apply_form_field_ui(self)
+
 
 
 class RoleForm(forms.ModelForm):
@@ -96,3 +107,5 @@ class RoleForm(forms.ModelForm):
         field.queryset = Permission.objects.order_by("codename")
         field.required = False
         field.choices = permissions_grouped_choices(field.queryset)
+        apply_form_field_ui(self)
+

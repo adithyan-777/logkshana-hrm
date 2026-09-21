@@ -14,6 +14,7 @@
       {% partialdef leave_policy_edit_form inline %}
 <form
     id="leave-policy-edit-form"
+    class="tt-form-shell"
     hx-post="{% url 'leave_policy_edit' leave_policy.pk %}"
     hx-target="#leave-policy-edit-form-container"
     hx-swap="innerHTML"
@@ -24,65 +25,77 @@
     <div class="message error">{{ form.non_field_errors }}</div>
     {% endif %}
 
-    <div class="field">
-        <label for="{{ form.leave_type.id_for_label }}">Leave type *</label>
-        {{ form.leave_type }}
-        {% if form.leave_type.errors %}<span class="error">{{ form.leave_type.errors }}</span>{% endif %}
-    </div>
-
-    <div class="field">
-        <label for="{{ form.name.id_for_label }}">Policy name *</label>
-        {{ form.name }}
-        {% if form.name.errors %}<span class="error">{{ form.name.errors }}</span>{% endif %}
-    </div>
-
-    <div class="field-row">
+    <fieldset class="tt-panel">
+        <legend>Policy</legend>
         <div class="field">
-            <label for="{{ form.entitlement_days.id_for_label }}">Entitlement days</label>
-            {{ form.entitlement_days }}
+            <label class="form-label" for="{{ form.leave_type.id_for_label }}">Leave type *</label>
+            {{ form.leave_type }}
+            {% if form.leave_type.errors %}<span class="error">{{ form.leave_type.errors }}</span>{% endif %}
         </div>
         <div class="field">
-            <label for="{{ form.accrual_type.id_for_label }}">Accrual type</label>
-            {{ form.accrual_type }}
+            <label class="form-label" for="{{ form.name.id_for_label }}">Policy name *</label>
+            {{ form.name }}
+            {% if form.name.errors %}<span class="error">{{ form.name.errors }}</span>{% endif %}
+        </div>
+        <div class="field-row">
+            <div class="field">
+                <label class="form-label" for="{{ form.entitlement_days.id_for_label }}">Entitlement days</label>
+                {{ form.entitlement_days }}
+            </div>
+            <div class="field">
+                <label class="form-label" for="{{ form.accrual_type.id_for_label }}">Accrual type</label>
+                {{ form.accrual_type }}
+            </div>
+            <div class="field">
+                <label class="form-label" for="{{ form.accrual_days.id_for_label }}">Accrual days</label>
+                {{ form.accrual_days }}
+            </div>
         </div>
         <div class="field">
-            <label for="{{ form.accrual_days.id_for_label }}">Accrual days</label>
-            {{ form.accrual_days }}
-        </div>
-    </div>
-
-    <div class="field-row">
-        <div class="field checkbox">
-            {{ form.carry_forward }}
-            <label for="{{ form.carry_forward.id_for_label }}">Carry forward</label>
-        </div>
-        <div class="field">
-            <label for="{{ form.max_carry_forward_days.id_for_label }}">Max carry forward days</label>
-            {{ form.max_carry_forward_days }}
-        </div>
-        <div class="field">
-            <label for="{{ form.minimum_service_days.id_for_label }}">Minimum service days</label>
+            <label class="form-label" for="{{ form.minimum_service_days.id_for_label }}">Minimum service days</label>
             {{ form.minimum_service_days }}
         </div>
-    </div>
+    </fieldset>
 
-    <div class="field-row">
-        <div class="field checkbox">
-            {{ form.expiry_enabled }}
-            <label for="{{ form.expiry_enabled.id_for_label }}">Expiry enabled</label>
+    <fieldset class="tt-panel">
+        <legend>Carry forward &amp; expiry</legend>
+        <div class="tt-toggle-block">
+            <label class="form-switch">
+                {{ form.carry_forward }}
+                <span class="form-switch__ui" aria-hidden="true"></span>
+                <span class="form-switch__label">Carry forward</span>
+            </label>
+            <div class="tt-indent">
+                <div class="field">
+                    <label class="form-label" for="{{ form.max_carry_forward_days.id_for_label }}">Max carry forward days</label>
+                    {{ form.max_carry_forward_days }}
+                </div>
+            </div>
         </div>
-        <div class="field">
-            <label for="{{ form.expiry_days.id_for_label }}">Expiry days</label>
-            {{ form.expiry_days }}
+        <div class="tt-toggle-block">
+            <label class="form-switch">
+                {{ form.expiry_enabled }}
+                <span class="form-switch__ui" aria-hidden="true"></span>
+                <span class="form-switch__label">Expiry enabled</span>
+            </label>
+            <div class="tt-indent">
+                <div class="field">
+                    <label class="form-label" for="{{ form.expiry_days.id_for_label }}">Expiry days</label>
+                    {{ form.expiry_days }}
+                </div>
+            </div>
         </div>
-        <div class="field checkbox">
-            {{ form.is_active }}
-            <label for="{{ form.is_active.id_for_label }}">Active</label>
-        </div>
-    </div>
+        <label class="form-switch">
+                {{ form.is_active }}
+                <span class="form-switch__ui" aria-hidden="true"></span>
+                <span class="form-switch__label">Active</span>
+            </label>
+    </fieldset>
 
-    <button type="submit">Save changes</button>
-    <a href="{% url 'leave_policy_list' %}">Back to leave policies</a>
+    <div class="form-actions">
+        <button type="submit" class="btn btn--primary">Save changes</button>
+        <a href="{% url 'leave_policy_list' %}" class="btn btn--ghost">Back to leave policies</a>
+    </div>
 </form>
 {% endpartialdef leave_policy_edit_form %}
     </div>

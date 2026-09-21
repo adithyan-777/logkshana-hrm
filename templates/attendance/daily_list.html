@@ -57,9 +57,8 @@
             <td>{{ record.overtime_minutes }}m</td>
             <td class="table-actions">
                 {% if can_edit %}
-                <a href="{% url 'daily_edit' record.pk %}" class="btn-icon" title="Edit daily record" aria-label="Edit daily record {{ record.date }}">
-                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
-                </a>
+                {% url 'daily_edit' record.pk as daily_edit_url %}
+                {% include "partials/drawer_link.html" with url=daily_edit_url title="Edit daily record" icon="bx-edit" class="btn-icon" %}
                 {% endif %}
                 {% if can_delete %}
                 <button

@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
-from common.http import is_htmx_partial, set_hx_trigger
+from common.http import is_htmx_partial, redirect_to_list_drawer, set_hx_trigger
 from common.pagination import list_pagination_context
 from employees.decorators import require_permission
 from employees.permission_catalog import PermissionCodename
@@ -169,7 +169,11 @@ def leave_type_add(request: HttpRequest) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_leave_type_form(request, form)
 
-    return render(request, "leave/leave_type_add.html", {"form": form})
+    return redirect_to_list_drawer(
+        list_url_name="leave_type_list",
+        form_url=reverse("leave_type_add"),
+        title="Add leave type",
+    )
 
 
 @login_required
@@ -194,10 +198,10 @@ def leave_type_edit(request: HttpRequest, leave_type_id: int) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_leave_type_edit_form(request, form, leave_type=leave_type)
 
-    return render(
-        request,
-        "leave/leave_type_edit.html",
-        {"form": form, "leave_type": leave_type},
+    return redirect_to_list_drawer(
+        list_url_name="leave_type_list",
+        form_url=request.path,
+        title="Edit leave type",
     )
 
 
@@ -265,7 +269,11 @@ def leave_policy_add(request: HttpRequest) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_leave_policy_form(request, form)
 
-    return render(request, "leave/leave_policy_add.html", {"form": form})
+    return redirect_to_list_drawer(
+        list_url_name="leave_policy_list",
+        form_url=reverse("leave_policy_add"),
+        title="Add leave policy",
+    )
 
 
 @login_required
@@ -290,10 +298,10 @@ def leave_policy_edit(request: HttpRequest, leave_policy_id: int) -> HttpRespons
     if is_htmx_partial(request):
         return _render_leave_policy_edit_form(request, form, leave_policy=leave_policy)
 
-    return render(
-        request,
-        "leave/leave_policy_edit.html",
-        {"form": form, "leave_policy": leave_policy},
+    return redirect_to_list_drawer(
+        list_url_name="leave_policy_list",
+        form_url=request.path,
+        title="Edit leave policy",
     )
 
 
@@ -361,7 +369,11 @@ def leave_request_add(request: HttpRequest) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_leave_request_form(request, form)
 
-    return render(request, "leave/leave_request_add.html", {"form": form})
+    return redirect_to_list_drawer(
+        list_url_name="leave_request_list",
+        form_url=reverse("leave_request_add"),
+        title="Add leave request",
+    )
 
 
 @login_required
@@ -388,10 +400,10 @@ def leave_request_edit(request: HttpRequest, leave_request_id: int) -> HttpRespo
     if is_htmx_partial(request):
         return _render_leave_request_edit_form(request, form, leave_request=leave_request)
 
-    return render(
-        request,
-        "leave/leave_request_edit.html",
-        {"form": form, "leave_request": leave_request},
+    return redirect_to_list_drawer(
+        list_url_name="leave_request_list",
+        form_url=request.path,
+        title="Edit leave request",
     )
 
 
@@ -459,7 +471,11 @@ def holiday_add(request: HttpRequest) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_holiday_form(request, form)
 
-    return render(request, "leave/holiday_add.html", {"form": form})
+    return redirect_to_list_drawer(
+        list_url_name="holiday_list",
+        form_url=reverse("holiday_add"),
+        title="Add holiday",
+    )
 
 
 @login_required
@@ -484,10 +500,10 @@ def holiday_edit(request: HttpRequest, holiday_id: int) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_holiday_edit_form(request, form, holiday=holiday)
 
-    return render(
-        request,
-        "leave/holiday_edit.html",
-        {"form": form, "holiday": holiday},
+    return redirect_to_list_drawer(
+        list_url_name="holiday_list",
+        form_url=request.path,
+        title="Edit holiday",
     )
 
 

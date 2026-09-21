@@ -384,6 +384,28 @@
     if (window.Alpine) window.Alpine.store("spa").sync();
   });
 
+  function openDrawerFromQuery() {
+    const params = new URLSearchParams(window.location.search);
+    const url = params.get("drawer");
+    if (!url || !window.htmx || !window.Alpine) return;
+
+    const title = params.get("drawer_title") || "Dialog";
+    const size = params.get("drawer_size") || "default";
+    params.delete("drawer");
+    params.delete("drawer_title");
+    params.delete("drawer_size");
+    const qs = params.toString();
+    const clean = `${window.location.pathname}${qs ? `?${qs}` : ""}${window.location.hash || ""}`;
+    window.history.replaceState(window.history.state, "", clean);
+
+    window.Alpine.store("ui").openModal(title, size);
+    window.htmx.ajax("GET", url, { target: "#modal-body", swap: "innerHTML" });
+  }
+
+  document.addEventListener("alpine:initialized", () => {
+    openDrawerFromQuery();
+  });
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
       if (window.Alpine) window.Alpine.store("spa").sync();

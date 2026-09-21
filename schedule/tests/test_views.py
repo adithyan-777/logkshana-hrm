@@ -1,4 +1,5 @@
 from datetime import time
+from json import loads
 from uuid import uuid4
 
 from django.urls import reverse
@@ -27,9 +28,15 @@ def overnight_form_data(**overrides) -> dict:
         "require_check_in": "on",
         "require_check_out": "on",
         "is_active": "on",
+        "color": "#14b8a6",
     }
     data.update(overrides)
     return data
+
+
+def assert_hx_event(test_case, response, event: str) -> None:
+    payload = loads(response.headers.get("HX-Trigger") or "{}")
+    test_case.assertIn(event, payload)
 
 
 class TimetableViewTests(BaseTenantTestCase):
@@ -97,7 +104,7 @@ class TimetableViewTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers.get("HX-Trigger"), "timetableCreated")
+        assert_hx_event(self, response, "timetableCreated")
         self.assertTrue(Timetable.objects.filter(code=code).exists())
 
     def test_add_rejects_overnight_without_cross_days(self):
@@ -115,7 +122,7 @@ class TimetableViewTests(BaseTenantTestCase):
         response = self.client.post(reverse("timetable_add"), data)
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers.get("HX-Trigger"), "timetableCreated")
+        assert_hx_event(self, response, "timetableCreated")
 
         timetable = Timetable.objects.get(code=data["code"])
         self.assertEqual(timetable.check_in, time(22, 0))

@@ -1,4 +1,5 @@
 from datetime import date
+from json import loads
 from uuid import uuid4
 
 from django.urls import reverse
@@ -35,6 +36,11 @@ def make_plain_user(test_case, *, email, username):
     return user
 
 
+def assert_hx_event(test_case, response, event: str) -> None:
+    payload = loads(response.headers.get("HX-Trigger") or "{}")
+    test_case.assertIn(event, payload)
+
+
 def timetable_post_data(timetable, **overrides):
     data = {
         "name": "Updated Timetable",
@@ -52,20 +58,34 @@ def timetable_post_data(timetable, **overrides):
         "require_check_in": "on",
         "require_check_out": "on",
         "is_active": "on",
+        "color": "#14b8a6",
     }
     data.update(overrides)
     return data
 
 
 class TimetableEditDeleteTests(BaseTenantTestCase):
-    def test_edit_get_200(self):
+    def test_edit_get_redirects_to_list_drawer(self):
         timetable = timetable_factory(
             name="Morning", code=f"TT-{uuid4().hex[:6]}"
         )
         response = self.client.get(
             reverse("timetable_edit", args=[timetable.pk])
         )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("timetable_list"), response.url)
+        self.assertIn("drawer=", response.url)
+
+    def test_edit_get_htmx_returns_form_fragment(self):
+        timetable = timetable_factory(
+            name="Morning", code=f"TT-{uuid4().hex[:6]}"
+        )
+        response = self.client.get(
+            reverse("timetable_edit", args=[timetable.pk]),
+            HTTP_HX_REQUEST="true",
+        )
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "timetable-edit-form")
 
     def test_edit_post_updates_and_triggers(self):
         timetable = timetable_factory(
@@ -76,7 +96,7 @@ class TimetableEditDeleteTests(BaseTenantTestCase):
             timetable_post_data(timetable, name="Evening Updated"),
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers.get("HX-Trigger"), "timetableUpdated")
+        assert_hx_event(self, response, "timetableUpdated")
         timetable.refresh_from_db()
         self.assertEqual(timetable.name, "Evening Updated")
 
@@ -134,12 +154,14 @@ class ShiftEditDeleteTests(BaseTenantTestCase):
         data.update(overrides)
         return data
 
-    def test_edit_get_200(self):
+    def test_edit_get_redirects_to_list_drawer(self):
         shift = shift_factory(
             name="Week", code=f"SH-{uuid4().hex[:6]}"
         )
         response = self.client.get(reverse("shift_edit", args=[shift.pk]))
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("shift_list"), response.url)
+        self.assertIn("drawer=", response.url)
 
     def test_edit_post_updates_and_triggers(self):
         shift = shift_factory(
@@ -253,11 +275,13 @@ class AssignmentEditDeleteTests(BaseTenantTestCase):
         data.update(overrides)
         return data
 
-    def test_edit_get_200(self):
+    def test_edit_get_redirects_to_list_drawer(self):
         response = self.client.get(
             reverse("assignment_edit", args=[self.assignment.pk])
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("assignment_list"), response.url)
+        self.assertIn("drawer=", response.url)
 
     def test_edit_post_updates_and_triggers(self):
         new_end = date(2026, 6, 30)
@@ -330,11 +354,13 @@ class TemporaryEditDeleteTests(BaseTenantTestCase):
         data.update(overrides)
         return data
 
-    def test_edit_get_200(self):
+    def test_edit_get_redirects_to_list_drawer(self):
         response = self.client.get(
             reverse("temporary_edit", args=[self.temporary.pk])
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("temporary_list"), response.url)
+        self.assertIn("drawer=", response.url)
 
     def test_edit_post_updates_and_triggers(self):
         response = self.client.post(

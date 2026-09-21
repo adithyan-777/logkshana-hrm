@@ -8,8 +8,8 @@
   margin-bottom: var(--space-3);
 }
 
-.field > label,
-.field label {
+.field > label:not(.form-switch):not(.tt-switch),
+.field label:not(.form-switch):not(.tt-switch) {
   display: block;
   font-size: 14px;
   font-weight: 500;
@@ -78,15 +78,76 @@
   align-items: center;
   gap: var(--space-2);
   margin-bottom: 0;
+  cursor: pointer;
+  user-select: none;
 }
 
 .field.checkbox {
   margin-bottom: var(--space-3);
 }
 
-.field.checkbox input {
+.field.checkbox label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.field.checkbox input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  width: 40px;
+  height: 22px;
+  min-height: 22px;
+  margin: 0;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--border);
+  box-shadow: none;
+  cursor: pointer;
+  transition: background var(--t-fast, 150ms) ease;
+}
+
+.field.checkbox input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
+  transition: transform var(--t-fast, 150ms) ease;
+}
+
+.field.checkbox input[type="checkbox"]:checked {
+  background: #16a34a;
+}
+
+.field.checkbox input[type="checkbox"]:checked::after {
+  transform: translateX(18px);
+}
+
+.field.checkbox input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--accent, #e11d48);
+  outline-offset: 2px;
+}
+
+.formset-table .field.checkbox input[type="checkbox"],
+.formset-table input[type="checkbox"] {
+  appearance: auto;
+  -webkit-appearance: checkbox;
   width: auto;
+  height: auto;
   min-height: auto;
+  border-radius: var(--r-sm, 4px);
+  background: var(--bg-prompt);
+}
+
+.formset-table input[type="checkbox"]::after {
+  content: none;
 }
 
 .permission-multiselect {
@@ -145,8 +206,25 @@
 
 .field-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
   gap: var(--space-3);
+  align-items: start;
+  min-width: 0;
+}
+
+.field-row > .field,
+.field-row > .form-switch,
+.field-row > .tt-toggle-block {
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+.field-row > .field > .form-input,
+.field-row > .field > .form-select,
+.field-row > .field > input,
+.field-row > .field > select,
+.field-row > .field > textarea {
+  max-width: 100%;
 }
 
 .field .error,
@@ -154,12 +232,19 @@
   font-size: 12.5px;
   color: var(--danger);
   margin-top: 4px;
+  display: block;
 }
 
 .help-text {
   color: var(--text-muted);
   font-size: 13px;
-  margin: 0 0 var(--space-3);
+  margin: var(--space-1) 0 0;
+  line-height: 1.4;
+}
+
+.field > .help-text:first-child,
+.tt-panel > .help-text:first-child {
+  margin-top: 0;
 }
 
 .app form button[type="submit"]:not(.btn),
@@ -177,7 +262,6 @@
   font-size: var(--control-font);
   font-weight: 500;
   cursor: pointer;
-  margin-top: var(--space-3);
   transition: var(--motion-interactive);
 }
 
@@ -194,10 +278,13 @@
   background: var(--bg-elevated);
 }
 
-.form-section legend {
+.form-section legend,
+fieldset.tt-panel > legend,
+fieldset.form-section > legend {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
   padding: 0 var(--space-1);
+  color: var(--text);
 }
 
 .employee-table {
@@ -205,6 +292,13 @@
   border-collapse: collapse;
   font-size: 14px;
   line-height: 1.4;
+}
+
+.employee-table-wrap,
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
 }
 
 .employee-table th,

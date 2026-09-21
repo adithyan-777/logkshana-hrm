@@ -21,7 +21,7 @@
 <div id="form-messages"></div>
 {% endif %}
 
-<form
+<form class="tt-form-shell"
     id="holiday-form"
     hx-post="{% url 'holiday_add' %}"
     hx-target="#holiday-form-container"
@@ -61,12 +61,15 @@
         {{ form.description }}
     </div>
 
-    <div class="field checkbox">
-        {{ form.is_active }}
-        <label for="{{ form.is_active.id_for_label }}">Active</label>
-    </div>
+    <label class="form-switch">
+                {{ form.is_active }}
+                <span class="form-switch__ui" aria-hidden="true"></span>
+                <span class="form-switch__label">Active</span>
+            </label>
 
-    <button type="submit">Add Holiday</button>
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Add Holiday</button>
+    </div>
 </form>
 </div>
 {% endpartialdef holiday_form %}

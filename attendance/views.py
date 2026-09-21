@@ -43,7 +43,7 @@ from attendance.services import (
     daily_attendance_delete,
     daily_attendance_update,
 )
-from common.http import is_htmx_partial, set_hx_trigger
+from common.http import is_htmx_partial, redirect_to_list_drawer, set_hx_trigger
 from common.pagination import list_pagination_context
 from employees.decorators import require_permission
 from employees.permission_catalog import PermissionCodename
@@ -178,7 +178,11 @@ def transaction_add(request: HttpRequest) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_transaction_form(request, form)
 
-    return render(request, "attendance/transaction_add.html", {"form": form})
+    return redirect_to_list_drawer(
+        list_url_name="attendance_transaction_list",
+        form_url=reverse("attendance_transaction_add"),
+        title="Record punch",
+    )
 
 
 def _render_transaction_edit_form(
@@ -219,10 +223,10 @@ def transaction_edit(request: HttpRequest, transaction_id: int) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_transaction_edit_form(request, form, transaction=transaction)
 
-    return render(
-        request,
-        "attendance/transaction_edit.html",
-        {"form": form, "transaction": transaction},
+    return redirect_to_list_drawer(
+        list_url_name="attendance_transaction_list",
+        form_url=request.path,
+        title="Edit punch",
     )
 
 
@@ -302,7 +306,11 @@ def daily_add(request: HttpRequest) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_daily_form(request, form)
 
-    return render(request, "attendance/daily_add.html", {"form": form})
+    return redirect_to_list_drawer(
+        list_url_name="daily_attendance_list",
+        form_url=reverse("daily_attendance_add"),
+        title="Add daily record",
+    )
 
 
 def _render_daily_edit_form(
@@ -345,10 +353,10 @@ def daily_edit(request: HttpRequest, daily_id: int) -> HttpResponse:
             request, form, daily_attendance=daily_attendance
         )
 
-    return render(
-        request,
-        "attendance/daily_edit.html",
-        {"form": form, "daily_attendance": daily_attendance},
+    return redirect_to_list_drawer(
+        list_url_name="daily_attendance_list",
+        form_url=request.path,
+        title="Edit daily record",
     )
 
 
@@ -435,7 +443,11 @@ def correction_add(request: HttpRequest) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_correction_form(request, form)
 
-    return render(request, "attendance/correction_add.html", {"form": form})
+    return redirect_to_list_drawer(
+        list_url_name="attendance_correction_list",
+        form_url=reverse("attendance_correction_add"),
+        title="Submit correction",
+    )
 
 
 def _render_correction_edit_form(
@@ -478,10 +490,10 @@ def correction_edit(request: HttpRequest, correction_id: int) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_correction_edit_form(request, form, correction=correction)
 
-    return render(
-        request,
-        "attendance/correction_edit.html",
-        {"form": form, "correction": correction},
+    return redirect_to_list_drawer(
+        list_url_name="attendance_correction_list",
+        form_url=request.path,
+        title="Edit correction",
     )
 
 
@@ -559,7 +571,11 @@ def rule_add(request: HttpRequest) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_rule_form(request, form)
 
-    return render(request, "attendance/rule_add.html", {"form": form})
+    return redirect_to_list_drawer(
+        list_url_name="attendance_rule_list",
+        form_url=reverse("attendance_rule_add"),
+        title="Add rule",
+    )
 
 
 def _render_rule_edit_form(
@@ -594,10 +610,10 @@ def rule_edit(request: HttpRequest, rule_id: int) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_rule_edit_form(request, form, rule=rule)
 
-    return render(
-        request,
-        "attendance/rule_edit.html",
-        {"form": form, "rule": rule},
+    return redirect_to_list_drawer(
+        list_url_name="attendance_rule_list",
+        form_url=request.path,
+        title="Edit rule",
     )
 
 

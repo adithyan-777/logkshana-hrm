@@ -10,13 +10,13 @@
     <span class="card__title">Edit temporary schedule</span>
   </div>
   <div class="card__body">
-    <div id="temporary-edit-form-container">
-      {% partialdef temporary_edit_form inline %}
-<form
+    {% partialdef temporary_edit_form inline %}
+<div id="temporary-edit-form-container">
+<form class="tt-form-shell"
     id="temporary-edit-form"
     hx-post="{% url 'temporary_edit' temporary.pk %}"
     hx-target="#temporary-edit-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -48,16 +48,19 @@
         {% if form.reason.errors %}<span class="error">{{ form.reason.errors }}</span>{% endif %}
     </div>
 
-    <div class="field checkbox">
-        {{ form.overrides_normal_schedule }}
-        <label for="{{ form.overrides_normal_schedule.id_for_label }}">Overrides normal schedule</label>
-    </div>
+    <label class="form-switch">
+                {{ form.overrides_normal_schedule }}
+                <span class="form-switch__ui" aria-hidden="true"></span>
+                <span class="form-switch__label">Overrides normal schedule</span>
+            </label>
 
-    <button type="submit">Save changes</button>
-    <a href="{% url 'temporary_list' %}">Back to temporary schedules</a>
-</form>
-{% endpartialdef temporary_edit_form %}
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Save changes</button>
+        <a href="{% url 'temporary_list' %}" class="btn btn--ghost">Back to temporary schedules</a>
     </div>
+</form>
+</div>
+{% endpartialdef temporary_edit_form %}
   </div>
 </div>
 {% endblock %}

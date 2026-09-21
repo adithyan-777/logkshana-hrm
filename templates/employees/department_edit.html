@@ -10,7 +10,7 @@
   <div class="card__body">
     <div id="department-edit-form-container">
       {% partialdef department_edit_form inline %}
-<form
+<form class="tt-form-shell"
     id="department-edit-form"
     hx-post="{% url 'department_edit' department.pk %}"
     hx-target="#department-edit-form-container"
@@ -40,8 +40,10 @@
         {% if form.parent.errors %}<span class="error">{{ form.parent.errors }}</span>{% endif %}
     </div>
 
-    <button type="submit">Save changes</button>
-    <a href="{% url 'department_list' %}">Back to departments</a>
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Save changes</button>
+        <a href="{% url 'department_list' %}" class="btn btn--ghost">Back to departments</a>
+    </div>
 </form>
 {% endpartialdef department_edit_form %}
     </div>

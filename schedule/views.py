@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
-from common.http import is_htmx_partial, set_hx_trigger
+from common.http import is_htmx_partial, redirect_to_list_drawer, set_hx_trigger
 from common.pagination import list_pagination_context
 from employees.decorators import require_permission
 from employees.permission_catalog import PermissionCodename
@@ -176,16 +176,17 @@ def timetable_add(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
         form = TimetableForm(request.POST)
         if form.is_valid():
-            timetable_create(**form.cleaned_data)
+            payload = form.service_kwargs()
+            timetable_create(**payload)
             response = _render_timetable_form(
                 request,
                 TimetableForm(),
-                success_message=f"Timetable “{form.cleaned_data['name']}” created.",
+                success_message=f"Timetable “{payload['name']}” created.",
             )
             set_hx_trigger(
                 response,
                 event="timetableCreated",
-                toast=f"Timetable “{form.cleaned_data['name']}” created.",
+                toast=f"Timetable “{payload['name']}” created.",
             )
             return response
 
@@ -195,7 +196,11 @@ def timetable_add(request: HttpRequest) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_timetable_form(request, form)
 
-    return render(request, "schedule/timetable_add.html", {"form": form})
+    return redirect_to_list_drawer(
+        list_url_name="timetable_list",
+        form_url=reverse("timetable_add"),
+        title="Add timetable",
+    )
 
 
 @login_required
@@ -207,11 +212,16 @@ def timetable_edit(request: HttpRequest, timetable_id: int) -> HttpResponse:
     if request.method == "POST":
         form = TimetableForm(request.POST, instance=timetable)
         if form.is_valid():
-            timetable_update(**form.cleaned_data, timetable=timetable)
+            payload = form.service_kwargs()
+            timetable_update(**payload, timetable=timetable)
             response = _render_timetable_edit_form(
                 request, TimetableForm(instance=timetable), timetable=timetable
             )
-            response["HX-Trigger"] = "timetableUpdated"
+            set_hx_trigger(
+                response,
+                event="timetableUpdated",
+                toast=f"Timetable “{timetable.name}” updated.",
+            )
             return response
 
         return _render_timetable_edit_form(request, form, timetable=timetable)
@@ -220,10 +230,10 @@ def timetable_edit(request: HttpRequest, timetable_id: int) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_timetable_edit_form(request, form, timetable=timetable)
 
-    return render(
-        request,
-        "schedule/timetable_edit.html",
-        {"form": form, "timetable": timetable},
+    return redirect_to_list_drawer(
+        list_url_name="timetable_list",
+        form_url=reverse("timetable_edit", args=[timetable.pk]),
+        title="Edit timetable",
     )
 
 
@@ -300,10 +310,11 @@ def shift_add(request: HttpRequest) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_shift_form(request, form, formset)
 
-    return render(
-        request,
-        "schedule/shift_add.html",
-        {"form": form, "formset": formset},
+    return redirect_to_list_drawer(
+        list_url_name="shift_list",
+        form_url=reverse("shift_add"),
+        title="Add shift",
+        size="wide",
     )
 
 
@@ -342,10 +353,11 @@ def shift_edit(request: HttpRequest, shift_id: int) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_shift_edit_form(request, form, formset, shift=shift)
 
-    return render(
-        request,
-        "schedule/shift_edit.html",
-        {"form": form, "formset": formset, "shift": shift},
+    return redirect_to_list_drawer(
+        list_url_name="shift_list",
+        form_url=reverse("shift_edit", args=[shift.pk]),
+        title="Edit shift",
+        size="wide",
     )
 
 
@@ -413,7 +425,11 @@ def assignment_add(request: HttpRequest) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_assignment_form(request, form)
 
-    return render(request, "schedule/assignment_add.html", {"form": form})
+    return redirect_to_list_drawer(
+        list_url_name="assignment_list",
+        form_url=reverse("assignment_add"),
+        title="Add assignment",
+    )
 
 
 @login_required
@@ -440,10 +456,10 @@ def assignment_edit(request: HttpRequest, assignment_id: int) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_assignment_edit_form(request, form, assignment=assignment)
 
-    return render(
-        request,
-        "schedule/assignment_edit.html",
-        {"form": form, "assignment": assignment},
+    return redirect_to_list_drawer(
+        list_url_name="assignment_list",
+        form_url=reverse("assignment_edit", args=[assignment.pk]),
+        title="Edit assignment",
     )
 
 
@@ -509,7 +525,11 @@ def temporary_add(request: HttpRequest) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_temporary_form(request, form)
 
-    return render(request, "schedule/temporary_add.html", {"form": form})
+    return redirect_to_list_drawer(
+        list_url_name="temporary_list",
+        form_url=reverse("temporary_add"),
+        title="Add temporary schedule",
+    )
 
 
 @login_required
@@ -536,10 +556,10 @@ def temporary_edit(request: HttpRequest, temporary_id: int) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_temporary_edit_form(request, form, temporary=temporary)
 
-    return render(
-        request,
-        "schedule/temporary_edit.html",
-        {"form": form, "temporary": temporary},
+    return redirect_to_list_drawer(
+        list_url_name="temporary_list",
+        form_url=reverse("temporary_edit", args=[temporary.pk]),
+        title="Edit temporary schedule",
     )
 
 

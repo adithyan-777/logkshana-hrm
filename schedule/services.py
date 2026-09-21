@@ -9,6 +9,7 @@ from schedule.models import (
     ShiftDay,
     TemporarySchedule,
     Timetable,
+    TimetableBreak,
 )
 
 TIMETABLE_TIMES_ORDER_ERROR = (
@@ -52,6 +53,23 @@ def validate_timetable_times(
         raise ValidationError({"check_out_cross_days": TIMETABLE_TIMES_ORDER_ERROR})
 
 
+def _timetable_break_sync(*, timetable: Timetable, break_data: dict | None) -> None:
+    """Replace the primary break from the Hik-style form (0 or 1 break)."""
+    timetable.breaks.all().delete()
+    if not break_data:
+        return
+    break_row = TimetableBreak(
+        timetable=timetable,
+        name=break_data.get("name") or "Break",
+        start_time=break_data["start_time"],
+        end_time=break_data["end_time"],
+        paid=bool(break_data.get("paid", False)),
+        minimum_minutes=int(break_data.get("minimum_minutes") or 0),
+    )
+    break_row.full_clean()
+    break_row.save()
+
+
 @transaction.atomic
 def timetable_create(
     *,
@@ -79,6 +97,7 @@ def timetable_create(
     day_change_time=None,
     color: str = "",
     is_active: bool = True,
+    break_data: dict | None = None,
 ) -> Timetable:
     timetable = Timetable(
         name=name,
@@ -114,6 +133,7 @@ def timetable_create(
         check_out_cross_days=timetable.check_out_cross_days,
     )
     timetable.save()
+    _timetable_break_sync(timetable=timetable, break_data=break_data)
     return timetable
 
 
@@ -145,6 +165,7 @@ def timetable_update(
     day_change_time=None,
     color: str = "",
     is_active: bool = True,
+    break_data: dict | None = None,
 ) -> Timetable:
     timetable.name = name
     timetable.code = code
@@ -178,6 +199,7 @@ def timetable_update(
         check_out_cross_days=timetable.check_out_cross_days,
     )
     timetable.save()
+    _timetable_break_sync(timetable=timetable, break_data=break_data)
     return timetable
 
 

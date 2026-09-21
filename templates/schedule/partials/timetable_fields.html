@@ -1,0 +1,325 @@
+{% comment %}
+Timetable fields shared by add/edit forms. Same backend contract
+(TimetableForm + service_kwargs) — this file only reorganizes UI:
+
+  1. Kind of hours (normal vs flexible)
+  2. Work hours (times, cross-day, break, late rule live here)
+  3. Check rules (require in/out, multiple punches)
+  4. Details (collapsed: code, counting, punch windows, engine defaults)
+
+Expects: form
+{% endcomment %}
+<div
+  class="tt-form"
+  x-data="{
+    type: '{% if form.type.value %}{{ form.type.value }}{% else %}normal{% endif %}',
+    crossDay: {% if form.cross_day.value %}true{% else %}false{% endif %},
+    enableBreak: {% if form.enable_break.value %}true{% else %}false{% endif %},
+    latestIn: {% if form.latest_check_in_enabled.value %}true{% else %}false{% endif %}
+  }"
+>
+  {# ---- Step 1: kind of hours ---- #}
+  <section aria-label="Kind of hours">
+    <h3 class="tt-step"><span class="tt-step__num" aria-hidden="true">1</span> What kind of hours?</h3>
+    <div
+      class="tabs tt-tabs"
+      role="tablist"
+      aria-label="{{ form.type.label }}"
+      @change="type = $event.target.value"
+    >
+      {% for radio in form.type %}
+      <label
+        class="tab tt-choice"
+        role="tab"
+        :class="type === '{{ radio.data.value }}' && 'is-active'"
+        :aria-selected="type === '{{ radio.data.value }}' ? 'true' : 'false'"
+        title="{% if radio.data.value == 'normal' %}Same start and end time every day{% else %}A set number of hours inside a broad window{% endif %}"
+      >
+        {{ radio.tag }}
+        <span class="tt-choice__text">
+          <span class="tt-choice__title">{{ radio.choice_label }}</span>
+          <span class="tt-choice__desc">{% if radio.data.value == 'normal' %}Fixed start &amp; end, e.g. 9:00–18:00{% else %}Work any 8 hours between two times{% endif %}</span>
+        </span>
+      </label>
+      {% endfor %}
+    </div>
+    {% if form.type.errors %}<span class="error">{{ form.type.errors }}</span>{% endif %}
+  </section>
+
+  {# ---- Step 2: work hours ---- #}
+  <section aria-label="Work hours">
+    <h3 class="tt-step"><span class="tt-step__num" aria-hidden="true">2</span> Work hours</h3>
+
+    <div class="field">
+      <label class="form-label" for="{{ form.name.id_for_label }}">{{ form.name.label }} *</label>
+      {{ form.name }}
+      {% if form.name.errors %}<span class="error">{{ form.name.errors }}</span>{% endif %}
+    </div>
+    {{ form.color }}
+
+    {# Normal: fixed start/end #}
+    <div class="field" x-show="type === 'normal'" x-cloak>
+      <span class="form-label">Starts – ends</span>
+      <div class="tt-range">
+        <div class="field">
+          <label class="sr-only" for="{{ form.check_in.id_for_label }}">{{ form.check_in.label }}</label>
+          {{ form.check_in }}
+          {% if form.check_in.errors %}<span class="error">{{ form.check_in.errors }}</span>{% endif %}
+        </div>
+        <span class="tt-range__sep" aria-hidden="true">–</span>
+        <div class="field">
+          <label class="sr-only" for="{{ form.check_out.id_for_label }}">{{ form.check_out.label }}</label>
+          {{ form.check_out }}
+          {% if form.check_out.errors %}<span class="error">{{ form.check_out.errors }}</span>{% endif %}
+        </div>
+        <label
+          class="tt-chip"
+          :class="crossDay && 'is-on'"
+          title="Turn on when work ends the next calendar day (e.g. night shift)"
+          @change="crossDay = $event.target.checked"
+        >
+          {{ form.cross_day }}
+          <span aria-hidden="true">Ends next day</span>
+        </label>
+      </div>
+      {% if form.check_out_cross_days.errors %}
+      <span class="error">{{ form.check_out_cross_days.errors }}</span>
+      {% endif %}
+      <p class="help-text">Punches are auto-accepted 10 minutes around these times. Night shift? Turn on <strong>Ends next day</strong>.</p>
+    </div>
+
+    {# Flexible: duration + usable window #}
+    <div x-show="type === 'flexible'" x-cloak>
+      <div class="field">
+        <span class="form-label">Must work</span>
+        <div class="tt-hours">
+          <div class="field">
+            <label class="form-label" for="{{ form.work_hours.id_for_label }}">{{ form.work_hours.label }}</label>
+            {{ form.work_hours }}
+            {% if form.work_hours.errors %}<span class="error">{{ form.work_hours.errors }}</span>{% endif %}
+          </div>
+          <div class="field">
+            <label class="form-label" for="{{ form.work_mins.id_for_label }}">{{ form.work_mins.label }}</label>
+            {{ form.work_mins }}
+            {% if form.work_mins.errors %}<span class="error">{{ form.work_mins.errors }}</span>{% endif %}
+          </div>
+        </div>
+        <p class="help-text">Total time the employee must work within the window below.</p>
+      </div>
+      <div class="field">
+        <span class="form-label">Usable window</span>
+        <div class="tt-range">
+          <div class="field">
+            <label class="sr-only" for="{{ form.check_in.id_for_label }}">{{ form.check_in.label }}</label>
+            {{ form.check_in }}
+            {% if form.check_in.errors %}<span class="error">{{ form.check_in.errors }}</span>{% endif %}
+          </div>
+          <span class="tt-range__sep" aria-hidden="true">–</span>
+          <div class="field">
+            <label class="sr-only" for="{{ form.check_out.id_for_label }}">{{ form.check_out.label }}</label>
+            {{ form.check_out }}
+            {% if form.check_out.errors %}<span class="error">{{ form.check_out.errors }}</span>{% endif %}
+          </div>
+        </div>
+        <p class="help-text">Employees may punch any time inside this window.</p>
+      </div>
+    </div>
+  </section>
+
+  {# ---- Step 3: rules ---- #}
+  <section aria-label="Attendance rules">
+    <h3 class="tt-step"><span class="tt-step__num" aria-hidden="true">3</span> Late, break &amp; checks</h3>
+
+    <div class="tt-toggle-block" x-show="type === 'normal'" x-cloak>
+      <label class="form-switch" @change="latestIn = $event.target.checked">
+        {{ form.latest_check_in_enabled }}
+        <span class="form-switch__ui" aria-hidden="true"></span>
+        <span class="form-switch__label">Mark late after…</span>
+      </label>
+      <div class="tt-indent" x-show="latestIn" x-cloak>
+        <div class="field">
+          <label class="sr-only" for="{{ form.latest_check_in.id_for_label }}">{{ form.latest_check_in.label }}</label>
+          {{ form.latest_check_in }}
+          {% if form.latest_check_in.errors %}<span class="error">{{ form.latest_check_in.errors }}</span>{% endif %}
+        </div>
+        <p class="help-text">Arriving later than this counts as <strong>Late</strong>. Leave off to use the automatic 10-minute grace.</p>
+      </div>
+    </div>
+
+    <div class="tt-toggle-block">
+      <label class="form-switch" @change="enableBreak = $event.target.checked">
+        {{ form.enable_break }}
+        <span class="form-switch__ui" aria-hidden="true"></span>
+        <span class="form-switch__label">Has a break</span>
+      </label>
+      <div
+        class="tt-panel"
+        x-show="enableBreak"
+        x-cloak
+        @change="(() => { const r = $el; const s = r.querySelector('#id_break_start')?.value; const e = r.querySelector('#id_break_end')?.value; const d = r.querySelector('#id_break_duration'); if (s && e && d && !d.value) { const t = v => { const p = v.split(':'); return (+p[0]) * 60 + (+p[1]); }; const diff = t(e) - t(s); if (diff > 0) d.value = diff; } })()"
+      >
+        <div class="field">
+          <span class="form-label">Break from – to</span>
+          <div class="tt-range">
+            <div class="field">
+              {{ form.break_start }}
+              {% if form.break_start.errors %}<span class="error">{{ form.break_start.errors }}</span>{% endif %}
+            </div>
+            <span class="tt-range__sep" aria-hidden="true">–</span>
+            <div class="field">
+              {{ form.break_end }}
+              {% if form.break_end.errors %}<span class="error">{{ form.break_end.errors }}</span>{% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label class="form-label" for="{{ form.break_duration.id_for_label }}">{{ form.break_duration.label }}</label>
+          {{ form.break_duration }}
+          {% if form.break_duration.errors %}<span class="error">{{ form.break_duration.errors }}</span>{% endif %}
+          <p class="help-text">Fills itself in from the times above — change it only to override.</p>
+        </div>
+        <label class="form-switch">
+          {{ form.count_break_as_work }}
+          <span class="form-switch__ui" aria-hidden="true"></span>
+          <span class="form-switch__label">{{ form.count_break_as_work.label }}</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="tt-switch-stack">
+      <label class="form-switch" title="Missing check-in marks the day incomplete">
+        {{ form.require_check_in }}
+        <span class="form-switch__ui" aria-hidden="true"></span>
+        <span class="form-switch__label">{{ form.require_check_in.label }}</span>
+      </label>
+      <label class="form-switch" title="Missing check-out marks the day incomplete">
+        {{ form.require_check_out }}
+        <span class="form-switch__ui" aria-hidden="true"></span>
+        <span class="form-switch__label">{{ form.require_check_out.label }}</span>
+      </label>
+      <label class="form-switch" title="Allow several in/out pairs per day, e.g. field visits">
+        {{ form.multiple_in_out }}
+        <span class="form-switch__ui" aria-hidden="true"></span>
+        <span class="form-switch__label">{{ form.multiple_in_out.label }}</span>
+      </label>
+    </div>
+  </section>
+
+  {{ form.work_minutes }}
+
+  {# ---- Step 4: details (rarely touched) ---- #}
+  <details class="form-section">
+    <summary class="form-section__title">Details &amp; defaults</summary>
+    <div class="form-section__body">
+      <p class="help-text">Identifiers, counting and punch-window defaults. Safe to leave alone.</p>
+      <div class="field-row">
+        <div class="field">
+          <label class="form-label" for="{{ form.code.id_for_label }}">{{ form.code.label }}</label>
+          {{ form.code }}
+          {% if form.code.errors %}<span class="error">{{ form.code.errors }}</span>{% endif %}
+          <p class="help-text">Auto-made from the name if blank.</p>
+        </div>
+        <div class="field">
+          <label class="form-label" for="{{ form.work_type.id_for_label }}">{{ form.work_type.label }}</label>
+          {{ form.work_type }}
+          <p class="help-text">Use “Day off” for rest days inside a shift.</p>
+        </div>
+        <div class="field">
+          <label class="form-label" for="{{ form.workday.id_for_label }}">{{ form.workday.label }}</label>
+          {{ form.workday }}
+          <p class="help-text">Counts as 1 full day; use 0.5 for half days.</p>
+        </div>
+      </div>
+
+      <div x-show="type === 'normal'" x-cloak>
+        <div class="field">
+          <span class="form-label">Accepted check-in window</span>
+          <div class="tt-range">
+            <div class="field">{{ form.check_in_start }}</div>
+            <span class="tt-range__sep" aria-hidden="true">–</span>
+            <div class="field">{{ form.check_in_end }}</div>
+          </div>
+        </div>
+        <div class="field">
+          <span class="form-label">Accepted check-out window</span>
+          <div class="tt-range">
+            <div class="field">{{ form.check_out_start }}</div>
+            <span class="tt-range__sep" aria-hidden="true">–</span>
+            <div class="field">{{ form.check_out_end }}</div>
+          </div>
+          <p class="help-text">Auto-filled ±10 minutes around work hours; edit only for exceptions.</p>
+        </div>
+      </div>
+
+      <div x-show="type === 'flexible'" x-cloak>
+        <div class="field">
+          <span class="form-label">Accepted check-in window</span>
+          <div class="tt-range">
+            <div class="field">{{ form.check_in_start }}</div>
+            <span class="tt-range__sep" aria-hidden="true">–</span>
+            <div class="field">{{ form.check_in_end }}</div>
+          </div>
+        </div>
+        <div class="field">
+          <span class="form-label">Accepted check-out window</span>
+          <div class="tt-range">
+            <div class="field">{{ form.check_out_start }}</div>
+            <span class="tt-range__sep" aria-hidden="true">–</span>
+            <div class="field">{{ form.check_out_end }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label class="form-label" for="{{ form.check_in_cross_days.id_for_label }}">{{ form.check_in_cross_days.label }}</label>
+          {{ form.check_in_cross_days }}
+        </div>
+        <div class="field">
+          <label class="form-label" for="{{ form.check_out_cross_days.id_for_label }}">{{ form.check_out_cross_days.label }}</label>
+          {{ form.check_out_cross_days }}
+          <p class="help-text">Usually set via “Ends next day” above.</p>
+        </div>
+        <div class="field">
+          <label class="form-label" for="{{ form.day_change_time.id_for_label }}">{{ form.day_change_time.label }}</label>
+          {{ form.day_change_time }}
+          <p class="help-text">Punches before this belong to yesterday.</p>
+        </div>
+      </div>
+
+      <div class="tt-toggle-block">
+        <label class="form-switch">
+          {{ form.allow_late_in }}
+          <span class="form-switch__ui" aria-hidden="true"></span>
+          <span class="form-switch__label">{{ form.allow_late_in.label }}</span>
+        </label>
+        <div class="tt-indent">
+          <div class="field">
+            <label class="form-label" for="{{ form.late_in_grace_minutes.id_for_label }}">{{ form.late_in_grace_minutes.label }}</label>
+            {{ form.late_in_grace_minutes }}
+          </div>
+        </div>
+      </div>
+
+      <div class="tt-toggle-block">
+        <label class="form-switch">
+          {{ form.allow_early_out }}
+          <span class="form-switch__ui" aria-hidden="true"></span>
+          <span class="form-switch__label">{{ form.allow_early_out.label }}</span>
+        </label>
+        <div class="tt-indent">
+          <div class="field">
+            <label class="form-label" for="{{ form.early_out_grace_minutes.id_for_label }}">{{ form.early_out_grace_minutes.label }}</label>
+            {{ form.early_out_grace_minutes }}
+          </div>
+        </div>
+      </div>
+
+      <label class="form-switch">
+        {{ form.is_active }}
+        <span class="form-switch__ui" aria-hidden="true"></span>
+        <span class="form-switch__label">{{ form.is_active.label }}</span>
+      </label>
+    </div>
+  </details>
+</div>

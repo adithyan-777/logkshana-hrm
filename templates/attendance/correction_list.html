@@ -55,9 +55,8 @@
             <td>{{ correction.reason|truncatewords:8 }}</td>
             <td class="table-actions">
                 {% if can_edit %}
-                <a href="{% url 'correction_edit' correction.pk %}" class="btn-icon" title="Edit correction" aria-label="Edit correction {{ correction.date }}">
-                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
-                </a>
+                {% url 'correction_edit' correction.pk as correction_edit_url %}
+                {% include "partials/drawer_link.html" with url=correction_edit_url title="Edit correction" icon="bx-edit" class="btn-icon" %}
                 {% endif %}
                 {% if can_delete %}
                 <button

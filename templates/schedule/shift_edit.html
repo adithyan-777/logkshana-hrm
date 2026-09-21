@@ -10,13 +10,14 @@
     <span class="card__title">Edit shift</span>
   </div>
   <div class="card__body">
-    <div id="shift-edit-form-container">
-      {% partialdef shift_edit_form inline %}
+    {% partialdef shift_edit_form inline %}
+<div id="shift-edit-form-container">
 <form
     id="shift-edit-form"
+    class="tt-form-shell"
     hx-post="{% url 'shift_edit' shift.pk %}"
     hx-target="#shift-edit-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -24,44 +25,47 @@
     <div class="message error">{{ form.non_field_errors }}</div>
     {% endif %}
 
-    <fieldset class="form-section">
+    <fieldset class="tt-panel">
         <legend>Shift details</legend>
 
         <div class="field">
-            <label for="{{ form.name.id_for_label }}">Name *</label>
+            <label class="form-label" for="{{ form.name.id_for_label }}">Name *</label>
             {{ form.name }}
             {% if form.name.errors %}<span class="error">{{ form.name.errors }}</span>{% endif %}
         </div>
 
         <div class="field">
-            <label for="{{ form.code.id_for_label }}">Code *</label>
+            <label class="form-label" for="{{ form.code.id_for_label }}">Code *</label>
             {{ form.code }}
             {% if form.code.errors %}<span class="error">{{ form.code.errors }}</span>{% endif %}
         </div>
 
         <div class="field-row">
             <div class="field">
-                <label for="{{ form.cycle_unit.id_for_label }}">Cycle unit</label>
+                <label class="form-label" for="{{ form.cycle_unit.id_for_label }}">Cycle unit</label>
                 {{ form.cycle_unit }}
             </div>
             <div class="field">
-                <label for="{{ form.cycle_count.id_for_label }}">Cycle count</label>
+                <label class="form-label" for="{{ form.cycle_count.id_for_label }}">Cycle count</label>
                 {{ form.cycle_count }}
             </div>
         </div>
 
-        <div class="field checkbox">
-            {{ form.auto_shift }}
-            <label for="{{ form.auto_shift.id_for_label }}">Auto shift</label>
-        </div>
-
-        <div class="field checkbox">
-            {{ form.is_active }}
-            <label for="{{ form.is_active.id_for_label }}">Active</label>
+        <div class="tt-switch-stack">
+            <label class="form-switch">
+                {{ form.auto_shift }}
+                <span class="form-switch__ui" aria-hidden="true"></span>
+                <span class="form-switch__label">Auto shift</span>
+            </label>
+            <label class="form-switch">
+                {{ form.is_active }}
+                <span class="form-switch__ui" aria-hidden="true"></span>
+                <span class="form-switch__label">Active</span>
+            </label>
         </div>
     </fieldset>
 
-    <fieldset class="form-section">
+    <fieldset class="tt-panel">
         <legend>Cycle days</legend>
         <p class="help-text">Assign a timetable to each day in the cycle. Leave blank rows empty.</p>
 
@@ -99,11 +103,13 @@
         </table>
     </fieldset>
 
-    <button type="submit">Save changes</button>
-    <a href="{% url 'shift_list' %}">Back to shifts</a>
-</form>
-{% endpartialdef shift_edit_form %}
+    <div class="form-actions">
+        <button type="submit" class="btn btn--primary">Save changes</button>
+        <a href="{% url 'shift_list' %}" class="btn btn--ghost">Back to shifts</a>
     </div>
+</form>
+</div>
+{% endpartialdef shift_edit_form %}
   </div>
 </div>
 {% endblock %}

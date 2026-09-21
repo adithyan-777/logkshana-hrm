@@ -102,7 +102,7 @@ button.btn--warm:hover {
 }
 
 .btn--ghost {
-  background: transparent;
+  background: var(--accent-muted);
   border-color: transparent;
   box-shadow: none;
 }
@@ -174,6 +174,10 @@ button.btn--danger:hover {
   border-radius: var(--r-card);
   box-shadow: var(--shadow-card);
   transition: var(--motion-interactive);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .card:hover {
@@ -196,7 +200,16 @@ button.btn--danger:hover {
   letter-spacing: -0.01em;
 }
 
-.card__body { padding: var(--space-4); }
+.card__body {
+  padding: var(--space-4);
+  min-width: 0;
+}
+
+.card__body > form,
+.card__body > .tt-form-shell {
+  min-width: 0;
+  max-width: 100%;
+}
 
 .card--table:hover {
   transform: none;
@@ -1340,11 +1353,70 @@ button.btn--danger:hover {
 
 .form-actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2);
   margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-header, var(--border));
 }
 
-.form-section {
+.tt-form-shell > .form-actions,
+#modal-body form > .form-actions {
+  margin-top: var(--space-2);
+}
+
+.form-actions .btn--ghost,
+.form-actions a.btn--ghost {
+  margin-left: 0;
+}
+
+/* Accordion sections (details/summary) */
+details.form-section {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+  background: var(--bg-elevated);
+}
+
+details.form-section > .form-section__title {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+details.form-section > .form-section__title::-webkit-details-marker,
+details.form-section > .form-section__title::marker {
+  display: none;
+  content: none;
+}
+
+details.form-section > .form-section__title::after {
+  content: "▾";
+  color: var(--text-muted);
+  font-size: 12px;
+  transition: transform var(--t-fast) var(--ease);
+}
+
+details.form-section:not([open]) > .form-section__title::after {
+  transform: rotate(-90deg);
+}
+
+details.form-section > .form-section__body {
+  margin-top: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Legacy alias — prefer details.form-section / fieldset.tt-panel */
+.form-section:not(details):not(fieldset) {
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   padding: var(--space-3);
@@ -1415,19 +1487,22 @@ button.btn--danger:hover {
   align-items: center;
   gap: var(--space-2);
   margin-bottom: var(--space-3);
+  min-width: 0;
 }
 
 .toolbar__search {
-  flex: 1;
-  min-width: 200px;
+  flex: 1 1 200px;
+  min-width: 0;
   max-width: 320px;
 }
 
 .data-table-wrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   background: var(--bg-elevated);
+  max-width: 100%;
 }
 
 .data-table {
@@ -2042,8 +2117,17 @@ div.dt-container button.dt-paging-button:focus-visible {
 
 .admin-modal__body {
   flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow-x: hidden;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: var(--space-4);
+}
+
+.admin-modal__body > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .admin-modal__foot {
@@ -2394,4 +2478,803 @@ div.dt-container button.dt-paging-button:focus-visible {
   }
 
   .toast { border-radius: var(--r-md); text-align: center; width: 100%; }
+}
+
+/* Form dialog shell + nested panels (shared by timetable + drawer forms) */
+.tt-form-shell,
+#modal-body form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.tt-form-shell > .field,
+.tt-form-shell > .field-row,
+.tt-form-shell > .form-switch,
+.tt-form-shell > .tt-panel,
+.tt-form-shell > .tt-toggle-block,
+.tt-form-shell > fieldset,
+.tt-form-shell > details.form-section,
+#modal-body form > .field,
+#modal-body form > .field-row,
+#modal-body form > .form-switch,
+#modal-body form > .tt-panel,
+#modal-body form > .tt-toggle-block,
+#modal-body form > fieldset,
+#modal-body form > details.form-section {
+  margin-bottom: 0;
+}
+
+.tt-panel > .field,
+.tt-panel > .field-row,
+.tt-panel > .form-switch,
+.tt-panel > .tt-switch-stack,
+.tt-panel > .help-text,
+fieldset.tt-panel > .field,
+fieldset.tt-panel > .field-row,
+fieldset.tt-panel > .form-switch,
+fieldset.tt-panel > .tt-switch-stack,
+fieldset.tt-panel > .help-text,
+fieldset.form-section > .field,
+fieldset.form-section > .field-row,
+fieldset.form-section > .form-switch,
+fieldset.form-section > .help-text {
+  margin-bottom: 0;
+}
+
+.tt-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.tt-form > .field,
+.tt-form > .tt-name-row,
+.tt-form > .tt-toggle-block,
+.tt-form > .tt-panel,
+.tt-form > .form-switch,
+.tt-form > .tabs,
+.tt-form > details.form-section,
+.tt-form > [x-show] {
+  margin-bottom: 0;
+}
+
+.tt-name-row .field {
+  margin-bottom: 0;
+}
+
+/* Shift type as full-width tabs */
+.tt-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: 0;
+  box-sizing: border-box;
+	background: var(--bg);
+	border-radius: var(--r-md);
+}
+
+.tt-tabs .tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin: 0;
+  cursor: pointer;
+  user-select: none;
+  text-align: center;
+}
+
+.tt-tabs .tab input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  pointer-events: none;
+}
+
+.tt-name-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.tt-color-field {
+  width: 56px;
+}
+
+.tt-color-field .form-label {
+  text-align: center;
+}
+
+.tt-color-field .tt-color,
+.tt-color-field input[type="color"] {
+  width: 44px;
+  margin-inline: auto;
+}
+
+.tt-segment {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.tt-segment__btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-h);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--motion-interactive);
+}
+
+.tt-segment__btn input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tt-segment__btn.is-active {
+  border-color: var(--accent, #e11d48);
+  color: var(--accent, #e11d48);
+  box-shadow: inset 0 0 0 1px var(--accent, #e11d48);
+}
+
+.tt-color,
+.form-input[type="color"],
+input.tt-color[type="color"] {
+  display: block;
+  width: 44px;
+  max-width: 44px;
+  height: var(--control-h);
+  min-height: var(--control-h);
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-prompt);
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.tt-hours,
+.tt-range {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: var(--space-2);
+  align-items: start;
+  min-width: 0;
+}
+
+.tt-hours {
+  grid-template-columns: 1fr 1fr;
+}
+
+.tt-hours > .field,
+.tt-range > .field {
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+.tt-range__sep {
+  margin-top: calc(var(--control-h) / 2 - 0.5em);
+  color: var(--text-muted);
+}
+
+/* Form switches (replaces checkbox UI).
+   !important beats .field label { display:block } and .form-input width rules. */
+.form-switch,
+.tt-switch,
+.field .form-switch,
+.field .tt-switch,
+.field-row .form-switch,
+.tt-toggle-block .form-switch {
+  position: relative;
+  display: inline-flex !important;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  user-select: none;
+  margin-bottom: var(--space-3);
+  width: auto;
+  max-width: 100%;
+}
+
+.form-switch input,
+.tt-switch input,
+.field .form-switch input,
+.field .tt-switch input,
+.tt-toggle-block .form-switch input {
+  position: absolute !important;
+  inset: 0 auto 0 0;
+  opacity: 0 !important;
+  width: 40px !important;
+  height: 22px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: 40px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  pointer-events: none;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+}
+
+.tt-toggle-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-switch__ui,
+.tt-switch__ui {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--border);
+  transition: background var(--t-fast, 150ms) ease;
+  flex-shrink: 0;
+  flex-grow: 0;
+}
+
+.form-switch__ui::after,
+.tt-switch__ui::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
+  transition: transform var(--t-fast, 150ms) ease;
+}
+
+.form-switch input:checked + .form-switch__ui,
+.tt-switch input:checked + .tt-switch__ui {
+  background: #16a34a;
+}
+
+.form-switch input:checked + .form-switch__ui::after,
+.tt-switch input:checked + .tt-switch__ui::after {
+  transform: translateX(18px);
+}
+
+.form-switch input:focus-visible + .form-switch__ui,
+.tt-switch input:focus-visible + .tt-switch__ui {
+  outline: 2px solid var(--accent, #e11d48);
+  outline-offset: 2px;
+}
+
+.form-switch__label,
+.tt-switch__label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.tt-switch-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Legacy .field.checkbox → toggle switch */
+.field.checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  cursor: pointer;
+  user-select: none;
+}
+
+.field.checkbox label {
+  display: inline;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.field.checkbox input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  width: 40px;
+  height: 22px;
+  min-height: 22px;
+  margin: 0;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--border);
+  box-shadow: none;
+  cursor: pointer;
+  transition: background var(--t-fast, 150ms) ease;
+}
+
+.field.checkbox input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
+  transition: transform var(--t-fast, 150ms) ease;
+}
+
+.field.checkbox input[type="checkbox"]:checked {
+  background: #16a34a;
+}
+
+.field.checkbox input[type="checkbox"]:checked::after {
+  transform: translateX(18px);
+}
+
+.field.checkbox input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--accent, #e11d48);
+  outline-offset: 2px;
+}
+
+/* Keep formset delete boxes compact */
+.formset-table input[type="checkbox"] {
+  appearance: auto;
+  -webkit-appearance: auto;
+  width: auto;
+  height: auto;
+  min-height: auto;
+  border-radius: var(--r-sm, 4px);
+  background: var(--bg-prompt);
+}
+
+.tt-panel,
+fieldset.tt-panel,
+fieldset.form-section {
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-muted);
+}
+
+/* Non-fieldset panels stack with flex gap */
+div.tt-panel {
+  display: flex;
+  flex-direction: column;
+	margin-bottom: var(--space-3);
+  gap: var(--space-3);
+}
+
+/* Fieldsets avoid display:flex (legend bugs in Chromium) */
+fieldset.tt-panel > *:not(legend),
+fieldset.form-section > *:not(legend) {
+  margin-top: var(--space-3);
+}
+
+fieldset.tt-panel > legend + *,
+fieldset.form-section > legend + * {
+  margin-top: var(--space-2);
+}
+
+fieldset.tt-panel > legend,
+fieldset.form-section > legend {
+  float: none;
+  width: auto;
+  max-width: 100%;
+  padding: 0 var(--space-1);
+  margin: 0 0 calc(var(--space-1) * -1);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text);
+  background: transparent;
+}
+
+.tt-indent {
+	margin-bottom: var(--space-3);
+  padding-left: calc(40px + var(--space-2));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.tt-indent .field {
+  margin-bottom: 0;
+}
+
+.tt-switch-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.tt-switch-stack .form-switch,
+.tt-panel > .form-switch,
+.tt-form-shell > .form-switch {
+  margin-bottom: 0;
+}
+
+/* Align switches with labeled inputs only when sharing a row with .field */
+.field-row > .form-switch {
+  margin-top: calc(var(--space-2) + 1.1em);
+  margin-bottom: 0;
+}
+
+.field-row > .form-switch:only-child,
+.field-row > .form-switch:first-child:last-child {
+  margin-top: 0;
+}
+
+/* When a row is only switches, don't offset */
+.field-row:not(:has(.field)) > .form-switch {
+  margin-top: 0;
+}
+
+.tt-link {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--accent, #2563eb);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.tt-identity {
+  min-width: 0;
+  width: 100%;
+}
+
+.tt-identity__name {
+  min-width: 0;
+}
+
+.tt-chip {
+  flex-shrink: 0;
+}
+
+/* Numbered form sections (timetable add/edit) */
+.tt-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tt-step:first-child {
+  margin-top: 0;
+}
+
+.tt-step__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-pill);
+  background: var(--accent-muted);
+  color: var(--accent-pressed);
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Shift-type choice cards */
+.tt-choice {
+  flex: 1;
+  display: flex !important;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: 10px 12px !important;
+  cursor: pointer;
+}
+
+.tt-choice__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.35;
+}
+
+.tt-choice__title {
+  font-weight: 600;
+}
+
+.tt-choice__desc {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+/* Name + color identity row */
+.tt-identity {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-end;
+}
+
+.tt-identity__name {
+  flex: 1;
+  min-width: 0;
+}
+
+.tt-identity__color {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tt-color {
+  width: 44px;
+  height: var(--control-h);
+  padding: 3px;
+  border: 1px solid var(--input);
+  border-radius: var(--r-md);
+  background: var(--bg-prompt);
+  cursor: pointer;
+}
+
+.tt-color__hidden {
+  display: contents;
+}
+
+/* Ends-next-day chip next to check-out time */
+.tt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: center;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--bg-muted);
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--motion-interactive);
+}
+
+.tt-chip:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.tt-chip.is-on {
+  background: var(--accent-muted);
+  border-color: var(--accent);
+  color: var(--accent-pressed);
+}
+
+.tt-chip input {
+  accent-color: var(--accent);
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  cursor: pointer;
+}
+
+/* One-line flow explainer under section tabs */
+.tabs-hint {
+  margin: -4px 0 var(--space-3);
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.tabs-hint strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.tt-swatch {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--tt-color);
+  border: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.tt-list-name {
+  font-weight: 500;
+}
+
+/* ── Responsive layout / spacing ─────────────────────────────── */
+@media (max-width: 768px) {
+  .page-content {
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+  }
+
+  .card__header,
+  .card__body {
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+  }
+
+  .card--table .card__header {
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+  }
+
+  .admin-modal__head,
+  .admin-modal__body,
+  .admin-modal__foot {
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+  }
+
+  .admin-modal__dialog {
+    width: 100%;
+  }
+
+  .admin-modal--wide .admin-modal__dialog {
+    width: 100%;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar__search,
+  .toolbar .search-input {
+    max-width: none;
+    width: 100%;
+    flex: 1 1 auto;
+  }
+
+  .form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .form-actions .btn,
+  .form-actions button,
+  .form-actions a.btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .profile-details__row {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
+
+  .tt-indent {
+    padding-left: var(--space-3);
+  }
+
+  .tt-range {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .tt-range__sep {
+    display: none;
+  }
+
+  .tt-hours {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .tt-identity {
+    flex-wrap: wrap;
+  }
+
+  .tt-chip {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+
+  .field-row > .form-switch {
+    margin-top: 0;
+  }
+
+  .tabs.tt-tabs,
+  .tt-tabs {
+    width: 100%;
+  }
+
+  .dashboard-kpis,
+  .dash-kpi-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-content {
+    padding-left: var(--space-2);
+    padding-right: var(--space-2);
+  }
+
+  .tt-hours {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-kpis,
+  .dash-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-head__title {
+    font-size: clamp(1.25rem, 5vw, var(--text-h1));
+  }
+
+  /* Inset shell: tighten gap so content isn't squeezed */
+  :root[data-sidebar-variant="inset"] {
+    --shell-gap: 8px;
+  }
+}
+
+/* Drawer forms: keep grids from overflowing the panel */
+#modal-body .field-row,
+.admin-modal__body .field-row {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+}
+
+#modal-body .formset-table,
+.admin-modal__body .formset-table,
+.tt-form-shell .formset-table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+#modal-body .formset-table th,
+#modal-body .formset-table td,
+.admin-modal__body .formset-table th,
+.admin-modal__body .formset-table td,
+.tt-form-shell .formset-table th,
+.tt-form-shell .formset-table td {
+  white-space: nowrap;
+}
+
+/* Prefer gap over stacked margins inside panels */
+.form-section__body > .field,
+.form-section__body > .field-row,
+.form-section__body > .form-switch,
+.form-section__body > .tt-switch-stack,
+.form-section__body > .tt-toggle-block {
+  margin-bottom: 0;
+}
+
+[x-cloak] {
+  display: none !important;
 }

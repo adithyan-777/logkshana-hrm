@@ -80,10 +80,12 @@ def _holiday(**kwargs):
 
 
 class LeaveTypeEditDeleteTests(BaseTenantTestCase):
-    def test_edit_get_200(self):
+    def test_edit_get_redirects_to_list_drawer(self):
         lt = _leave_type()
         response = self.client.get(reverse("leave_type_edit", args=[lt.pk]))
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("leave_type_list"), response.url)
+        self.assertIn("drawer=", response.url)
 
     def test_edit_post_updates_and_trigger(self):
         lt = _leave_type(name="Before")
@@ -125,10 +127,12 @@ class LeaveTypeEditDeleteTests(BaseTenantTestCase):
 
 
 class LeavePolicyEditDeleteTests(BaseTenantTestCase):
-    def test_edit_get_200(self):
+    def test_edit_get_redirects_to_list_drawer(self):
         policy = _leave_policy()
         response = self.client.get(reverse("leave_policy_edit", args=[policy.pk]))
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("leave_policy_list"), response.url)
+        self.assertIn("drawer=", response.url)
 
     def test_edit_post_updates_and_trigger(self):
         policy = _leave_policy(name="PolBefore")
@@ -170,10 +174,12 @@ class LeavePolicyEditDeleteTests(BaseTenantTestCase):
 
 
 class LeaveRequestEditDeleteTests(BaseTenantTestCase):
-    def test_edit_get_200(self):
+    def test_edit_get_redirects_to_list_drawer(self):
         lr = _leave_request()
         response = self.client.get(reverse("leave_request_edit", args=[lr.pk]))
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("leave_request_list"), response.url)
+        self.assertIn("drawer=", response.url)
 
     def test_edit_post_updates_and_trigger(self):
         lr = _leave_request()
@@ -216,10 +222,12 @@ class LeaveRequestEditDeleteTests(BaseTenantTestCase):
 
 
 class HolidayEditDeleteTests(BaseTenantTestCase):
-    def test_edit_get_200(self):
+    def test_edit_get_redirects_to_list_drawer(self):
         h = _holiday()
         response = self.client.get(reverse("holiday_edit", args=[h.pk]))
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("holiday_list"), response.url)
+        self.assertIn("drawer=", response.url)
 
     def test_edit_post_updates_and_trigger(self):
         h = _holiday()

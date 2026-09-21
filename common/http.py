@@ -1,6 +1,8 @@
 import json
+from urllib.parse import urlencode
 
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
+from django.urls import reverse
 
 
 def is_htmx_partial(request: HttpRequest) -> bool:
@@ -31,3 +33,24 @@ def set_hx_trigger(
         payload["showToast"] = {"message": toast, "type": "success"}
     response["HX-Trigger"] = json.dumps(payload)
     return response
+
+
+def redirect_to_list_drawer(
+    *,
+    list_url_name: str,
+    form_url: str,
+    title: str,
+    size: str = "default",
+) -> HttpResponseRedirect:
+    """
+    Send full-page add/edit GETs back to the list and reopen the form in the
+    right drawer (query params consumed by alpine-app.js).
+    """
+    query = urlencode(
+        {
+            "drawer": form_url,
+            "drawer_title": title,
+            "drawer_size": size,
+        }
+    )
+    return HttpResponseRedirect(f"{reverse(list_url_name)}?{query}")

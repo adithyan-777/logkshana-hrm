@@ -53,9 +53,8 @@
             <td>{{ transaction.external_id }}</td>
             <td class="table-actions">
                 {% if can_edit %}
-                <a href="{% url 'transaction_edit' transaction.pk %}" class="btn-icon" title="Edit punch" aria-label="Edit punch {{ transaction.external_id }}">
-                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
-                </a>
+                {% url 'transaction_edit' transaction.pk as transaction_edit_url %}
+                {% include "partials/drawer_link.html" with url=transaction_edit_url title="Edit punch" icon="bx-edit" class="btn-icon" %}
                 {% endif %}
                 {% if can_delete %}
                 <button

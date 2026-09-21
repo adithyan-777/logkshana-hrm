@@ -25,8 +25,10 @@ def timetable_form_data(**overrides) -> dict:
         "early_out_grace_minutes": "0",
         "multiple_in_out": "",
         "day_change_time": "08:00",
-        "color": "",
+        "color": "#14b8a6",
         "is_active": "on",
+        "work_hours": "8",
+        "work_mins": "0",
     }
     data.update(overrides)
     return data
@@ -43,6 +45,14 @@ class TimetableFormCrossDayTests(BaseTenantTestCase):
         form = TimetableForm(data=timetable_form_data())
 
         self.assertTrue(form.is_valid(), form.errors)
+
+    def test_cross_day_toggle_forces_overnight_offset(self):
+        form = TimetableForm(
+            data=timetable_form_data(cross_day="on", check_out_cross_days="0")
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["check_out_cross_days"], 1)
 
     def test_zero_length_shift_is_rejected(self):
         form = TimetableForm(
@@ -68,3 +78,54 @@ class TimetableFormCrossDayTests(BaseTenantTestCase):
         )
 
         self.assertTrue(form.is_valid(), form.errors)
+
+    def test_flexible_requires_work_hours(self):
+        form = TimetableForm(
+            data=timetable_form_data(
+                code="FLEX",
+                type="flexible",
+                check_in="09:00",
+                check_out="18:00",
+                check_out_cross_days="0",
+                work_hours="",
+                work_mins="",
+            )
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("work_hours", form.errors)
+
+    def test_break_payload_in_service_kwargs(self):
+        form = TimetableForm(
+            data=timetable_form_data(
+                code="BRK",
+                check_in="09:00",
+                check_out="18:00",
+                check_out_cross_days="0",
+                enable_break="on",
+                break_start="12:00",
+                break_end="13:00",
+                break_duration="60",
+                count_break_as_work="on",
+            )
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        payload = form.service_kwargs()
+        self.assertIsNotNone(payload["break_data"])
+        self.assertEqual(str(payload["break_data"]["start_time"]), "12:00:00")
+        self.assertTrue(payload["break_data"]["paid"])
+
+    def test_auto_code_from_name(self):
+        form = TimetableForm(
+            data=timetable_form_data(
+                name="Morning Shift",
+                code="",
+                check_in="09:00",
+                check_out="18:00",
+                check_out_cross_days="0",
+            )
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["code"], "MORNING-SHIFT")

@@ -53,9 +53,8 @@
             <td>{% if item.overrides_normal_schedule %}Yes{% else %}No{% endif %}</td>
             <td class="table-actions">
                 {% if can_edit %}
-                <a href="{% url 'temporary_edit' item.pk %}" class="btn-icon" title="Edit temporary schedule" aria-label="Edit temporary schedule {{ item.pk }}">
-                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
-                </a>
+                {% url 'temporary_edit' item.pk as temporary_edit_url %}
+                {% include "partials/drawer_link.html" with url=temporary_edit_url title="Edit temporary schedule" icon="bx-edit" class="btn-icon" %}
                 {% endif %}
                 {% if can_delete %}
                 <button

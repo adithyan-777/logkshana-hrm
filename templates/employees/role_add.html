@@ -19,7 +19,7 @@
 <div id="form-messages"></div>
 {% endif %}
 
-<form
+<form class="tt-form-shell"
     id="role-form"
     hx-post="{% url 'role_add' %}"
     hx-target="#role-form-container"
@@ -43,7 +43,9 @@
         {% if form.permissions.errors %}<span class="error">{{ form.permissions.errors }}</span>{% endif %}
     </div>
 
-    <button type="submit">Add Role</button>
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Add Role</button>
+    </div>
 </form>
 </div>
 {% endpartialdef role_form %}

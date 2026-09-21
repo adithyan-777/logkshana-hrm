@@ -12,7 +12,7 @@
   <div class="card__body">
     <div id="holiday-edit-form-container">
       {% partialdef holiday_edit_form inline %}
-<form
+<form class="tt-form-shell"
     id="holiday-edit-form"
     hx-post="{% url 'holiday_edit' holiday.pk %}"
     hx-target="#holiday-edit-form-container"
@@ -52,13 +52,16 @@
         {{ form.description }}
     </div>
 
-    <div class="field checkbox">
-        {{ form.is_active }}
-        <label for="{{ form.is_active.id_for_label }}">Active</label>
-    </div>
+    <label class="form-switch">
+                {{ form.is_active }}
+                <span class="form-switch__ui" aria-hidden="true"></span>
+                <span class="form-switch__label">Active</span>
+            </label>
 
-    <button type="submit">Save changes</button>
-    <a href="{% url 'holiday_list' %}">Back to holidays</a>
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Save changes</button>
+        <a href="{% url 'holiday_list' %}" class="btn btn--ghost">Back to holidays</a>
+    </div>
 </form>
 {% endpartialdef holiday_edit_form %}
     </div>

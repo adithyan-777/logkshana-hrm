@@ -21,7 +21,7 @@
 <div id="form-messages"></div>
 {% endif %}
 
-<form
+<form class="tt-form-shell"
     id="transaction-form"
     hx-post="{% url 'attendance_transaction_add' %}"
     hx-target="#transaction-form-container"
@@ -55,7 +55,9 @@
         </div>
     </div>
 
-    <button type="submit">Record Punch</button>
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Record Punch</button>
+    </div>
 </form>
 </div>
 {% endpartialdef transaction_form %}

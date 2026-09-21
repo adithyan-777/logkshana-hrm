@@ -2,15 +2,16 @@
 <div class="tabs" role="tablist" aria-label="Schedule sections">
   <a href="{% url 'timetable_list' %}"
      class="tab {% if request.resolver_match.url_name == 'timetable_list' or request.resolver_match.url_name == 'timetable_add' %}is-active{% endif %}"
-     role="tab">Timetables</a>
+     role="tab" title="Daily work hours, e.g. 9:00–18:00">Timetables</a>
   <a href="{% url 'shift_list' %}"
      class="tab {% if request.resolver_match.url_name == 'shift_list' or request.resolver_match.url_name == 'shift_add' %}is-active{% endif %}"
-     role="tab">Shifts</a>
+     role="tab" title="Weekly rotation of timetables">Shifts</a>
   <a href="{% url 'assignment_list' %}"
      class="tab {% if request.resolver_match.url_name == 'assignment_list' or request.resolver_match.url_name == 'assignment_add' %}is-active{% endif %}"
-     role="tab">Assignments</a>
+     role="tab" title="Give a shift to a person or department">Assignments</a>
   <a href="{% url 'temporary_list' %}"
      class="tab {% if request.resolver_match.url_name == 'temporary_list' or request.resolver_match.url_name == 'temporary_add' %}is-active{% endif %}"
-     role="tab">Temporary</a>
+     role="tab" title="One-day override, e.g. night duty">Temporary</a>
 </div>
+<p class="tabs-hint">Timetables set <strong>daily hours</strong> → Shifts <strong>rotate</strong> them across the week → Assignments <strong>give</strong> them to people. Temporary <strong>overrides one day</strong>.</p>
 {% endpartialdef tabs_schedule %}

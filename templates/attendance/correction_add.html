@@ -21,7 +21,7 @@
 <div id="form-messages"></div>
 {% endif %}
 
-<form
+<form class="tt-form-shell"
     id="correction-form"
     hx-post="{% url 'attendance_correction_add' %}"
     hx-target="#correction-form-container"
@@ -68,7 +68,9 @@
         {% if form.reason.errors %}<span class="error">{{ form.reason.errors }}</span>{% endif %}
     </div>
 
-    <button type="submit">Submit Correction</button>
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Submit Correction</button>
+    </div>
 </form>
 </div>
 {% endpartialdef correction_form %}

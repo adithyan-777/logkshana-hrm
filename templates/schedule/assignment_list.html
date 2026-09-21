@@ -63,9 +63,8 @@
             <td>{% if assignment.overwrite_existing %}Yes{% else %}No{% endif %}</td>
             <td class="table-actions">
                 {% if can_edit %}
-                <a href="{% url 'assignment_edit' assignment.pk %}" class="btn-icon" title="Edit assignment" aria-label="Edit assignment {{ assignment.pk }}">
-                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
-                </a>
+                {% url 'assignment_edit' assignment.pk as assignment_edit_url %}
+                {% include "partials/drawer_link.html" with url=assignment_edit_url title="Edit assignment" icon="bx-edit" class="btn-icon" %}
                 {% endif %}
                 {% if can_delete %}
                 <button

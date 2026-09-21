@@ -11,12 +11,13 @@ from common.tests.factories import (
     shift_factory,
     timetable_factory,
 )
-from schedule.models import ScheduleAssignment, ShiftDay, Timetable
+from schedule.models import ScheduleAssignment, ShiftDay, Timetable, TimetableBreak
 from schedule.services import (
     schedule_assignment_create,
     shift_create,
     temporary_schedule_create,
     timetable_create,
+    timetable_update,
 )
 
 
@@ -96,6 +97,57 @@ class TimetableCreateTests(BaseTenantTestCase):
                 check_in_cross_days=1,
                 check_out_cross_days=0,
             )
+
+    def test_creates_timetable_with_break(self):
+        timetable = timetable_create(
+            name="Morning",
+            code="MORN-BRK",
+            type=Timetable.Type.NORMAL,
+            work_type=Timetable.WorkType.WORK,
+            check_in=time(9, 0),
+            check_out=time(18, 0),
+            break_data={
+                "name": "Lunch",
+                "start_time": time(12, 0),
+                "end_time": time(13, 0),
+                "paid": False,
+                "minimum_minutes": 60,
+            },
+        )
+
+        break_row = timetable.breaks.get()
+        self.assertEqual(break_row.start_time, time(12, 0))
+        self.assertEqual(break_row.end_time, time(13, 0))
+        self.assertEqual(break_row.minimum_minutes, 60)
+
+    def test_update_clears_break_when_none(self):
+        timetable = timetable_create(
+            name="Morning",
+            code="MORN-CLR",
+            type=Timetable.Type.NORMAL,
+            work_type=Timetable.WorkType.WORK,
+            check_in=time(9, 0),
+            check_out=time(18, 0),
+            break_data={
+                "name": "Lunch",
+                "start_time": time(12, 0),
+                "end_time": time(13, 0),
+            },
+        )
+        self.assertEqual(timetable.breaks.count(), 1)
+
+        timetable_update(
+            timetable=timetable,
+            name=timetable.name,
+            code=timetable.code,
+            type=timetable.type,
+            work_type=timetable.work_type,
+            check_in=timetable.check_in,
+            check_out=timetable.check_out,
+            break_data=None,
+        )
+
+        self.assertEqual(TimetableBreak.objects.filter(timetable=timetable).count(), 0)
 
 
 class ShiftCreateTests(BaseTenantTestCase):

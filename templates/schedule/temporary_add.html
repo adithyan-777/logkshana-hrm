@@ -21,7 +21,7 @@
 <div id="form-messages"></div>
 {% endif %}
 
-<form
+<form class="tt-form-shell"
     id="temporary-form"
     hx-post="{% url 'temporary_add' %}"
     hx-target="#temporary-form-container"
@@ -57,12 +57,15 @@
         {% if form.reason.errors %}<span class="error">{{ form.reason.errors }}</span>{% endif %}
     </div>
 
-    <div class="field checkbox">
-        {{ form.overrides_normal_schedule }}
-        <label for="{{ form.overrides_normal_schedule.id_for_label }}">Overrides normal schedule</label>
-    </div>
+    <label class="form-switch">
+                {{ form.overrides_normal_schedule }}
+                <span class="form-switch__ui" aria-hidden="true"></span>
+                <span class="form-switch__label">Overrides normal schedule</span>
+            </label>
 
-    <button type="submit">Add Temporary Schedule</button>
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Add Temporary Schedule</button>
+    </div>
 </form>
 </div>
 {% endpartialdef temporary_form %}

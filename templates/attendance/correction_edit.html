@@ -12,7 +12,7 @@
   <div class="card__body">
     <div id="correction-edit-form-container">
       {% partialdef correction_edit_form inline %}
-<form
+<form class="tt-form-shell"
     id="correction-edit-form"
     hx-post="{% url 'correction_edit' correction.pk %}"
     hx-target="#correction-edit-form-container"
@@ -59,8 +59,10 @@
         {% if form.reason.errors %}<span class="error">{{ form.reason.errors }}</span>{% endif %}
     </div>
 
-    <button type="submit">Save changes</button>
-    <a href="{% url 'attendance_correction_list' %}">Back to corrections</a>
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Save changes</button>
+        <a href="{% url 'attendance_correction_list' %}" class="btn btn--ghost">Back to corrections</a>
+    </div>
 </form>
 {% endpartialdef correction_edit_form %}
     </div>

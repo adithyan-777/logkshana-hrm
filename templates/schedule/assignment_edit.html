@@ -10,13 +10,13 @@
     <span class="card__title">Edit assignment</span>
   </div>
   <div class="card__body">
-    <div id="assignment-edit-form-container">
-      {% partialdef assignment_edit_form inline %}
-<form
+    {% partialdef assignment_edit_form inline %}
+<div id="assignment-edit-form-container">
+<form class="tt-form-shell"
     id="assignment-edit-form"
     hx-post="{% url 'assignment_edit' assignment.pk %}"
     hx-target="#assignment-edit-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -24,53 +24,15 @@
     <div class="message error">{{ form.non_field_errors }}</div>
     {% endif %}
 
-    <div class="field">
-        <label for="{{ form.assignment_type.id_for_label }}">Assignment type *</label>
-        {{ form.assignment_type }}
-        {% if form.assignment_type.errors %}<span class="error">{{ form.assignment_type.errors }}</span>{% endif %}
-    </div>
+    {% include "schedule/partials/assignment_fields.html" %}
 
-    <div class="field">
-        <label for="{{ form.shift.id_for_label }}">Shift *</label>
-        {{ form.shift }}
-        {% if form.shift.errors %}<span class="error">{{ form.shift.errors }}</span>{% endif %}
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Save changes</button>
+        <a href="{% url 'assignment_list' %}" class="btn btn--ghost">Back to assignments</a>
     </div>
-
-    <div class="field-row">
-        <div class="field">
-            <label for="{{ form.start_date.id_for_label }}">Start date *</label>
-            {{ form.start_date }}
-            {% if form.start_date.errors %}<span class="error">{{ form.start_date.errors }}</span>{% endif %}
-        </div>
-        <div class="field">
-            <label for="{{ form.end_date.id_for_label }}">End date *</label>
-            {{ form.end_date }}
-            {% if form.end_date.errors %}<span class="error">{{ form.end_date.errors }}</span>{% endif %}
-        </div>
-    </div>
-
-    <div class="field">
-        <label for="{{ form.employee.id_for_label }}">Employee</label>
-        {{ form.employee }}
-        {% if form.employee.errors %}<span class="error">{{ form.employee.errors }}</span>{% endif %}
-    </div>
-
-    <div class="field">
-        <label for="{{ form.department.id_for_label }}">Department</label>
-        {{ form.department }}
-        {% if form.department.errors %}<span class="error">{{ form.department.errors }}</span>{% endif %}
-    </div>
-
-    <div class="field checkbox">
-        {{ form.overwrite_existing }}
-        <label for="{{ form.overwrite_existing.id_for_label }}">Overwrite existing schedules</label>
-    </div>
-
-    <button type="submit">Save changes</button>
-    <a href="{% url 'assignment_list' %}">Back to assignments</a>
 </form>
+</div>
 {% endpartialdef assignment_edit_form %}
-    </div>
   </div>
 </div>
 {% endblock %}

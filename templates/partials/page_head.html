@@ -16,6 +16,7 @@
         hx-target="#modal-body"
         hx-swap="innerHTML"
         hx-boost="false"
+        hx-push-url="false"
         @click="$store.ui.openModal('{{ topbar_action.label|escapejs }}', '{{ topbar_action.drawer_size|default:'default'|escapejs }}')"
       >
         <i class="bx bx-plus admin-icon admin-icon--18"></i>

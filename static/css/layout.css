@@ -229,8 +229,9 @@
   max-width: var(--content-max);
   margin: 0 auto;
   width: 100%;
-  padding: var(--space-3);
+  padding: var(--space-4) var(--space-3);
   box-sizing: border-box;
+  min-width: 0;
 }
 
 .page-content--wide { max-width: none; }
@@ -367,6 +368,25 @@
   /* Prevent content from being covered by the fixed bar */
   .page-content {
     padding-bottom: calc(var(--space-7) + var(--space-8));
+  }
+
+  .app {
+    padding: 0;
+    gap: 0;
+  }
+
+  :root[data-sidebar-variant="inset"] .app {
+    padding: 0;
+    gap: 0;
+  }
+
+  .main {
+    gap: 0;
+  }
+
+  .topbar,
+  .main-scroll {
+    border-radius: 0;
   }
 }
 

@@ -13,7 +13,7 @@ from schedule.models import (
 
 
 def timetable_list(*, search: str = "") -> QuerySet[Timetable]:
-    queryset = Timetable.objects.order_by("name")
+    queryset = Timetable.objects.prefetch_related("breaks").order_by("name")
 
     if search:
         queryset = queryset.filter(

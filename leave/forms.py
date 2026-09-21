@@ -1,5 +1,7 @@
 from django import forms
 
+from common.forms import apply_form_field_ui
+
 from employees.models import Employee
 from leave.models import Holiday, LeavePolicy, LeaveRequest, LeaveType
 
@@ -19,6 +21,11 @@ class LeaveTypeForm(forms.ModelForm):
             "allow_negative_balance",
             "is_active",
         ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        apply_form_field_ui(self)
+
 
 
 class LeavePolicyForm(forms.ModelForm):
@@ -43,6 +50,7 @@ class LeavePolicyForm(forms.ModelForm):
         self.fields["leave_type"].queryset = LeaveType.objects.filter(
             is_active=True
         ).order_by("name")
+        apply_form_field_ui(self)
 
 
 class LeaveRequestForm(forms.ModelForm):
@@ -73,6 +81,8 @@ class LeaveRequestForm(forms.ModelForm):
         self.fields["leave_type"].queryset = LeaveType.objects.filter(
             is_active=True
         ).order_by("name")
+        apply_form_field_ui(self)
+
 
     def clean(self):
         cleaned_data = super().clean()
@@ -100,6 +110,11 @@ class HolidayForm(forms.ModelForm):
             "date": DATE_INPUT,
             "end_date": DATE_INPUT,
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        apply_form_field_ui(self)
+
 
     def clean(self):
         cleaned_data = super().clean()

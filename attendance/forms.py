@@ -1,6 +1,7 @@
 from django import forms
 
 from attendance.models import Attendance, AttendanceActivity
+from common.forms import apply_form_field_ui
 from employees.models import Employee
 from schedule.models import Timetable
 
@@ -29,6 +30,7 @@ class AttendanceActivityForm(forms.ModelForm):
         self.fields["employee"].queryset = Employee.objects.filter(
             is_active=True
         ).order_by("first_name", "last_name")
+        apply_form_field_ui(self)
 
 
 class AttendanceForm(forms.ModelForm):
@@ -52,3 +54,4 @@ class AttendanceForm(forms.ModelForm):
         self.fields["shift"].queryset = Timetable.objects.filter(
             is_active=True
         ).order_by("name")
+        apply_form_field_ui(self)

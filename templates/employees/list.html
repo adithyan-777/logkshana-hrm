@@ -62,9 +62,8 @@
             </td>
             <td class="table-actions">
                 {% if can_edit %}
-                <a href="{% url 'employee_edit' employee.pk %}" class="btn-icon" title="Edit employee" aria-label="Edit {{ employee.first_name }} {{ employee.last_name }}">
-                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
-                </a>
+                {% url 'employee_edit' employee.pk as employee_edit_url %}
+                {% include "partials/drawer_link.html" with url=employee_edit_url title="Edit employee" icon="bx-edit" class="btn-icon" size="wide" %}
                 {% endif %}
                 {% if can_delete %}
                 <button

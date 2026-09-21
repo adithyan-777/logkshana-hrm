@@ -21,7 +21,7 @@
 <div id="form-messages"></div>
 {% endif %}
 
-<form
+<form class="tt-form-shell"
     id="leave-type-form"
     hx-post="{% url 'leave_type_add' %}"
     hx-target="#leave-type-form-container"
@@ -51,32 +51,39 @@
     </div>
 
     <div class="field-row">
-        <div class="field checkbox">
-            {{ form.paid }}
-            <label for="{{ form.paid.id_for_label }}">Paid leave</label>
-        </div>
-        <div class="field checkbox">
-            {{ form.requires_approval }}
-            <label for="{{ form.requires_approval.id_for_label }}">Requires approval</label>
-        </div>
-        <div class="field checkbox">
-            {{ form.allow_half_day }}
-            <label for="{{ form.allow_half_day.id_for_label }}">Allow half day</label>
-        </div>
+        <label class="form-switch">
+                {{ form.paid }}
+                <span class="form-switch__ui" aria-hidden="true"></span>
+                <span class="form-switch__label">Paid leave</span>
+            </label>
+        <label class="form-switch">
+                {{ form.requires_approval }}
+                <span class="form-switch__ui" aria-hidden="true"></span>
+                <span class="form-switch__label">Requires approval</span>
+            </label>
+        <label class="form-switch">
+                {{ form.allow_half_day }}
+                <span class="form-switch__ui" aria-hidden="true"></span>
+                <span class="form-switch__label">Allow half day</span>
+            </label>
     </div>
 
     <div class="field-row">
-        <div class="field checkbox">
-            {{ form.allow_negative_balance }}
-            <label for="{{ form.allow_negative_balance.id_for_label }}">Allow negative balance</label>
-        </div>
-        <div class="field checkbox">
-            {{ form.is_active }}
-            <label for="{{ form.is_active.id_for_label }}">Active</label>
-        </div>
+        <label class="form-switch">
+                {{ form.allow_negative_balance }}
+                <span class="form-switch__ui" aria-hidden="true"></span>
+                <span class="form-switch__label">Allow negative balance</span>
+            </label>
+        <label class="form-switch">
+                {{ form.is_active }}
+                <span class="form-switch__ui" aria-hidden="true"></span>
+                <span class="form-switch__label">Active</span>
+            </label>
     </div>
 
-    <button type="submit">Add Leave Type</button>
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Add Leave Type</button>
+    </div>
 </form>
 </div>
 {% endpartialdef leave_type_form %}

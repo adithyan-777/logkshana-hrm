@@ -10,7 +10,7 @@
   <div class="card__body">
     <div id="position-edit-form-container">
       {% partialdef position_edit_form inline %}
-<form
+<form class="tt-form-shell"
     id="position-edit-form"
     hx-post="{% url 'position_edit' position.pk %}"
     hx-target="#position-edit-form-container"
@@ -40,8 +40,10 @@
         {% if form.parent.errors %}<span class="error">{{ form.parent.errors }}</span>{% endif %}
     </div>
 
-    <button type="submit">Save changes</button>
-    <a href="{% url 'position_list' %}">Back to positions</a>
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Save changes</button>
+        <a href="{% url 'position_list' %}" class="btn btn--ghost">Back to positions</a>
+    </div>
 </form>
 {% endpartialdef position_edit_form %}
     </div>

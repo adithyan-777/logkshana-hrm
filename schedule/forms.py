@@ -2,6 +2,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import inlineformset_factory
 
+from common.forms import apply_form_field_ui
 from schedule.models import Schedule, Timetable, TimetableBreak
 from schedule.services import (
     TIMETABLE_TIMES_ORDER_ERROR,
@@ -36,6 +37,10 @@ class TimetableForm(forms.ModelForm):
             "check_in_start": TIME_INPUT,
             "check_in_end": TIME_INPUT,
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        apply_form_field_ui(self)
 
     def clean(self):
         cleaned_data = super().clean()
@@ -77,6 +82,10 @@ class TimetableBreakForm(forms.ModelForm):
             "start_time": TIME_INPUT,
             "end_time": TIME_INPUT,
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        apply_form_field_ui(self)
 
     def clean(self):
         cleaned_data = super().clean()
@@ -136,6 +145,7 @@ class ScheduleForm(forms.ModelForm):
         self.fields["timetable"].queryset = Timetable.objects.filter(
             is_active=True
         ).order_by("name")
+        apply_form_field_ui(self)
 
     def clean(self):
         cleaned_data = super().clean()

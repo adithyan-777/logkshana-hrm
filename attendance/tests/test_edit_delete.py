@@ -25,12 +25,14 @@ class AttendanceEditDeleteTestMixin:
 class AttendanceActivityEditDeleteTests(
     AttendanceEditDeleteTestMixin, BaseTenantTestCase
 ):
-    def test_edit_get_200(self):
+    def test_edit_get_redirects_to_list_drawer(self):
         punch = activity_factory(external_id="TX-ED-GET")
 
         response = self.client.get(reverse("transaction_edit", args=[punch.pk]))
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("attendance_transaction_list"), response.url)
+        self.assertIn("drawer=", response.url)
 
     def test_edit_post_updates_and_triggers(self):
         punch = activity_factory(
@@ -81,12 +83,14 @@ class AttendanceActivityEditDeleteTests(
 
 
 class AttendanceRecordEditDeleteTests(AttendanceEditDeleteTestMixin, BaseTenantTestCase):
-    def test_edit_get_200(self):
+    def test_edit_get_redirects_to_list_drawer(self):
         record = attendance_record_factory(day=date(2026, 7, 20))
 
         response = self.client.get(reverse("daily_edit", args=[record.pk]))
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("daily_attendance_list"), response.url)
+        self.assertIn("drawer=", response.url)
 
     def test_edit_post_updates_and_triggers(self):
         record = attendance_record_factory(

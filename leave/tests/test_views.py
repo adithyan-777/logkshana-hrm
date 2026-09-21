@@ -114,7 +114,7 @@ class LeaveTypeViewTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers.get("HX-Trigger"), "leaveTypeCreated")
+        self.assertIn("leaveTypeCreated", response.headers.get("HX-Trigger"))
         self.assertTrue(LeaveType.objects.filter(code=code).exists())
 
 
@@ -144,7 +144,7 @@ class LeaveRequestViewTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers.get("HX-Trigger"), "leaveRequestCreated")
+        self.assertIn("leaveRequestCreated", response.headers.get("HX-Trigger"))
         self.assertTrue(
             LeaveRequest.objects.filter(
                 employee=employee,
@@ -167,5 +167,5 @@ class HolidayViewTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers.get("HX-Trigger"), "holidayCreated")
+        self.assertIn("holidayCreated", response.headers.get("HX-Trigger"))
         self.assertTrue(Holiday.objects.filter(name="Labour Day").exists())

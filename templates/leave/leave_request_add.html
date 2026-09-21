@@ -23,6 +23,7 @@
 
 <form
     id="leave-request-form"
+    class="tt-form-shell"
     hx-post="{% url 'leave_request_add' %}"
     hx-target="#leave-request-form-container"
     hx-swap="outerHTML"
@@ -33,64 +34,71 @@
     <div class="message error">{{ form.non_field_errors }}</div>
     {% endif %}
 
-    <div class="field">
-        <label for="{{ form.employee.id_for_label }}">Employee *</label>
-        {{ form.employee }}
-        {% if form.employee.errors %}<span class="error">{{ form.employee.errors }}</span>{% endif %}
-    </div>
+    <fieldset class="tt-panel">
+        <legend>Request</legend>
+        <div class="field">
+            <label class="form-label" for="{{ form.employee.id_for_label }}">Employee *</label>
+            {{ form.employee }}
+            {% if form.employee.errors %}<span class="error">{{ form.employee.errors }}</span>{% endif %}
+        </div>
+        <div class="field">
+            <label class="form-label" for="{{ form.leave_type.id_for_label }}">Leave type *</label>
+            {{ form.leave_type }}
+            {% if form.leave_type.errors %}<span class="error">{{ form.leave_type.errors }}</span>{% endif %}
+        </div>
+        <div class="field-row">
+            <div class="field">
+                <label class="form-label" for="{{ form.duration_type.id_for_label }}">Duration type</label>
+                {{ form.duration_type }}
+            </div>
+            <div class="field">
+                <label class="form-label" for="{{ form.status.id_for_label }}">Status</label>
+                {{ form.status }}
+            </div>
+        </div>
+    </fieldset>
+
+    <fieldset class="tt-panel">
+        <legend>Dates</legend>
+        <div class="field-row">
+            <div class="field">
+                <label class="form-label" for="{{ form.start_date.id_for_label }}">Start date *</label>
+                {{ form.start_date }}
+                {% if form.start_date.errors %}<span class="error">{{ form.start_date.errors }}</span>{% endif %}
+            </div>
+            <div class="field">
+                <label class="form-label" for="{{ form.end_date.id_for_label }}">End date *</label>
+                {{ form.end_date }}
+                {% if form.end_date.errors %}<span class="error">{{ form.end_date.errors }}</span>{% endif %}
+            </div>
+            <div class="field">
+                <label class="form-label" for="{{ form.days.id_for_label }}">Days *</label>
+                {{ form.days }}
+                {% if form.days.errors %}<span class="error">{{ form.days.errors }}</span>{% endif %}
+            </div>
+        </div>
+        <div class="tt-switch-stack">
+            <label class="form-switch">
+                {{ form.start_half }}
+                <span class="form-switch__ui" aria-hidden="true"></span>
+                <span class="form-switch__label">Start half day</span>
+            </label>
+            <label class="form-switch">
+                {{ form.end_half }}
+                <span class="form-switch__ui" aria-hidden="true"></span>
+                <span class="form-switch__label">End half day</span>
+            </label>
+        </div>
+    </fieldset>
 
     <div class="field">
-        <label for="{{ form.leave_type.id_for_label }}">Leave type *</label>
-        {{ form.leave_type }}
-        {% if form.leave_type.errors %}<span class="error">{{ form.leave_type.errors }}</span>{% endif %}
-    </div>
-
-    <div class="field-row">
-        <div class="field">
-            <label for="{{ form.start_date.id_for_label }}">Start date *</label>
-            {{ form.start_date }}
-            {% if form.start_date.errors %}<span class="error">{{ form.start_date.errors }}</span>{% endif %}
-        </div>
-        <div class="field">
-            <label for="{{ form.end_date.id_for_label }}">End date *</label>
-            {{ form.end_date }}
-            {% if form.end_date.errors %}<span class="error">{{ form.end_date.errors }}</span>{% endif %}
-        </div>
-        <div class="field">
-            <label for="{{ form.days.id_for_label }}">Days *</label>
-            {{ form.days }}
-            {% if form.days.errors %}<span class="error">{{ form.days.errors }}</span>{% endif %}
-        </div>
-    </div>
-
-    <div class="field-row">
-        <div class="field">
-            <label for="{{ form.duration_type.id_for_label }}">Duration type</label>
-            {{ form.duration_type }}
-        </div>
-        <div class="field">
-            <label for="{{ form.status.id_for_label }}">Status</label>
-            {{ form.status }}
-        </div>
-    </div>
-
-    <div class="field-row">
-        <div class="field checkbox">
-            {{ form.start_half }}
-            <label for="{{ form.start_half.id_for_label }}">Start half day</label>
-        </div>
-        <div class="field checkbox">
-            {{ form.end_half }}
-            <label for="{{ form.end_half.id_for_label }}">End half day</label>
-        </div>
-    </div>
-
-    <div class="field">
-        <label for="{{ form.reason.id_for_label }}">Reason</label>
+        <label class="form-label" for="{{ form.reason.id_for_label }}">Reason</label>
         {{ form.reason }}
     </div>
 
-    <button type="submit">Add Leave Request</button>
+    <div class="form-actions">
+        <button type="submit" class="btn btn--primary">Add Leave Request</button>
+    </div>
 </form>
 </div>
 {% endpartialdef leave_request_form %}

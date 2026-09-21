@@ -12,7 +12,7 @@
   <div class="card__body">
     <div id="transaction-edit-form-container">
       {% partialdef transaction_edit_form inline %}
-<form
+<form class="tt-form-shell"
     id="transaction-edit-form"
     hx-post="{% url 'transaction_edit' transaction.pk %}"
     hx-target="#transaction-edit-form-container"
@@ -46,8 +46,10 @@
         </div>
     </div>
 
-    <button type="submit">Save changes</button>
-    <a href="{% url 'attendance_transaction_list' %}">Back to punches</a>
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Save changes</button>
+        <a href="{% url 'attendance_transaction_list' %}" class="btn btn--ghost">Back to punches</a>
+    </div>
 </form>
 {% endpartialdef transaction_edit_form %}
     </div>

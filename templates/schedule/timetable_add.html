@@ -5,7 +5,7 @@
 {% block page_content %}
 {% include "partials/tabs_schedule.html#tabs_schedule" %}
 
-<div class="card" style="max-width:720px;">
+<div class="card" style="max-width:560px;">
   <div class="card__header">
     <span class="card__title">Add timetable</span>
   </div>
@@ -23,6 +23,7 @@
 
 <form
     id="timetable-form"
+    class="tt-form-shell"
     hx-post="{% url 'timetable_add' %}"
     hx-target="#timetable-form-container"
     hx-swap="outerHTML"
@@ -35,7 +36,6 @@
 
     <fieldset class="form-section">
         <legend>Basic info</legend>
-
         <div class="field">
             <label for="{{ form.name.id_for_label }}">Name *</label>
             {{ form.name }}
@@ -184,7 +184,9 @@
         {% endfor %}
     </fieldset>
 
-    <button type="submit">Add Timetable</button>
+    <div class="form-actions">
+      <button type="submit" class="btn btn--primary">Add Timetable</button>
+    </div>
 </form>
 </div>
 {% endpartialdef timetable_form %}

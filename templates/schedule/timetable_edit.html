@@ -5,18 +5,19 @@
 {% block page_content %}
 {% include "partials/tabs_schedule.html#tabs_schedule" %}
 
-<div class="card" style="max-width:720px;">
+<div class="card" style="max-width:560px;">
   <div class="card__header">
     <span class="card__title">Edit timetable</span>
   </div>
   <div class="card__body">
-    <div id="timetable-edit-form-container">
-      {% partialdef timetable_edit_form inline %}
+    {% partialdef timetable_edit_form inline %}
+<div id="timetable-edit-form-container">
 <form
     id="timetable-edit-form"
+    class="tt-form-shell"
     hx-post="{% url 'timetable_edit' timetable.pk %}"
     hx-target="#timetable-edit-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -26,7 +27,6 @@
 
     <fieldset class="form-section">
         <legend>Basic info</legend>
-
         <div class="field">
             <label for="{{ form.name.id_for_label }}">Name *</label>
             {{ form.name }}
@@ -175,11 +175,12 @@
         {% endfor %}
     </fieldset>
 
-    <button type="submit">Save changes</button>
-    <a href="{% url 'timetable_list' %}">Back to timetables</a>
+    <div class="form-actions">
+      <button type="submit" class="btn btn--primary">Save changes</button>
+      <a href="{% url 'timetable_list' %}" class="btn btn--ghost">Back to timetables</a>
+    </div>
 </form>
 {% endpartialdef timetable_edit_form %}
-    </div>
   </div>
 </div>
 {% endblock %}

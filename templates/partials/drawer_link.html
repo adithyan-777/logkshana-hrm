@@ -1,5 +1,7 @@
-{# Open a create form in the right drawer instead of navigating away.
-   Required: url, title, label. Optional: class, size (default|wide). #}
+{% comment %}
+Open a create/edit form in the right drawer instead of navigating away.
+Required: url, title. Optional: label, icon, class, size (default|wide).
+{% endcomment %}
 <a
   {% if class %}class="{{ class }}"{% endif %}
   href="{{ url }}"
@@ -7,5 +9,14 @@
   hx-target="#modal-body"
   hx-swap="innerHTML"
   hx-boost="false"
+  hx-push-url="false"
+  title="{{ title }}"
+  {% if icon %}aria-label="{{ title }}"{% endif %}
   @click="$store.ui.openModal('{{ title|escapejs }}', '{{ size|default:'default'|escapejs }}')"
->{{ label }}</a>
+>
+  {% if icon %}
+  <i class="bx {{ icon }} admin-icon admin-icon--18" aria-hidden="true"></i>
+  {% else %}
+  {{ label }}
+  {% endif %}
+</a>

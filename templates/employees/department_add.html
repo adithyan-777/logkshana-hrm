@@ -19,7 +19,7 @@
 <div id="form-messages"></div>
 {% endif %}
 
-<form
+<form class="tt-form-shell"
     id="department-form"
     hx-post="{% url 'department_add' %}"
     hx-target="#department-form-container"
@@ -49,7 +49,9 @@
         {% if form.parent.errors %}<span class="error">{{ form.parent.errors }}</span>{% endif %}
     </div>
 
-    <button type="submit">Add Department</button>
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Add Department</button>
+    </div>
 </form>
 </div>
 {% endpartialdef department_form %}

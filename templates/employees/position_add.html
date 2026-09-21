@@ -19,7 +19,7 @@
 <div id="form-messages"></div>
 {% endif %}
 
-<form
+<form class="tt-form-shell"
     id="position-form"
     hx-post="{% url 'position_add' %}"
     hx-target="#position-form-container"
@@ -49,7 +49,9 @@
         {% if form.parent.errors %}<span class="error">{{ form.parent.errors }}</span>{% endif %}
     </div>
 
-    <button type="submit">Add Position</button>
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Add Position</button>
+    </div>
 </form>
 </div>
 {% endpartialdef position_form %}

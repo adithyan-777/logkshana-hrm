@@ -46,7 +46,7 @@
 <div id="form-messages"></div>
 {% endif %}
 
-<form
+<form class="tt-form-shell"
     id="employee-form"
     hx-post="{% url 'employee_add' %}"
     hx-target="#employee-form-container"
@@ -115,13 +115,16 @@
         {% if form.hire_date.errors %}<span class="error">{{ form.hire_date.errors }}</span>{% endif %}
     </div>
 
-    <div class="field checkbox">
-        {{ form.is_active }}
-        <label for="{{ form.is_active.id_for_label }}">Active</label>
-        {% if form.is_active.errors %}<span class="error">{{ form.is_active.errors }}</span>{% endif %}
-    </div>
+    <label class="form-switch">
+                {{ form.is_active }}
+                <span class="form-switch__ui" aria-hidden="true"></span>
+                <span class="form-switch__label">Active</span>
+            </label>
+    {% if form.is_active.errors %}<span class="error">{{ form.is_active.errors }}</span>{% endif %}
 
-    <button type="submit">Add Employee</button>
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Add Employee</button>
+    </div>
 </form>
 </div>
 {% endpartialdef employee_form %}

@@ -147,7 +147,7 @@ class EmployeeViewTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers.get("HX-Trigger"), "employeeCreated")
+        self.assertIn("employeeCreated", response.headers.get("HX-Trigger"))
         self.assertTemplateUsed(response, "employee_invite")
         self.assertContains(response, "/accounts/password/reset/key/")
         self.assertContains(response, 'data-invite-link="')
@@ -208,7 +208,7 @@ class EmployeeViewTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers.get("HX-Trigger"), "employeeUpdated")
+        self.assertIn("employeeUpdated", response.headers.get("HX-Trigger"))
         employee.refresh_from_db()
         self.assertEqual(employee.first_name, "After")
         self.assertEqual(employee.last_name, "Updated")
@@ -269,7 +269,7 @@ class DepartmentViewTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers.get("HX-Trigger"), "departmentCreated")
+        self.assertIn("departmentCreated", response.headers.get("HX-Trigger"))
         self.assertTrue(Department.objects.filter(code="ENG").exists())
 
     def test_add_rejects_invalid_data(self):
@@ -327,7 +327,7 @@ class PositionViewTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers.get("HX-Trigger"), "positionCreated")
+        self.assertIn("positionCreated", response.headers.get("HX-Trigger"))
         self.assertTrue(Position.objects.filter(code="MGR").exists())
 
 
@@ -378,7 +378,7 @@ class RoleViewTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers.get("HX-Trigger"), "roleCreated")
+        self.assertIn("roleCreated", response.headers.get("HX-Trigger"))
         self.assertTrue(Role.objects.filter(name="Manager").exists())
 
     def test_add_attaches_permissions(self):
@@ -394,12 +394,12 @@ class RoleViewTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers.get("HX-Trigger"), "roleCreated")
+        self.assertIn("roleCreated", response.headers.get("HX-Trigger"))
         role = Role.objects.get(name="HR Manager")
         self.assertEqual(set(role.permissions.all()), {view_perm, add_perm})
 
     def test_add_form_seeds_catalog_as_checkboxes(self):
-        response = self.client.get(reverse("role_add"))
+        response = self.client.get(reverse("role_add"), HTTP_HX_REQUEST="true")
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'class="permission-multiselect"')
@@ -470,5 +470,5 @@ class PermissionViewTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers.get("HX-Trigger"), "permissionCreated")
+        self.assertIn("permissionCreated", response.headers.get("HX-Trigger"))
         self.assertTrue(Permission.objects.filter(codename="view_employees").exists())

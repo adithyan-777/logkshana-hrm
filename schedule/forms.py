@@ -2,21 +2,13 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import inlineformset_factory
 
-from employees.models import Department, Employee
-from schedule.models import (
-    ScheduleAssignment,
-    Shift,
-    ShiftDay,
-    TemporarySchedule,
-    Timetable,
-)
+from schedule.models import Schedule, Timetable, TimetableBreak
 from schedule.services import (
     TIMETABLE_TIMES_ORDER_ERROR,
     validate_timetable_times,
 )
 
 TIME_INPUT = forms.TimeInput(attrs={"type": "time"})
-DATE_INPUT = forms.DateInput(attrs={"type": "date"})
 
 
 class TimetableForm(forms.ModelForm):
@@ -26,26 +18,16 @@ class TimetableForm(forms.ModelForm):
             "name",
             "code",
             "type",
-            "work_type",
-            "workday",
             "check_in",
             "check_out",
+            "check_out_cross_days",
             "work_minutes",
             "check_in_start",
             "check_in_end",
-            "check_out_start",
-            "check_out_end",
-            "check_in_cross_days",
-            "check_out_cross_days",
-            "require_check_in",
-            "require_check_out",
-            "allow_late_in",
-            "allow_early_out",
-            "late_in_grace_minutes",
-            "early_out_grace_minutes",
+            "grace_period_check_out",
+            "grace_period_minutes",
+            "count_break_time_as_work_time",
             "multiple_in_out",
-            "day_change_time",
-            "color",
             "is_active",
         ]
         widgets = {
@@ -53,9 +35,6 @@ class TimetableForm(forms.ModelForm):
             "check_out": TIME_INPUT,
             "check_in_start": TIME_INPUT,
             "check_in_end": TIME_INPUT,
-            "check_out_start": TIME_INPUT,
-            "check_out_end": TIME_INPUT,
-            "day_change_time": TIME_INPUT,
         }
 
     def clean(self):
@@ -64,115 +43,106 @@ class TimetableForm(forms.ModelForm):
             validate_timetable_times(
                 check_in=cleaned_data.get("check_in"),
                 check_out=cleaned_data.get("check_out"),
-                check_in_cross_days=cleaned_data.get("check_in_cross_days"),
                 check_out_cross_days=cleaned_data.get("check_out_cross_days"),
             )
         except ValidationError:
             self.add_error("check_out_cross_days", TIMETABLE_TIMES_ORDER_ERROR)
+
+        timetable_type = cleaned_data.get("type")
+        work_minutes = cleaned_data.get("work_minutes")
+        if (
+            timetable_type == Timetable.Type.FLEXIBLE
+            and work_minutes in (None, "")
+        ):
+            self.add_error(
+                "work_minutes",
+                "Required working minutes must be set for flexible timetables.",
+            )
         return cleaned_data
 
 
-class ShiftForm(forms.ModelForm):
+class TimetableBreakForm(forms.ModelForm):
     class Meta:
-        model = Shift
+        model = TimetableBreak
         fields = [
             "name",
-            "code",
-            "auto_shift",
-            "cycle_unit",
-            "cycle_count",
-            "is_active",
+            "break_time_type",
+            "break_time_minutes",
+            "start_time",
+            "end_time",
+            "grace_period_check_out",
+            "grace_period_minutes",
         ]
+        widgets = {
+            "start_time": TIME_INPUT,
+            "end_time": TIME_INPUT,
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_time = cleaned_data.get("start_time")
+        end_time = cleaned_data.get("end_time")
+        if start_time and end_time and end_time <= start_time:
+            self.add_error("end_time", "End time must be after start time.")
+
+        break_time_type = cleaned_data.get("break_time_type")
+        break_time_minutes = cleaned_data.get("break_time_minutes")
+        if (
+            break_time_type == TimetableBreak.BreakType.FLEXIBLE
+            and break_time_minutes in (None, "")
+        ):
+            self.add_error(
+                "break_time_minutes",
+                "Break minutes are required for flexible breaks.",
+            )
+        return cleaned_data
 
 
-ShiftDayFormSet = inlineformset_factory(
-    Shift,
-    ShiftDay,
-    fields=["day_number", "timetable"],
-    extra=7,
+TimetableBreakFormSet = inlineformset_factory(
+    Timetable,
+    TimetableBreak,
+    form=TimetableBreakForm,
+    fields=[
+        "name",
+        "break_time_type",
+        "break_time_minutes",
+        "start_time",
+        "end_time",
+        "grace_period_check_out",
+        "grace_period_minutes",
+    ],
+    extra=1,
     can_delete=True,
 )
 
 
-def build_shift_day_formset(*args, **kwargs) -> ShiftDayFormSet:
-    formset = ShiftDayFormSet(*args, **kwargs)
-    timetable_queryset = Timetable.objects.filter(is_active=True).order_by("name")
-    for form in formset.forms:
-        form.fields["timetable"].queryset = timetable_queryset
-    return formset
+def build_timetable_break_formset(*args, **kwargs) -> TimetableBreakFormSet:
+    return TimetableBreakFormSet(*args, **kwargs)
 
 
-class ScheduleAssignmentForm(forms.ModelForm):
+class ScheduleForm(forms.ModelForm):
     class Meta:
-        model = ScheduleAssignment
+        model = Schedule
         fields = [
-            "assignment_type",
-            "shift",
-            "start_date",
-            "end_date",
-            "employee",
-            "department",
-            "overwrite_existing",
-        ]
-        widgets = {
-            "start_date": DATE_INPUT,
-            "end_date": DATE_INPUT,
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields["shift"].queryset = Shift.objects.filter(is_active=True).order_by(
-            "name"
-        )
-        self.fields["employee"].queryset = Employee.objects.filter(
-            is_active=True
-        ).order_by("first_name", "last_name")
-        self.fields["department"].queryset = Department.objects.order_by("name")
-
-    def clean(self):
-        cleaned_data = super().clean()
-        assignment_type = cleaned_data.get("assignment_type")
-        employee = cleaned_data.get("employee")
-        department = cleaned_data.get("department")
-        start_date = cleaned_data.get("start_date")
-        end_date = cleaned_data.get("end_date")
-
-        if start_date and end_date and end_date < start_date:
-            self.add_error("end_date", "End date must be on or after start date.")
-
-        if (
-            assignment_type == ScheduleAssignment.AssignmentType.EMPLOYEE
-            and not employee
-        ):
-            self.add_error("employee", "Required for employee assignments.")
-        elif (
-            assignment_type == ScheduleAssignment.AssignmentType.DEPARTMENT
-            and not department
-        ):
-            self.add_error("department", "Required for department assignments.")
-
-        return cleaned_data
-
-
-class TemporaryScheduleForm(forms.ModelForm):
-    class Meta:
-        model = TemporarySchedule
-        fields = [
-            "employee",
-            "date",
+            "name",
             "timetable",
-            "reason",
-            "overrides_normal_schedule",
+            "repeat",
+            "repeat_every",
+            "repeat_unit",
         ]
-        widgets = {
-            "date": DATE_INPUT,
-        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["employee"].queryset = Employee.objects.filter(
-            is_active=True
-        ).order_by("first_name", "last_name")
         self.fields["timetable"].queryset = Timetable.objects.filter(
             is_active=True
         ).order_by("name")
+
+    def clean(self):
+        cleaned_data = super().clean()
+        repeat = cleaned_data.get("repeat")
+        repeat_every = cleaned_data.get("repeat_every")
+        if repeat and repeat_every in (None, ""):
+            self.add_error("repeat_every", "Repeat interval is required.")
+        elif repeat and repeat_every is not None and repeat_every < 1:
+            self.add_error("repeat_every", "Repeat interval must be at least 1.")
+        return cleaned_data

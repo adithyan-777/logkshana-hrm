@@ -2,8 +2,8 @@ from datetime import date, time
 
 from employees.models import Department, Position
 from employees.services import employee_create
-from schedule.models import Timetable
-from schedule.services import shift_create, timetable_create
+from schedule.models import Schedule, Timetable
+from schedule.services import schedule_create, timetable_create
 
 
 def device_factory(*, serial_number="ZK-001", company, branch=None, **kwargs):
@@ -32,7 +32,6 @@ def device_factory(*, serial_number="ZK-001", company, branch=None, **kwargs):
 def timetable_factory(*, name="Morning Shift", code="MORN", **kwargs) -> Timetable:
     defaults = {
         "type": Timetable.Type.NORMAL,
-        "work_type": Timetable.WorkType.WORK,
         "check_in": time(9, 0),
         "check_out": time(18, 0),
     }
@@ -40,17 +39,22 @@ def timetable_factory(*, name="Morning Shift", code="MORN", **kwargs) -> Timetab
     return timetable_create(name=name, code=code, **defaults)
 
 
-def shift_factory(*, name="Week Shift", code="WEEK", timetable=None, **kwargs):
+def schedule_factory(
+    *, name="Weekly Schedule", timetable=None, **kwargs
+) -> Schedule:
     if timetable is None:
-        timetable = timetable_factory(name="Base Shift", code=f"BASE-{code}")
+        timetable = timetable_factory(
+            name=f"Base {name}", code=f"BASE-{name[:4].upper()}"
+        )
 
     defaults = {
-        "cycle_unit": "week",
-        "cycle_count": 1,
-        "shift_days": [{"day_number": 1, "timetable": timetable}],
+        "timetable": timetable,
+        "repeat": True,
+        "repeat_every": 1,
+        "repeat_unit": Schedule.RepeatUnitType.WEEK,
     }
     defaults.update(kwargs)
-    return shift_create(name=name, code=code, **defaults)
+    return schedule_create(name=name, **defaults)
 
 
 def department_factory(*, name="Engineering", code="ENG") -> Department:

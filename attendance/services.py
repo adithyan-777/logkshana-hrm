@@ -27,8 +27,17 @@ from employees.models import Employee
 from employees.selectors import employee_get_by_emp_code
 from employees.services import employee_create
 from schedule.calculation import expected_datetimes
-from schedule.models import OvertimeRule, Timetable
-from schedule.selectors import schedule_for_employee_on_date
+from schedule.models import Timetable
+
+
+def schedule_for_employee_on_date(*, employee, day):
+    """Placeholder — employee schedule resolution was removed with the old
+    Shift/ScheduleAssignment models and needs a redesign against the new
+    Schedule model."""
+    raise NotImplementedError(
+        "Employee schedule resolution needs a redesign against the new "
+        "Schedule model (no employee/date assignment exists yet)."
+    )
 
 DEFAULT_DAY_CHANGE_TIME = time(8, 0)
 
@@ -437,19 +446,11 @@ def _expected_schedule(*, timetable, day):
 
 
 def _overtime_minutes(*, timetable, worked_minutes, scheduled_minutes) -> int:
-    """Excess over scheduled time when the timetable's overtime rule allows it."""
-    try:
-        overtime_rule = timetable.overtime_rule if timetable is not None else None
-    except OvertimeRule.DoesNotExist:
-        return 0
-    if overtime_rule is None or not overtime_rule.enabled:
-        return 0
-    excess = worked_minutes - scheduled_minutes
-    if excess < overtime_rule.minimum_minutes:
-        return 0
-    if overtime_rule.maximum_minutes is not None:
-        return min(excess, overtime_rule.maximum_minutes)
-    return excess
+    """Overtime rules were removed with the old schedule models.
+
+    Pending attendance redesign against the new Timetable grace fields.
+    """
+    return 0
 
 
 def _resolve_day_status(

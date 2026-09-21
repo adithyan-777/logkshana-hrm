@@ -1,0 +1,63 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block title %}Edit Schedule{% endblock %}
+
+{% block page_content %}
+{% include "partials/tabs_schedule.html#tabs_schedule" %}
+
+<div class="card" style="max-width:720px;">
+  <div class="card__header">
+    <span class="card__title">Edit schedule</span>
+  </div>
+  <div class="card__body">
+    <div id="schedule-edit-form-container">
+      {% partialdef schedule_edit_form inline %}
+<form
+    id="schedule-edit-form"
+    hx-post="{% url 'schedule_edit' schedule.pk %}"
+    hx-target="#schedule-edit-form-container"
+    hx-swap="innerHTML"
+>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="message error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="field">
+        <label for="{{ form.name.id_for_label }}">Name *</label>
+        {{ form.name }}
+        {% if form.name.errors %}<span class="error">{{ form.name.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.timetable.id_for_label }}">Timetable *</label>
+        {{ form.timetable }}
+        {% if form.timetable.errors %}<span class="error">{{ form.timetable.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field-row">
+        <div class="field checkbox">
+            {{ form.repeat }}
+            <label for="{{ form.repeat.id_for_label }}">Repeat</label>
+        </div>
+        <div class="field">
+            <label for="{{ form.repeat_every.id_for_label }}">Repeat every</label>
+            {{ form.repeat_every }}
+            {% if form.repeat_every.errors %}<span class="error">{{ form.repeat_every.errors }}</span>{% endif %}
+        </div>
+        <div class="field">
+            <label for="{{ form.repeat_unit.id_for_label }}">Repeat unit</label>
+            {{ form.repeat_unit }}
+            {% if form.repeat_unit.errors %}<span class="error">{{ form.repeat_unit.errors }}</span>{% endif %}
+        </div>
+    </div>
+
+    <button type="submit">Save changes</button>
+    <a href="{% url 'schedule_list' %}">Back to schedules</a>
+</form>
+{% endpartialdef schedule_edit_form %}
+    </div>
+  </div>
+</div>
+{% endblock %}

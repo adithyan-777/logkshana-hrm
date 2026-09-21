@@ -1,7 +1,7 @@
 from django import forms
 
 from employees.models import Employee
-from schedule.models import Shift, Timetable
+from schedule.models import Timetable
 from attendance.models import (
     AttendanceCorrection,
     AttendanceRule,
@@ -43,7 +43,6 @@ class DailyAttendanceForm(forms.ModelForm):
             "employee",
             "date",
             "status",
-            "shift",
             "timetable",
             "scheduled_minutes",
             "worked_minutes",

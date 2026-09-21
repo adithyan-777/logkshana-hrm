@@ -34,7 +34,7 @@
         </div>
 
         <div class="field">
-            <label for="{{ form.code.id_for_label }}">Code *</label>
+            <label for="{{ form.code.id_for_label }}">Code</label>
             {{ form.code }}
             {% if form.code.errors %}<span class="error">{{ form.code.errors }}</span>{% endif %}
         </div>
@@ -46,23 +46,10 @@
                 {% if form.type.errors %}<span class="error">{{ form.type.errors }}</span>{% endif %}
             </div>
 
-            <div class="field">
-                <label for="{{ form.work_type.id_for_label }}">Work type</label>
-                {{ form.work_type }}
-                {% if form.work_type.errors %}<span class="error">{{ form.work_type.errors }}</span>{% endif %}
+            <div class="field checkbox">
+                {{ form.is_active }}
+                <label for="{{ form.is_active.id_for_label }}">Active</label>
             </div>
-
-            <div class="field">
-                <label for="{{ form.workday.id_for_label }}">Workday</label>
-                {{ form.workday }}
-                {% if form.workday.errors %}<span class="error">{{ form.workday.errors }}</span>{% endif %}
-            </div>
-        </div>
-
-        <div class="field">
-            <label for="{{ form.color.id_for_label }}">Color</label>
-            {{ form.color }}
-            {% if form.color.errors %}<span class="error">{{ form.color.errors }}</span>{% endif %}
         </div>
     </fieldset>
 
@@ -71,22 +58,28 @@
 
         <div class="field-row">
             <div class="field">
-                <label for="{{ form.check_in.id_for_label }}">Check in</label>
+                <label for="{{ form.check_in.id_for_label }}">Check in *</label>
                 {{ form.check_in }}
                 {% if form.check_in.errors %}<span class="error">{{ form.check_in.errors }}</span>{% endif %}
             </div>
 
             <div class="field">
-                <label for="{{ form.check_out.id_for_label }}">Check out</label>
+                <label for="{{ form.check_out.id_for_label }}">Check out *</label>
                 {{ form.check_out }}
                 {% if form.check_out.errors %}<span class="error">{{ form.check_out.errors }}</span>{% endif %}
             </div>
 
             <div class="field">
-                <label for="{{ form.work_minutes.id_for_label }}">Work minutes (flexible)</label>
-                {{ form.work_minutes }}
-                {% if form.work_minutes.errors %}<span class="error">{{ form.work_minutes.errors }}</span>{% endif %}
+                <label for="{{ form.check_out_cross_days.id_for_label }}">Check-out cross days</label>
+                {{ form.check_out_cross_days }}
+                {% if form.check_out_cross_days.errors %}<span class="error">{{ form.check_out_cross_days.errors }}</span>{% endif %}
             </div>
+        </div>
+
+        <div class="field">
+            <label for="{{ form.work_minutes.id_for_label }}">Work minutes (flexible)</label>
+            {{ form.work_minutes }}
+            {% if form.work_minutes.errors %}<span class="error">{{ form.work_minutes.errors }}</span>{% endif %}
         </div>
 
         <div class="field-row">
@@ -101,35 +94,20 @@
                 {% if form.check_in_end.errors %}<span class="error">{{ form.check_in_end.errors }}</span>{% endif %}
             </div>
         </div>
+    </fieldset>
+
+    <fieldset class="form-section">
+        <legend>Grace period</legend>
 
         <div class="field-row">
-            <div class="field">
-                <label for="{{ form.check_out_start.id_for_label }}">Check-out window start</label>
-                {{ form.check_out_start }}
-                {% if form.check_out_start.errors %}<span class="error">{{ form.check_out_start.errors }}</span>{% endif %}
+            <div class="field checkbox">
+                {{ form.grace_period_check_out }}
+                <label for="{{ form.grace_period_check_out.id_for_label }}">Grace period check out</label>
             </div>
             <div class="field">
-                <label for="{{ form.check_out_end.id_for_label }}">Check-out window end</label>
-                {{ form.check_out_end }}
-                {% if form.check_out_end.errors %}<span class="error">{{ form.check_out_end.errors }}</span>{% endif %}
-            </div>
-        </div>
-
-        <div class="field-row">
-            <div class="field">
-                <label for="{{ form.check_in_cross_days.id_for_label }}">Check-in cross days</label>
-                {{ form.check_in_cross_days }}
-                {% if form.check_in_cross_days.errors %}<span class="error">{{ form.check_in_cross_days.errors }}</span>{% endif %}
-            </div>
-            <div class="field">
-                <label for="{{ form.check_out_cross_days.id_for_label }}">Check-out cross days</label>
-                {{ form.check_out_cross_days }}
-                {% if form.check_out_cross_days.errors %}<span class="error">{{ form.check_out_cross_days.errors }}</span>{% endif %}
-            </div>
-            <div class="field">
-                <label for="{{ form.day_change_time.id_for_label }}">Day change time</label>
-                {{ form.day_change_time }}
-                {% if form.day_change_time.errors %}<span class="error">{{ form.day_change_time.errors }}</span>{% endif %}
+                <label for="{{ form.grace_period_minutes.id_for_label }}">Grace period (min)</label>
+                {{ form.grace_period_minutes }}
+                {% if form.grace_period_minutes.errors %}<span class="error">{{ form.grace_period_minutes.errors }}</span>{% endif %}
             </div>
         </div>
     </fieldset>
@@ -139,45 +117,62 @@
 
         <div class="field-row">
             <div class="field checkbox">
-                {{ form.require_check_in }}
-                <label for="{{ form.require_check_in.id_for_label }}">Require check in</label>
-            </div>
-            <div class="field checkbox">
-                {{ form.require_check_out }}
-                <label for="{{ form.require_check_out.id_for_label }}">Require check out</label>
+                {{ form.count_break_time_as_work_time }}
+                <label for="{{ form.count_break_time_as_work_time.id_for_label }}">Count break time as work time</label>
             </div>
             <div class="field checkbox">
                 {{ form.multiple_in_out }}
                 <label for="{{ form.multiple_in_out.id_for_label }}">Multiple in/out</label>
             </div>
         </div>
+    </fieldset>
 
-        <div class="field-row">
-            <div class="field checkbox">
-                {{ form.allow_late_in }}
-                <label for="{{ form.allow_late_in.id_for_label }}">Allow late in</label>
-            </div>
+    <fieldset class="form-section">
+        <legend>Breaks</legend>
+        {{ formset.management_form }}
+        {% if formset.non_form_errors %}
+        <div class="message error">{{ formset.non_form_errors }}</div>
+        {% endif %}
+        {% for break_form in formset %}
+        <div class="break-form">
+            {{ break_form.id }}
             <div class="field">
-                <label for="{{ form.late_in_grace_minutes.id_for_label }}">Late-in grace (min)</label>
-                {{ form.late_in_grace_minutes }}
+                <label for="{{ break_form.name.id_for_label }}">Break name</label>
+                {{ break_form.name }}
+                {% if break_form.name.errors %}<span class="error">{{ break_form.name.errors }}</span>{% endif %}
             </div>
-        </div>
-
-        <div class="field-row">
+            <div class="field-row">
+                <div class="field">
+                    <label for="{{ break_form.start_time.id_for_label }}">Start</label>
+                    {{ break_form.start_time }}
+                    {% if break_form.start_time.errors %}<span class="error">{{ break_form.start_time.errors }}</span>{% endif %}
+                </div>
+                <div class="field">
+                    <label for="{{ break_form.end_time.id_for_label }}">End</label>
+                    {{ break_form.end_time }}
+                    {% if break_form.end_time.errors %}<span class="error">{{ break_form.end_time.errors }}</span>{% endif %}
+                </div>
+            </div>
+            <div class="field-row">
+                <div class="field">
+                    <label for="{{ break_form.break_time_type.id_for_label }}">Break type</label>
+                    {{ break_form.break_time_type }}
+                    {% if break_form.break_time_type.errors %}<span class="error">{{ break_form.break_time_type.errors }}</span>{% endif %}
+                </div>
+                <div class="field">
+                    <label for="{{ break_form.break_time_minutes.id_for_label }}">Break minutes</label>
+                    {{ break_form.break_time_minutes }}
+                    {% if break_form.break_time_minutes.errors %}<span class="error">{{ break_form.break_time_minutes.errors }}</span>{% endif %}
+                </div>
+            </div>
+            {% if formset.can_delete %}
             <div class="field checkbox">
-                {{ form.allow_early_out }}
-                <label for="{{ form.allow_early_out.id_for_label }}">Allow early out</label>
+                {{ break_form.DELETE }}
+                <label for="{{ break_form.DELETE.id_for_label }}">Delete</label>
             </div>
-            <div class="field">
-                <label for="{{ form.early_out_grace_minutes.id_for_label }}">Early-out grace (min)</label>
-                {{ form.early_out_grace_minutes }}
-            </div>
+            {% endif %}
         </div>
-
-        <div class="field checkbox">
-            {{ form.is_active }}
-            <label for="{{ form.is_active.id_for_label }}">Active</label>
-        </div>
+        {% endfor %}
     </fieldset>
 
     <button type="submit">Save changes</button>

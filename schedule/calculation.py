@@ -13,12 +13,13 @@ def expected_datetimes(
     """
     Expected check-in/check-out datetimes for a timetable on `day`.
 
-    The cross-day offsets move check-in/check-out forward by whole days,
-    so a night shift (22:00 -> 06:00 with check_out_cross_days=1) on
-    Monday expects its check-out early on Tuesday.
+    Check-in falls on `day`; the cross-day offset moves check-out
+    forward by whole days, so a night shift (22:00 -> 06:00 with
+    check_out_cross_days=1) on Monday expects its check-out early on
+    Tuesday.
 
-    Returns (None, None) for timetables without fixed times (day off,
-    flexible without times).
+    Returns (None, None) for timetables without fixed times
+    (e.g. flexible timetables without times).
     """
     if timetable.check_in is None and timetable.check_out is None:
         return None, None
@@ -26,17 +27,14 @@ def expected_datetimes(
     expected_in = None
     if timetable.check_in is not None:
         expected_in = timezone.make_aware(
-            datetime.combine(
-                day + timedelta(days=timetable.check_in_cross_days),
-                timetable.check_in,
-            )
+            datetime.combine(day, timetable.check_in)
         )
 
     expected_out = None
     if timetable.check_out is not None:
         expected_out = timezone.make_aware(
             datetime.combine(
-                day + timedelta(days=timetable.check_out_cross_days),
+                day + timedelta(days=timetable.check_out_cross_days or 0),
                 timetable.check_out,
             )
         )

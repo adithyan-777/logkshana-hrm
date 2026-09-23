@@ -260,9 +260,7 @@ class UserHasPermissionTests(BaseTenantTestCase):
     def test_user_without_employee_has_no_permission(self):
         employee = employee_factory(first_name="NoRole", emp_code="PERM-NE")
 
-        self.assertFalse(
-            user_has_permission(user=employee.user, codename="test.view")
-        )
+        self.assertFalse(user_has_permission(user=employee.user, codename="test.view"))
 
     def test_employee_without_role_has_no_permission(self):
         employee = employee_factory(first_name="NoRole", emp_code="PERM-NR")

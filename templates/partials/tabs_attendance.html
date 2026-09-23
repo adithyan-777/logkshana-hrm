@@ -6,11 +6,5 @@
   <a href="{% url 'daily_attendance_list' %}"
      class="tab {% if request.resolver_match.url_name == 'daily_attendance_list' or request.resolver_match.url_name == 'daily_attendance_add' %}is-active{% endif %}"
      role="tab">Daily</a>
-  <a href="{% url 'attendance_correction_list' %}"
-     class="tab {% if request.resolver_match.url_name == 'attendance_correction_list' or request.resolver_match.url_name == 'attendance_correction_add' %}is-active{% endif %}"
-     role="tab">Corrections</a>
-  <a href="{% url 'attendance_rule_list' %}"
-     class="tab {% if request.resolver_match.url_name == 'attendance_rule_list' or request.resolver_match.url_name == 'attendance_rule_add' %}is-active{% endif %}"
-     role="tab">Rules</a>
 </div>
 {% endpartialdef tabs_attendance %}

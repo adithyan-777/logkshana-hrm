@@ -5,8 +5,8 @@ from django.utils import timezone
 from django_tenants.utils import get_public_schema_name, schema_context
 
 from attendance.calculation import direction_from_gateway_status
-from attendance.models import AttendanceTransaction
-from attendance.services import attendance_transaction_create
+from attendance.models import AttendanceActivity
+from attendance.services import activity_create
 from companies.models import Branch, Company, Device
 from companies.selectors import device_get_by_serial_number
 from employees.models import Employee
@@ -88,7 +88,7 @@ def attendance_log_create(
     gateway_log_id: int | str | None = None,
     timestamp: datetime,
     extra_raw_data: dict | None = None,
-) -> AttendanceTransaction:
+) -> AttendanceActivity:
     # Device is a SHARED model (lives in public schema) and the gateway has
     # no tenant context, so the company must always be resolved from the
     # serial number — never from the schema the request happens to be on.
@@ -103,7 +103,9 @@ def attendance_log_create(
         tenant_schema = device.company.schema_name
         if tenant_schema == get_public_schema_name():
             raise ValidationError(
-                {"serial_number": "Device is assigned to the public schema; reassign it to a real company/tenant."}
+                {
+                    "serial_number": "Device is assigned to the public schema; reassign it to a real company/tenant."
+                }
             )
 
     with schema_context(tenant_schema):
@@ -119,8 +121,10 @@ def attendance_log_create(
         if gateway_log_id is not None:
             external_id = f"gateway:{gateway_log_id}"
         else:
-            external_id = f"device:{serial_number}:{employee_id}:{timestamp.isoformat()}"
-        existing = AttendanceTransaction.objects.filter(external_id=external_id).first()
+            external_id = (
+                f"device:{serial_number}:{employee_id}:{timestamp.isoformat()}"
+            )
+        existing = AttendanceActivity.objects.filter(external_id=external_id).first()
         if existing is not None:
             return existing
 
@@ -136,16 +140,15 @@ def attendance_log_create(
 
         # Explicit check-out states from the device close the day's
         # open period; everything else pairs by alternating IN/OUT.
-        # Recalculation runs inside attendance_transaction_create, so
-        # the employee's DailyAttendance is current before we return.
+        # Recalculation runs inside activity_create, so the employee's
+        # Attendance is current before we return.
         direction = direction_from_gateway_status(raw_data.get("status"))
 
-        return attendance_transaction_create(
+        return activity_create(
             employee=employee,
-            external_id=external_id,
-            timestamp=timestamp,
+            punch_time=timestamp,
             direction=direction,
-            source=AttendanceTransaction.Source.BIOMETRIC,
-            external_employee_id=employee_id,
+            method=AttendanceActivity.AttendanceActivityMethodType.BIOMETRIC,
+            external_id=external_id,
             raw_data=raw_data,
         )

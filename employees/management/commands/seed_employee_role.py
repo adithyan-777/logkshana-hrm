@@ -1,5 +1,9 @@
 from django.core.management.base import BaseCommand, CommandError
-from django_tenants.utils import get_public_schema_name, get_tenant_model, schema_context
+from django_tenants.utils import (
+    get_public_schema_name,
+    get_tenant_model,
+    schema_context,
+)
 
 from employees.services import employee_role_ensure, employees_assign_employee_role
 
@@ -37,9 +41,7 @@ class Command(BaseCommand):
                         f"No tenant with schema '{schema_name}'."
                     ) from exc
             else:
-                tenants = list(
-                    tenant_model.objects.exclude(schema_name=public_schema)
-                )
+                tenants = list(tenant_model.objects.exclude(schema_name=public_schema))
 
         if not tenants:
             self.stdout.write("No tenants found.")

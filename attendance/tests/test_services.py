@@ -1,144 +1,112 @@
-from datetime import date, timedelta
+from datetime import date
 
-from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.utils import timezone
 
+from attendance.models import Attendance, AttendanceActivity
+from attendance.services import activity_create, attendance_record_create
 from common.tests.base import BaseTenantTestCase
 from common.tests.factories import (
-    attendance_correction_factory,
-    attendance_rule_factory,
-    attendance_transaction_factory,
-    daily_attendance_factory,
+    activity_factory,
+    attendance_record_factory,
     employee_factory,
 )
-from attendance.models import (
-    AttendanceCorrection,
-    AttendanceRule,
-    AttendanceTransaction,
-    DailyAttendance,
-)
-from attendance.services import (
-    attendance_correction_create,
-    attendance_rule_create,
-    attendance_transaction_create,
-    daily_attendance_create,
-)
 
 
-class AttendanceTransactionCreateTests(BaseTenantTestCase):
-    def test_creates_transaction(self):
+class AttendanceActivityCreateTests(BaseTenantTestCase):
+    def test_creates_activity(self):
         employee = employee_factory(first_name="Alice", emp_code="AT100")
-        timestamp = timezone.now()
+        punch_time = timezone.now()
 
-        transaction = attendance_transaction_create(
+        activity = activity_create(
             employee=employee,
             external_id="EXT-001",
-            timestamp=timestamp,
-            direction=AttendanceTransaction.Direction.IN,
-            source=AttendanceTransaction.Source.MANUAL,
+            punch_time=punch_time,
+            direction=AttendanceActivity.Direction.IN,
+            method=AttendanceActivity.AttendanceActivityMethodType.MANUAL,
         )
 
-        self.assertEqual(transaction.employee, employee)
-        self.assertEqual(transaction.external_id, "EXT-001")
+        self.assertEqual(activity.employee, employee)
+        self.assertEqual(activity.external_id, "EXT-001")
         self.assertTrue(
-            AttendanceTransaction.objects.filter(external_id="EXT-001").exists()
+            AttendanceActivity.objects.filter(external_id="EXT-001").exists()
         )
 
-    def test_derives_ids_from_employee_when_omitted(self):
+    def test_generates_external_id_when_omitted(self):
         employee = employee_factory(first_name="Auto", emp_code="AT101")
 
-        transaction = attendance_transaction_create(
+        activity = activity_create(
             employee=employee,
-            timestamp=timezone.now(),
-            direction=AttendanceTransaction.Direction.IN,
-            source=AttendanceTransaction.Source.MANUAL,
+            punch_time=timezone.now(),
+            direction=AttendanceActivity.Direction.IN,
+            method=AttendanceActivity.AttendanceActivityMethodType.MANUAL,
         )
 
-        self.assertTrue(transaction.external_id.startswith("manual:"))
-        self.assertEqual(transaction.external_employee_id, "AT101")
+        self.assertTrue(activity.external_id.startswith("manual:"))
+
+    def test_repeating_external_id_returns_existing(self):
+        employee = employee_factory(first_name="Dup", emp_code="AT102")
+
+        first = activity_create(
+            employee=employee,
+            punch_time=timezone.now(),
+            direction=AttendanceActivity.Direction.IN,
+            method=AttendanceActivity.AttendanceActivityMethodType.BIOMETRIC,
+            external_id="gateway:999",
+        )
+        second = activity_create(
+            employee=employee,
+            punch_time=timezone.now(),
+            direction=AttendanceActivity.Direction.IN,
+            method=AttendanceActivity.AttendanceActivityMethodType.BIOMETRIC,
+            external_id="gateway:999",
+        )
+
+        self.assertEqual(first.pk, second.pk)
+        self.assertEqual(
+            AttendanceActivity.objects.filter(external_id="gateway:999").count(), 1
+        )
 
 
-class DailyAttendanceCreateTests(BaseTenantTestCase):
-    def test_creates_daily_record(self):
+class AttendanceRecordCreateTests(BaseTenantTestCase):
+    def test_creates_manual_record(self):
         employee = employee_factory(first_name="Bob", emp_code="DA100")
 
-        daily = daily_attendance_create(
+        record = attendance_record_create(
             employee=employee,
-            date=date(2026, 3, 1),
-            status=DailyAttendance.Status.PRESENT,
-            worked_minutes=480,
-            scheduled_minutes=480,
-            has_check_in=True,
-            has_check_out=True,
+            day=date(2026, 3, 1),
+            status=Attendance.Status.PRESENT,
         )
 
-        self.assertEqual(daily.employee, employee)
-        self.assertEqual(daily.worked_minutes, 480)
+        self.assertEqual(record.employee, employee)
+        self.assertFalse(record.is_calculated)
 
-    def test_rejects_duplicate_employee_date(self):
+    def test_rejects_duplicate_employee_day(self):
         employee = employee_factory(first_name="Dup", emp_code="DA101")
-        daily_attendance_create(
+        attendance_record_create(
             employee=employee,
-            date=date(2026, 3, 2),
-            status=DailyAttendance.Status.PRESENT,
+            day=date(2026, 3, 2),
+            status=Attendance.Status.PRESENT,
         )
 
-        with self.assertRaises((ValidationError, IntegrityError)):
-            daily_attendance_create(
+        with self.assertRaises(IntegrityError):
+            Attendance.objects.create(
                 employee=employee,
-                date=date(2026, 3, 2),
-                status=DailyAttendance.Status.ABSENT,
+                day=date(2026, 3, 2),
+                status=Attendance.Status.ABSENT,
             )
-
-
-class AttendanceCorrectionCreateTests(BaseTenantTestCase):
-    def test_creates_correction(self):
-        employee = employee_factory(first_name="Carol", emp_code="AC100")
-        check_in = timezone.now().replace(hour=9, minute=0, second=0, microsecond=0)
-
-        correction = attendance_correction_create(
-            employee=employee,
-            date=date(2026, 4, 1),
-            reason="Missed punch",
-            check_in=check_in,
-        )
-
-        self.assertEqual(correction.reason, "Missed punch")
-        self.assertEqual(correction.status, AttendanceCorrection.Status.PENDING)
-
-    def test_rejects_check_out_before_check_in(self):
-        employee = employee_factory(first_name="Dan", emp_code="AC101")
-        check_in = timezone.now()
-        check_out = check_in - timedelta(hours=2)
-
-        with self.assertRaises(ValidationError):
-            attendance_correction_create(
-                employee=employee,
-                date=date(2026, 4, 2),
-                reason="Invalid times",
-                check_in=check_in,
-                check_out=check_out,
-            )
-
-
-class AttendanceRuleCreateTests(BaseTenantTestCase):
-    def test_creates_rule(self):
-        rule = attendance_rule_create(
-            name="Standard",
-            late_grace_minutes=15,
-            early_leave_grace_minutes=10,
-        )
-
-        self.assertEqual(rule.name, "Standard")
-        self.assertTrue(rule.require_check_in)
-        self.assertTrue(AttendanceRule.objects.filter(name="Standard").exists())
 
 
 class AttendanceModelTests(BaseTenantTestCase):
-    def test_soft_delete_excludes_transaction(self):
-        transaction = attendance_transaction_factory()
-        transaction.delete()
+    def test_soft_delete_excludes_activity(self):
+        activity = activity_factory()
+        activity.delete()
 
-        self.assertEqual(AttendanceTransaction.objects.count(), 0)
-        self.assertEqual(AttendanceTransaction.all_objects.count(), 1)
+        self.assertEqual(AttendanceActivity.objects.count(), 0)
+        self.assertEqual(AttendanceActivity.all_objects.count(), 1)
+
+    def test_record_factory_builds_manual_row(self):
+        record = attendance_record_factory(status=Attendance.Status.LEAVE)
+
+        self.assertEqual(record.status, Attendance.Status.LEAVE)
+        self.assertFalse(record.is_calculated)

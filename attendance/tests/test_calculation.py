@@ -5,14 +5,13 @@ from django.test import SimpleTestCase, override_settings
 from django.utils import timezone
 
 from attendance.calculation import attendance_day_for_punch
-from attendance.models import AttendanceTransaction
-from attendance.services import attendance_transaction_create
+from attendance.models import AttendanceActivity
+from attendance.services import activity_create
 from common.tests.base import BaseTenantTestCase
-from common.tests.factories import employee_factory, timetable_factory
+from common.tests.factories import employee_factory, schedule_factory, timetable_factory
 from schedule.calculation import expected_datetimes
-from schedule.models import ScheduleAssignment
+from schedule.models import EmployeeScheduleAssignment
 from schedule.selectors import timetable_for_employee_on_date
-from schedule.services import schedule_assignment_create, shift_create
 
 QATAR = ZoneInfo("Asia/Qatar")
 
@@ -159,9 +158,7 @@ class AttendanceDayForPunchTests(SimpleTestCase):
     def test_extreme_day_change_time_pulls_back_evening_punch(self):
         punch = datetime(2026, 3, 10, 23, 0, tzinfo=QATAR)
 
-        day = attendance_day_for_punch(
-            timestamp=punch, day_change_time=time(23, 59)
-        )
+        day = attendance_day_for_punch(timestamp=punch, day_change_time=time(23, 59))
 
         self.assertEqual(day, date(2026, 3, 9))
 
@@ -191,35 +188,36 @@ class OvernightShiftScenarioTests(BaseTenantTestCase):
         )
         self.monday = date(2026, 3, 9)
         self.tuesday = date(2026, 3, 10)
-        schedule_assignment_create(
-            assignment_type=ScheduleAssignment.AssignmentType.EMPLOYEE,
-            shift=shift_create(
-                name="Monday Nights",
-                code="SH-E2E",
-                cycle_unit="week",
-                shift_days=[{"day_number": 1, "timetable": self.night}],
-            ),
+        schedule = schedule_factory(
+            name="Monday Nights",
+            timetable=self.night,
+        )
+        assignment = EmployeeScheduleAssignment.objects.create(
+            schedule=schedule,
             start_date=date(2026, 3, 1),
             end_date=date(2026, 12, 31),
-            employee=self.employee,
         )
+        assignment.employees.add(self.employee)
 
-    def punch(self, *, at, direction=AttendanceTransaction.Direction.IN):
-        return attendance_transaction_create(
+    def punch(self, *, at, direction=AttendanceActivity.Direction.IN):
+        return activity_create(
             employee=self.employee,
             external_id=f"E2E-{self.id()}-{at.isoformat()}",
-            timestamp=at,
+            punch_time=at,
             direction=direction,
-            source=AttendanceTransaction.Source.MANUAL,
+            method=AttendanceActivity.AttendanceActivityMethodType.MANUAL,
         )
 
-    def test_monday_resolves_to_night_shift_tuesday_is_day_off(self):
+    def test_both_days_resolve_to_night_shift(self):
+        # The simplified schedule model has no per-weekday timetables:
+        # an assigned weekly schedule covers every day in range.
         self.assertEqual(
             timetable_for_employee_on_date(employee=self.employee, day=self.monday),
             self.night,
         )
-        self.assertIsNone(
-            timetable_for_employee_on_date(employee=self.employee, day=self.tuesday)
+        self.assertEqual(
+            timetable_for_employee_on_date(employee=self.employee, day=self.tuesday),
+            self.night,
         )
 
     def test_expected_window_spans_two_calendar_days(self):
@@ -240,16 +238,16 @@ class OvernightShiftScenarioTests(BaseTenantTestCase):
         self.punch(at=datetime(2026, 3, 9, 21, 55, tzinfo=QATAR))
         self.punch(
             at=datetime(2026, 3, 10, 6, 10, tzinfo=QATAR),
-            direction=AttendanceTransaction.Direction.OUT,
+            direction=AttendanceActivity.Direction.OUT,
         )
 
-        punches = AttendanceTransaction.objects.filter(employee=self.employee)
+        punches = AttendanceActivity.objects.filter(employee=self.employee)
         self.assertEqual(punches.count(), 2)
 
         for punch in punches:
             with self.subTest(punch=punch.external_id):
                 day = attendance_day_for_punch(
-                    timestamp=punch.timestamp,
+                    timestamp=punch.punch_time,
                     day_change_time=self.night.day_change_time,
                 )
                 self.assertEqual(day, self.monday)
@@ -261,7 +259,7 @@ class OvernightShiftScenarioTests(BaseTenantTestCase):
         punch = self.punch(at=datetime(2026, 3, 10, 14, 0, tzinfo=QATAR))
 
         day = attendance_day_for_punch(
-            timestamp=punch.timestamp,
+            timestamp=punch.punch_time,
             day_change_time=self.night.day_change_time,
         )
 

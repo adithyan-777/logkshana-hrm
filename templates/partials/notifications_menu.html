@@ -14,7 +14,7 @@
     @click="$store.ui.toggleMenu('notify')"
   >
     <i class="bx bx-bell admin-icon admin-icon--20"></i>
-    {% if nav_alerts.pending_leave or nav_alerts.pending_corrections or nav_alerts.pending_overtime %}
+    {% if nav_alerts.pending_leave or nav_alerts.pending_overtime %}
     <span class="topbar__notify-dot" aria-hidden="true"></span>
     {% endif %}
   </button>
@@ -36,16 +36,6 @@
           <span class="notify-menu__meta">Awaiting approval</span>
         </span>
         <span class="notify-menu__count">{{ nav_alerts.pending_leave|default:0 }}</span>
-      </a>
-      <a class="notify-menu__item" href="{% url 'attendance_correction_list' %}" @click="$store.ui.closeMenus()">
-        <span class="notify-menu__icon notify-menu__icon--info">
-          <i class="bx bx-edit admin-icon admin-icon--18"></i>
-        </span>
-        <span class="notify-menu__copy">
-          <span class="notify-menu__label">Attendance corrections</span>
-          <span class="notify-menu__meta">Punch fixes to review</span>
-        </span>
-        <span class="notify-menu__count">{{ nav_alerts.pending_corrections|default:0 }}</span>
       </a>
       <a class="notify-menu__item" href="{% url 'report_overtime' %}" @click="$store.ui.closeMenus()">
         <span class="notify-menu__icon notify-menu__icon--accent">

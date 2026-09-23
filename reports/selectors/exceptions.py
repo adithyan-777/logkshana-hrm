@@ -1,9 +1,9 @@
 from datetime import date
 
-from django.db.models import Q, QuerySet
+from django.db.models import QuerySet
 
-from attendance.models import DailyAttendance
-from reports.selectors.attendance import _daily_attendance_base_queryset
+from attendance.models import Attendance
+from reports.selectors.attendance import _attendance_base_queryset
 
 
 def exception_report_list(
@@ -13,8 +13,8 @@ def exception_report_list(
     department_id: int | None = None,
     employee_id: int | None = None,
     exception_type: str = "",
-) -> QuerySet[DailyAttendance]:
-    queryset = _daily_attendance_base_queryset(
+) -> QuerySet[Attendance]:
+    queryset = _attendance_base_queryset(
         date_from=date_from,
         date_to=date_to,
         department_id=department_id,
@@ -22,24 +22,20 @@ def exception_report_list(
     )
 
     if exception_type == "late":
-        queryset = queryset.filter(status=DailyAttendance.Status.LATE)
+        queryset = queryset.filter(status=Attendance.Status.LATE)
     elif exception_type == "absent":
-        queryset = queryset.filter(status=DailyAttendance.Status.ABSENT)
-    elif exception_type == "incomplete":
-        queryset = queryset.filter(status=DailyAttendance.Status.INCOMPLETE)
-    elif exception_type == "missing_punch":
-        queryset = queryset.filter(Q(has_check_in=False) | Q(has_check_out=False))
+        queryset = queryset.filter(status=Attendance.Status.ABSENT)
+    elif exception_type in ("incomplete", "missing_punch"):
+        # An incomplete day is the missing-punch signal: a check-in
+        # without its check-out (or vice versa).
+        queryset = queryset.filter(status=Attendance.Status.INCOMPLETE)
     else:
         queryset = queryset.filter(
-            Q(
-                status__in=[
-                    DailyAttendance.Status.LATE,
-                    DailyAttendance.Status.ABSENT,
-                    DailyAttendance.Status.INCOMPLETE,
-                ]
-            )
-            | Q(has_check_in=False)
-            | Q(has_check_out=False)
+            status__in=[
+                Attendance.Status.LATE,
+                Attendance.Status.ABSENT,
+                Attendance.Status.INCOMPLETE,
+            ]
         )
 
-    return queryset.order_by("-date", "employee__first_name")
+    return queryset.order_by("-day", "employee__first_name")

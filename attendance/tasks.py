@@ -63,12 +63,25 @@ def device_attendance_sync_task(
         msg_dict = getattr(exc, "message_dict", {}) or {}
         gateway_msgs = msg_dict.get("device_gateway", [])
         # Gateway messages can be list or string
-        joined = " ".join(gateway_msgs) if isinstance(gateway_msgs, list) else str(gateway_msgs)
+        joined = (
+            " ".join(gateway_msgs)
+            if isinstance(gateway_msgs, list)
+            else str(gateway_msgs)
+        )
         # Also check str(exc) for backwards compat with tests mocking plain ValidationError
         check_str = joined or str(exc)
         is_transient = any(
             code in check_str
-            for code in ("502", "503", "504", "500", "Gateway unreachable", "unreachable", "timeout", "timed out")
+            for code in (
+                "502",
+                "503",
+                "504",
+                "500",
+                "Gateway unreachable",
+                "unreachable",
+                "timeout",
+                "timed out",
+            )
         )
         # Only retry if it's a gateway transient error and we have retries left
         if is_transient and "device_gateway" in msg_dict:

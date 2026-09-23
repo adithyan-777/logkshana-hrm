@@ -10,7 +10,7 @@ dependencies = [
     "django-allauth[socialaccount]>=65.19.0",
     "django-celery-beat==2.9.0",
     "django-celery-results>=2.6.0",
-    "django-tenant-users>=2.2.1",
+    "django-q2>=1.11.1",
     "django-tenants>=3.14.0",
     "django-waffle>=5.0.0",
     "djangorestframework>=3.18.0",
@@ -25,3 +25,14 @@ dependencies = [
     "tenant-schemas-celery>=5.0.0",
     "whitenoise>=6.12.0",
 ]
+
+[dependency-groups]
+dev = [
+    "django-stubs[compatible-mypy]>=6.1.1",
+]
+
+[tool.mypy]
+plugins = ["mypy_django_plugin.main"]
+
+[tool.django-stubs]
+django_settings_module = "config.settings"

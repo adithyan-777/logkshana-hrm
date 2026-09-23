@@ -1,4 +1,5 @@
 from datetime import date, datetime, time
+from types import SimpleNamespace
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
@@ -10,23 +11,19 @@ from attendance.calculation import (
     pair_punches,
     summarize_pairs,
 )
-from attendance.models import AttendancePeriod, AttendanceTransaction, DailyAttendance
-from attendance.services import (
-    attendance_transaction_delete,
-    device_attendance_pull,
-    recalculate_daily_attendance,
-)
+from attendance.models import Attendance
+from attendance.recalculation import recalculate_attendance
+from attendance.services import activity_delete, device_attendance_pull
 from common.tests.base import BaseTenantTestCase
 from common.tests.factories import (
-    daily_attendance_factory,
+    attendance_record_factory,
     device_factory,
     employee_factory,
+    schedule_factory,
     timetable_factory,
 )
 from companies.services import attendance_log_create
-from employees.models import Employee
-from schedule.models import ScheduleAssignment
-from schedule.services import schedule_assignment_create, shift_create
+from schedule.models import EmployeeScheduleAssignment, EmployeeScheduleOverride
 
 QATAR = ZoneInfo("Asia/Qatar")
 
@@ -35,6 +32,16 @@ def aware(year, month, day, hour, minute=0):
     from datetime import datetime
 
     return datetime(year, month, day, hour, minute, tzinfo=QATAR)
+
+
+def assign(*, schedule, employee):
+    assignment = EmployeeScheduleAssignment.objects.create(
+        schedule=schedule,
+        start_date=date(2026, 1, 1),
+        end_date=date(2026, 12, 31),
+    )
+    assignment.employees.add(employee)
+    return assignment
 
 
 class DirectionMappingTests(SimpleTestCase):
@@ -53,14 +60,8 @@ class DirectionMappingTests(SimpleTestCase):
 
 class PairingTests(SimpleTestCase):
     def punch(self, at, direction="unknown"):
-        # Unsaved instances: pairing only reads timestamp/direction.
-        return AttendanceTransaction(
-            employee=Employee(),
-            external_id=f"pair-{at.isoformat()}",
-            timestamp=at,
-            direction=direction,
-            source=AttendanceTransaction.Source.MANUAL,
-        )
+        # Unsaved stand-ins: pairing only reads punch_time/direction.
+        return SimpleNamespace(punch_time=at, direction=direction)
 
     def test_unknown_punches_alternate_in_out(self):
         pairs = pair_punches(
@@ -70,8 +71,8 @@ class PairingTests(SimpleTestCase):
             ]
         )
         self.assertEqual(len(pairs), 1)
-        self.assertEqual(pairs[0][0].timestamp, aware(2026, 9, 2, 9))
-        self.assertEqual(pairs[0][1].timestamp, aware(2026, 9, 2, 18))
+        self.assertEqual(pairs[0][0].punch_time, aware(2026, 9, 2, 9))
+        self.assertEqual(pairs[0][1].punch_time, aware(2026, 9, 2, 18))
 
     def test_explicit_out_closes_open_in(self):
         pairs = pair_punches(
@@ -118,19 +119,8 @@ class RecalculationTests(BaseTenantTestCase):
             check_in=time(9, 0),
             check_out=time(18, 0),
         )
-        shift = shift_create(
-            name="Week Shift",
-            code="WEEK-RC",
-            cycle_unit="week",
-            shift_days=[{"day_number": self.day.isoweekday(), "timetable": morning}],
-        )
-        schedule_assignment_create(
-            assignment_type=ScheduleAssignment.AssignmentType.EMPLOYEE,
-            shift=shift,
-            start_date=date(2026, 1, 1),
-            end_date=date(2026, 12, 31),
-            employee=self.employee,
-        )
+        schedule = schedule_factory(name="Week Schedule", timetable=morning)
+        assign(schedule=schedule, employee=self.employee)
 
     def push(self, *, at, status=0, gateway_log_id, emp_code="RC001"):
         return attendance_log_create(
@@ -142,38 +132,32 @@ class RecalculationTests(BaseTenantTestCase):
         )
 
     def daily(self):
-        return DailyAttendance.objects.get(employee=self.employee, date=self.day)
+        return Attendance.objects.get(employee=self.employee, day=self.day)
 
     def test_push_creates_present_daily_attendance(self):
         self.push(at=aware(2026, 9, 2, 9), gateway_log_id=1)
         self.push(at=aware(2026, 9, 2, 18), status=1, gateway_log_id=2)
 
         daily = self.daily()
-        self.assertEqual(daily.status, DailyAttendance.Status.PRESENT)
+        self.assertEqual(daily.status, Attendance.Status.PRESENT)
         self.assertTrue(daily.is_calculated)
         self.assertIsNotNone(daily.calculated_at)
         self.assertTrue(daily.has_check_in)
         self.assertTrue(daily.has_check_out)
         self.assertEqual(timezone.localtime(daily.first_in).hour, 9)
         self.assertEqual(timezone.localtime(daily.last_out).hour, 18)
-        self.assertEqual(daily.scheduled_minutes, 540)
         self.assertEqual(daily.worked_minutes, 540)
         self.assertEqual(daily.late_minutes, 0)
         self.assertEqual(daily.early_leave_minutes, 0)
-        self.assertIsNotNone(daily.timetable)
         self.assertIsNotNone(daily.shift)
-
-        periods = list(daily.periods.all())
-        self.assertEqual(len(periods), 1)
-        self.assertTrue(periods[0].is_valid)
-        self.assertEqual(periods[0].worked_minutes, 540)
+        self.assertEqual(daily.attendance_activities.count(), 2)
 
     def test_late_punch_marks_late(self):
         self.push(at=aware(2026, 9, 2, 9, 30), gateway_log_id=11)
         self.push(at=aware(2026, 9, 2, 18), status=1, gateway_log_id=12)
 
         daily = self.daily()
-        self.assertEqual(daily.status, DailyAttendance.Status.LATE)
+        self.assertEqual(daily.status, Attendance.Status.LATE)
         self.assertEqual(daily.late_minutes, 30)
 
     def test_early_out_marks_early_out(self):
@@ -181,14 +165,14 @@ class RecalculationTests(BaseTenantTestCase):
         self.push(at=aware(2026, 9, 2, 17), status=1, gateway_log_id=22)
 
         daily = self.daily()
-        self.assertEqual(daily.status, DailyAttendance.Status.EARLY_OUT)
+        self.assertEqual(daily.status, Attendance.Status.EARLY_OUT)
         self.assertEqual(daily.early_leave_minutes, 60)
 
     def test_single_punch_is_incomplete(self):
         self.push(at=aware(2026, 9, 2, 9), gateway_log_id=31)
 
         daily = self.daily()
-        self.assertEqual(daily.status, DailyAttendance.Status.INCOMPLETE)
+        self.assertEqual(daily.status, Attendance.Status.INCOMPLETE)
         self.assertTrue(daily.has_check_in)
         self.assertFalse(daily.has_check_out)
 
@@ -199,21 +183,19 @@ class RecalculationTests(BaseTenantTestCase):
         self.push(at=aware(2026, 9, 2, 18), status=1, gateway_log_id=44)
 
         daily = self.daily()
-        self.assertEqual(daily.status, DailyAttendance.Status.PRESENT)
+        self.assertEqual(daily.status, Attendance.Status.PRESENT)
         self.assertEqual(daily.worked_minutes, 480)
-        self.assertEqual(daily.break_minutes, 60)
-        self.assertEqual(daily.periods.count(), 2)
+        self.assertEqual(daily.attendance_activities.count(), 4)
 
     def test_duplicate_taps_within_window_count_once(self):
         self.push(at=aware(2026, 9, 2, 9, 0), gateway_log_id=51)
-        self.push(
-            at=datetime(2026, 9, 2, 9, 0, 30, tzinfo=QATAR), gateway_log_id=52
-        )
+        self.push(at=datetime(2026, 9, 2, 9, 0, 30, tzinfo=QATAR), gateway_log_id=52)
         self.push(at=aware(2026, 9, 2, 18), status=1, gateway_log_id=53)
 
         daily = self.daily()
-        self.assertEqual(daily.periods.count(), 1)
         self.assertEqual(daily.worked_minutes, 540)
+        # All three punches are linked; pairing deduped the double-tap.
+        self.assertEqual(daily.attendance_activities.count(), 3)
 
     def test_replay_keeps_single_daily_row(self):
         first = self.push(at=aware(2026, 9, 2, 9), gateway_log_id=61)
@@ -221,17 +203,17 @@ class RecalculationTests(BaseTenantTestCase):
 
         self.assertEqual(first.id, second.id)
         self.assertEqual(
-            DailyAttendance.objects.filter(
-                employee=self.employee, date=self.day
+            Attendance.objects.filter(
+                employee=self.employee, day=self.day
             ).count(),
             1,
         )
 
     def test_manual_record_is_never_overwritten(self):
-        manual = daily_attendance_factory(
+        manual = attendance_record_factory(
             employee=self.employee,
-            date=self.day,
-            status=DailyAttendance.Status.LEAVE,
+            day=self.day,
+            status=Attendance.Status.LEAVE,
         )
         self.assertFalse(manual.is_calculated)
 
@@ -239,49 +221,30 @@ class RecalculationTests(BaseTenantTestCase):
         self.push(at=aware(2026, 9, 2, 18), status=1, gateway_log_id=72)
 
         manual.refresh_from_db()
-        self.assertEqual(manual.status, DailyAttendance.Status.LEAVE)
+        self.assertEqual(manual.status, Attendance.Status.LEAVE)
         self.assertFalse(manual.is_calculated)
 
     def test_delete_punch_recalculates_day(self):
         self.push(at=aware(2026, 9, 2, 9), gateway_log_id=81)
         out = self.push(at=aware(2026, 9, 2, 18), status=1, gateway_log_id=82)
-        self.assertEqual(self.daily().status, DailyAttendance.Status.PRESENT)
+        self.assertEqual(self.daily().status, Attendance.Status.PRESENT)
 
-        attendance_transaction_delete(transaction=out)
+        activity_delete(activity=out)
 
-        self.assertEqual(self.daily().status, DailyAttendance.Status.INCOMPLETE)
-        self.assertEqual(AttendancePeriod.objects.filter(
-            daily_attendance=self.daily()
-        ).count(), 1)
+        self.assertEqual(self.daily().status, Attendance.Status.INCOMPLETE)
 
-    def test_day_off_punch_is_worked_holiday(self):
-        off = timetable_factory(
-            name="Friday Off",
-            code="OFF-RC",
-            work_type="off",
-            check_in=None,
-            check_out=None,
-        )
+    def test_day_off_punch_is_present_with_overtime(self):
         friday = date(2026, 9, 4)
-        shift = shift_create(
-            name="Friday Off Shift",
-            code="OFF-RC-SHIFT",
-            cycle_unit="week",
-            shift_days=[{"day_number": friday.isoweekday(), "timetable": off}],
-        )
-        schedule_assignment_create(
-            assignment_type=ScheduleAssignment.AssignmentType.EMPLOYEE,
-            shift=shift,
-            start_date=date(2026, 1, 1),
-            end_date=date(2026, 12, 31),
-            employee=self.employee,
+        EmployeeScheduleOverride.objects.create(
+            employee=self.employee, date=friday, is_day_off=True
         )
         self.push(at=aware(2026, 9, 4, 10), gateway_log_id=91)
         self.push(at=aware(2026, 9, 4, 14), status=1, gateway_log_id=92)
 
-        daily = DailyAttendance.objects.get(employee=self.employee, date=friday)
-        self.assertEqual(daily.status, DailyAttendance.Status.WORKED_HOLIDAY)
+        daily = Attendance.objects.get(employee=self.employee, day=friday)
+        self.assertEqual(daily.status, Attendance.Status.PRESENT)
         self.assertEqual(daily.worked_minutes, 240)
+        self.assertEqual(daily.overtime_minutes, 240)
 
 
 class OvernightRecalculationTests(BaseTenantTestCase):
@@ -299,19 +262,8 @@ class OvernightRecalculationTests(BaseTenantTestCase):
             check_out=time(6, 0),
             check_out_cross_days=1,
         )
-        shift = shift_create(
-            name="Monday Nights",
-            code="NIGHT-RC-SHIFT",
-            cycle_unit="week",
-            shift_days=[{"day_number": 1, "timetable": night}],
-        )
-        schedule_assignment_create(
-            assignment_type=ScheduleAssignment.AssignmentType.EMPLOYEE,
-            shift=shift,
-            start_date=date(2026, 1, 1),
-            end_date=date(2026, 12, 31),
-            employee=self.employee,
-        )
+        schedule = schedule_factory(name="Night Schedule", timetable=night)
+        assign(schedule=schedule, employee=self.employee)
 
     def test_overnight_checkout_belongs_to_shift_day(self):
         attendance_log_create(
@@ -329,14 +281,12 @@ class OvernightRecalculationTests(BaseTenantTestCase):
             extra_raw_data={"status": 1},
         )
 
-        daily = DailyAttendance.objects.get(
-            employee=self.employee, date=self.monday
-        )
-        self.assertEqual(daily.status, DailyAttendance.Status.PRESENT)
+        daily = Attendance.objects.get(employee=self.employee, day=self.monday)
+        self.assertEqual(daily.status, Attendance.Status.PRESENT)
         self.assertEqual(daily.worked_minutes, 495)
         self.assertFalse(
-            DailyAttendance.objects.filter(
-                employee=self.employee, date=date(2026, 3, 10)
+            Attendance.objects.filter(
+                employee=self.employee, day=date(2026, 3, 10)
             ).exists()
         )
 
@@ -373,16 +323,16 @@ class PullRecalculationTests(BaseTenantTestCase):
         result = device_attendance_pull(serial_number="TEST001")
 
         self.assertEqual(result["created"], 2)
-        daily = DailyAttendance.objects.get(
-            employee__emp_code="1001", date=date(2026, 9, 2)
+        daily = Attendance.objects.get(
+            employee__emp_code="1001", day=date(2026, 9, 2)
         )
-        self.assertEqual(daily.status, DailyAttendance.Status.PRESENT)
+        self.assertEqual(daily.status, Attendance.Status.PRESENT)
         self.assertEqual(daily.worked_minutes, 540)
         # Second identical pull stays idempotent: one daily row.
         device_attendance_pull(serial_number="TEST001")
         self.assertEqual(
-            DailyAttendance.objects.filter(
-                employee__emp_code="1001", date=date(2026, 9, 2)
+            Attendance.objects.filter(
+                employee__emp_code="1001", day=date(2026, 9, 2)
             ).count(),
             1,
         )
@@ -390,5 +340,5 @@ class PullRecalculationTests(BaseTenantTestCase):
     def test_recalculate_without_punches_returns_none(self):
         employee = employee_factory(first_name="Empty", emp_code="RCEMPTY")
         self.assertIsNone(
-            recalculate_daily_attendance(employee=employee, day=date(2026, 9, 2))
+            recalculate_attendance(employee=employee, day=date(2026, 9, 2))
         )

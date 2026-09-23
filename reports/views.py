@@ -6,7 +6,7 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
-from attendance.models import AttendanceTransaction
+from attendance.models import AttendanceActivity
 from common.http import is_htmx_partial
 from common.pagination import paginate_queryset
 from employees.decorators import require_permission
@@ -97,7 +97,9 @@ def _filter_context(request: HttpRequest, form, *, report_url_name: str) -> dict
 
 def _resolve_columns(request: HttpRequest, report_key: str) -> list:
     preferred = get_preferred_columns(request.user, report_key)
-    return resolve_report_columns(request, report_key=report_key, preferred_keys=preferred)
+    return resolve_report_columns(
+        request, report_key=report_key, preferred_keys=preferred
+    )
 
 
 def _column_context(columns: list, report_key: str) -> dict:
@@ -114,9 +116,7 @@ def _self_service_scope(request: HttpRequest):
     Users with REPORTS_VIEW see everything. Users with only
     ATTENDANCE_OWN_VIEW see their own records. Anyone else gets 403.
     """
-    if user_has_permission(
-        user=request.user, codename=PermissionCodename.REPORTS_VIEW
-    ):
+    if user_has_permission(user=request.user, codename=PermissionCodename.REPORTS_VIEW):
         return True, None
     if user_has_permission(
         user=request.user, codename=PermissionCodename.ATTENDANCE_OWN_VIEW
@@ -392,7 +392,7 @@ def punch_log_view(request: HttpRequest) -> HttpResponse:
             employee_id=employee_id,
         )
     else:
-        queryset = AttendanceTransaction.objects.none()
+        queryset = AttendanceActivity.objects.none()
 
     export_response = _maybe_export(
         request,
@@ -568,5 +568,7 @@ def save_report_columns_view(request: HttpRequest) -> HttpResponse:
     save_preferred_columns(request.user, report_key, keys)
 
     response = HttpResponse(status=204)
-    response["HX-Trigger"] = '{"showToast": {"message": "Column preference saved.", "type": "success"}}'
+    response["HX-Trigger"] = (
+        '{"showToast": {"message": "Column preference saved.", "type": "success"}}'
+    )
     return response

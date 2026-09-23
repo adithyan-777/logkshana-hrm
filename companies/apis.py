@@ -90,8 +90,8 @@ class AttendanceLogCreateApi(APIView):
             {
                 "id": punch.id,
                 "external_id": punch.external_id,
-                "timestamp": punch.timestamp,
-                "employee_id": punch.external_employee_id,
+                "timestamp": punch.punch_time,
+                "employee_id": punch.employee.emp_code,
                 "serial_number": serializer.validated_data["serial_number"],
             }
         ).data

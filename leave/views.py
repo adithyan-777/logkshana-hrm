@@ -271,7 +271,9 @@ def leave_policy_edit(request: HttpRequest, leave_policy_id: int) -> HttpRespons
         if form.is_valid():
             leave_policy_update(**form.cleaned_data, leave_policy=leave_policy)
             response = _render_leave_policy_edit_form(
-                request, LeavePolicyForm(instance=leave_policy), leave_policy=leave_policy
+                request,
+                LeavePolicyForm(instance=leave_policy),
+                leave_policy=leave_policy,
             )
             response["HX-Trigger"] = "leavePolicyUpdated"
             return response
@@ -292,7 +294,9 @@ def leave_policy_edit(request: HttpRequest, leave_policy_id: int) -> HttpRespons
 @login_required
 @require_permission(PermissionCodename.LEAVE_DELETE)
 @require_http_methods(["DELETE"])
-def leave_policy_delete_view(request: HttpRequest, leave_policy_id: int) -> HttpResponse:
+def leave_policy_delete_view(
+    request: HttpRequest, leave_policy_id: int
+) -> HttpResponse:
     leave_policy = get_object_or_404(LeavePolicy, pk=leave_policy_id)
     leave_policy_delete(leave_policy=leave_policy)
     response = HttpResponse("")
@@ -370,11 +374,15 @@ def leave_request_edit(request: HttpRequest, leave_request_id: int) -> HttpRespo
             response["HX-Trigger"] = "leaveRequestUpdated"
             return response
 
-        return _render_leave_request_edit_form(request, form, leave_request=leave_request)
+        return _render_leave_request_edit_form(
+            request, form, leave_request=leave_request
+        )
 
     form = LeaveRequestForm(instance=leave_request)
     if is_htmx_partial(request):
-        return _render_leave_request_edit_form(request, form, leave_request=leave_request)
+        return _render_leave_request_edit_form(
+            request, form, leave_request=leave_request
+        )
 
     return render(
         request,

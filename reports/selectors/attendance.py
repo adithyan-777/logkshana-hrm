@@ -2,18 +2,18 @@ from datetime import date
 
 from django.db.models import Count, Q, QuerySet, Sum
 
-from attendance.models import DailyAttendance
+from attendance.models import Attendance
 
 
-def _daily_attendance_base_queryset(
+def _attendance_base_queryset(
     *,
     date_from: date,
     date_to: date,
     department_id: int | None = None,
     employee_id: int | None = None,
-) -> QuerySet[DailyAttendance]:
-    queryset = DailyAttendance.objects.filter(
-        date__range=(date_from, date_to),
+) -> QuerySet[Attendance]:
+    queryset = Attendance.objects.filter(
+        day__range=(date_from, date_to),
     ).select_related("employee", "employee__department")
 
     if department_id:
@@ -32,7 +32,7 @@ def attendance_summary_list(
     employee_id: int | None = None,
 ):
     return (
-        _daily_attendance_base_queryset(
+        _attendance_base_queryset(
             date_from=date_from,
             date_to=date_to,
             department_id=department_id,
@@ -47,13 +47,13 @@ def attendance_summary_list(
         )
         .annotate(
             total_days=Count("id"),
-            present_days=Count("id", filter=Q(status=DailyAttendance.Status.PRESENT)),
-            absent_days=Count("id", filter=Q(status=DailyAttendance.Status.ABSENT)),
-            late_days=Count("id", filter=Q(status=DailyAttendance.Status.LATE)),
-            leave_days=Count("id", filter=Q(status=DailyAttendance.Status.LEAVE)),
-            total_worked_minutes=Sum("worked_minutes"),
-            total_late_minutes=Sum("late_minutes"),
-            total_overtime_minutes=Sum("overtime_minutes"),
+            present_days=Count("id", filter=Q(status=Attendance.Status.PRESENT)),
+            absent_days=Count("id", filter=Q(status=Attendance.Status.ABSENT)),
+            late_days=Count("id", filter=Q(status=Attendance.Status.LATE)),
+            leave_days=Count("id", filter=Q(status=Attendance.Status.LEAVE)),
+            total_worked=Sum("total_work_time"),
+            total_late=Sum("late_time"),
+            total_overtime=Sum("over_time"),
         )
         .order_by("employee__first_name", "employee__last_name")
     )
@@ -65,11 +65,16 @@ def individual_attendance_list(
     date_to: date,
     employee_id: int,
 ):
-    return _daily_attendance_base_queryset(
-        date_from=date_from,
-        date_to=date_to,
-        employee_id=employee_id,
-    ).order_by("date")
+    return (
+        _attendance_base_queryset(
+            date_from=date_from,
+            date_to=date_to,
+            employee_id=employee_id,
+        )
+        .select_related("shift")
+        .prefetch_related("attendance_activities")
+        .order_by("day")
+    )
 
 
 def department_attendance_list(
@@ -78,7 +83,7 @@ def department_attendance_list(
     date_to: date,
     department_id: int | None = None,
 ):
-    queryset = _daily_attendance_base_queryset(
+    queryset = _attendance_base_queryset(
         date_from=date_from,
         date_to=date_to,
         department_id=department_id,
@@ -92,11 +97,11 @@ def department_attendance_list(
         .annotate(
             employee_count=Count("employee_id", distinct=True),
             total_days=Count("id"),
-            present_days=Count("id", filter=Q(status=DailyAttendance.Status.PRESENT)),
-            absent_days=Count("id", filter=Q(status=DailyAttendance.Status.ABSENT)),
-            late_days=Count("id", filter=Q(status=DailyAttendance.Status.LATE)),
-            total_late_minutes=Sum("late_minutes"),
-            total_overtime_minutes=Sum("overtime_minutes"),
+            present_days=Count("id", filter=Q(status=Attendance.Status.PRESENT)),
+            absent_days=Count("id", filter=Q(status=Attendance.Status.ABSENT)),
+            late_days=Count("id", filter=Q(status=Attendance.Status.LATE)),
+            total_late=Sum("late_time"),
+            total_overtime=Sum("over_time"),
         )
         .order_by("employee__department__name")
     )

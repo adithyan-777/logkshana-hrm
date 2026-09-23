@@ -159,6 +159,40 @@ class EmployeeCreateTests(BaseTenantTestCase):
                 password="short",
             )
 
+    def test_common_password_raises(self):
+        with self.assertRaises(ValidationError) as ctx:
+            employee_create(
+                first_name="Common",
+                last_name="Password",
+                emp_code="E064",
+                password="password123",
+            )
+
+        self.assertIn("password", ctx.exception.message_dict)
+
+    def test_numeric_password_raises(self):
+        with self.assertRaises(ValidationError) as ctx:
+            employee_create(
+                first_name="Numeric",
+                last_name="Password",
+                emp_code="E065",
+                password="9876543210",
+            )
+
+        self.assertIn("password", ctx.exception.message_dict)
+
+    def test_password_similar_to_email_raises(self):
+        with self.assertRaises(ValidationError) as ctx:
+            employee_create(
+                first_name="Alex",
+                last_name="Anderson",
+                emp_code="E066",
+                email="alexanderson@example.com",
+                password="alexanderson",
+            )
+
+        self.assertIn("password", ctx.exception.message_dict)
+
     def test_update_password_changes_login(self):
         employee = employee_create(
             first_name="Pw",
@@ -189,7 +223,7 @@ class EmployeeCreateTests(BaseTenantTestCase):
             mobile="+97433555040",
         )
 
-        self.assertIn(self.tenant, employee.user.tenants.all())
+        self.assertIn(self.tenant, employee.user.companies.all())
 
     def test_created_user_can_login_to_tenant(self):
         employee = employee_create(
@@ -368,16 +402,12 @@ class EmployeeRoleEnsureTests(BaseTenantTestCase):
         self.assertEqual(Role.objects.filter(name=first.name).count(), 1)
 
     def test_assigns_non_admin_employees_and_skips_staff(self):
-        from tenant_users.permissions.models import UserTenantPermissions
-
         from employees.permission_catalog import EMPLOYEE_ROLE_NAME
 
         worker = employee_factory(first_name="Worker", emp_code="ROLE-W")
         staff_member = employee_factory(first_name="Staffer", emp_code="ROLE-S")
-        UserTenantPermissions.objects.update_or_create(
-            profile=staff_member.user,
-            defaults={"is_staff": True},
-        )
+        staff_member.user.is_staff = True
+        staff_member.user.save(update_fields=["is_staff"])
         other_role = role_create(name="Temp Role")
         worker.role = None
         worker.save(update_fields=["role"])

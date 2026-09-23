@@ -1,0 +1,94 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block title %}Schedules{% endblock %}
+
+{% block page_content %}
+{% include "partials/tabs_schedule.html#tabs_schedule" %}
+
+<div class="toolbar">
+  <label class="sr-only" for="schedule-search">Search</label>
+  <input
+    id="schedule-search"
+    class="search-input toolbar__search"
+    type="search"
+    name="q"
+    value="{{ search }}"
+    placeholder="Name or timetable..."
+    hx-get="{% url 'schedule_list' %}"
+    hx-target="#schedule-list"
+    hx-trigger="keyup changed delay:300ms, search"
+  >
+</div>
+
+<div class="card card--table">
+  <div class="card__body">
+    <div
+      id="schedule-list"
+      class="data-table-wrap"
+      hx-get="{% url 'schedule_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+      hx-trigger="scheduleCreated, scheduleUpdated, scheduleDeleted from:body"
+      hx-target="this"
+      hx-swap="innerHTML"
+    >
+      {% partialdef schedule_table inline %}
+{% if page_obj.paginator.count %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Timetable</th>
+            <th>Repeat</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for schedule in page_obj %}
+        <tr>
+            <td>{{ schedule.name }}</td>
+            <td>{{ schedule.timetable.name }}</td>
+            <td>
+                {% if schedule.repeat %}
+                Every {{ schedule.repeat_every }} {{ schedule.get_repeat_unit_display|lower }}{% if schedule.repeat_every != 1 %}s{% endif %}
+                {% else %}
+                Once
+                {% endif %}
+            </td>
+            <td class="table-actions">
+                {% if can_edit %}
+                <a href="{% url 'schedule_edit' schedule.pk %}" class="btn-icon" title="Edit schedule" aria-label="Edit {{ schedule.name }}">
+                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
+                </a>
+                {% endif %}
+                {% if can_delete %}
+                <button
+                  type="button"
+                  class="btn-icon btn-icon--danger"
+                  title="Delete schedule"
+                  aria-label="Delete {{ schedule.name }}"
+                  hx-delete="{% url 'schedule_delete' schedule.pk %}"
+                  hx-confirm="Delete {{ schedule.name }}?"
+                  hx-swap="none"
+                >
+                    <i class="bx bx-trash admin-icon admin-icon--18"></i>
+                </button>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/pagination.html#pagination" %}
+{% else %}
+<p class="empty-state">
+    {% if search %}
+    No schedules match "{{ search }}".
+    {% else %}
+    No schedules yet. <a href="{% url 'schedule_add' %}">Add the first schedule</a>.
+    {% endif %}
+</p>
+{% endif %}
+{% endpartialdef schedule_table %}
+    </div>
+  </div>
+</div>
+{% endblock %}

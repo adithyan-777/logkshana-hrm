@@ -119,9 +119,9 @@ class OvertimeReportFilterForm(DateRangeFilterForm):
         required=False,
         choices=[
             ("", "All statuses"),
-            ("pending", "Pending"),
-            ("approved", "Approved"),
-            ("rejected", "Rejected"),
-            ("auto_approved", "Auto approved"),
+            ("present", "Present"),
+            ("late", "Late"),
+            ("early_out", "Early Out"),
+            ("incomplete", "Incomplete"),
         ],
     )

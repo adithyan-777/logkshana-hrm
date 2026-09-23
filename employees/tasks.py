@@ -48,11 +48,24 @@ def device_user_create_task(self, employee_id: int, serial_number: str) -> None:
         # Retry transient gateway ValidationErrors (502 etc.) if wrapped as ValidationError
         msg_dict = getattr(exc, "message_dict", {}) or {}
         gateway_msgs = msg_dict.get("device", []) or msg_dict.get("device_gateway", [])
-        joined = " ".join(gateway_msgs) if isinstance(gateway_msgs, list) else str(gateway_msgs)
+        joined = (
+            " ".join(gateway_msgs)
+            if isinstance(gateway_msgs, list)
+            else str(gateway_msgs)
+        )
         check_str = joined or str(exc)
         is_transient = any(
             code in check_str
-            for code in ("502", "503", "504", "500", "Gateway unreachable", "unreachable", "timeout", "timed out")
+            for code in (
+                "502",
+                "503",
+                "504",
+                "500",
+                "Gateway unreachable",
+                "unreachable",
+                "timeout",
+                "timed out",
+            )
         )
         if is_transient and ("device" in msg_dict or "device_gateway" in msg_dict):
             raise self.retry(exc=exc)

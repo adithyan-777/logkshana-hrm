@@ -16,10 +16,9 @@ from django.utils.text import slugify
 from allauth.account.forms import default_token_generator
 from allauth.account.utils import user_pk_to_url_str
 from django.urls import reverse
-from companies.models import Device
+from companies.models import Company, Device
 from django_tenants.utils import get_public_schema_name, schema_context
-from tenant_users.tenants.utils import get_current_tenant
-from users.models import TenantUser
+from users.models import User
 
 from employees.tasks import device_user_create_task
 
@@ -27,17 +26,27 @@ from employees.tasks import device_user_create_task
 User = get_user_model()
 
 
-def _validate_employee_password(*, password: str) -> str:
+def _validate_employee_password(*, password: str, user=None) -> str:
+    """Run the configured Django password validators (settings
+    AUTH_PASSWORD_VALIDATORS: similarity, min length, common, numeric).
+
+    Passing the (possibly unsaved) user enables the similarity check
+    against username/email/name. Raises field-keyed ValidationError.
+    """
     from django.contrib.auth.password_validation import validate_password
 
     if not password:
         raise ValidationError({"password": "Password is required."})
-    if len(password) < 8:
-        raise ValidationError(
-            {"password": "Password must be at least 8 characters long."}
-        )
-    validate_password(password)
+    try:
+        validate_password(password, user=user)
+    except ValidationError as exc:
+        raise ValidationError({"password": exc.messages})
     return password
+
+
+def _password_check_user(*, username: str = "", email: str = ""):
+    """Unsaved user instance so validators can check similarity."""
+    return User(username=username or "", email=email or "")
 
 
 def _generate_username(*, first_name: str, last_name: str) -> str:
@@ -74,27 +83,34 @@ def employee_create(
     """
     from django.utils.crypto import get_random_string
 
-    tenant = get_current_tenant()
+    tenant = connection.tenant
+    if not isinstance(tenant, Company):
+        # Test clients (FakeTenant) and other lightweight tenant refs only
+        # carry the schema name — resolve the real Company row for M2M writes.
+        tenant = Company.objects.get(schema_name=connection.schema_name)
     mobile = (mobile or "").strip()
     username = _generate_username(first_name=first_name, last_name=last_name)
-    user_email = email or f"{username}@{tenant.slug}.com"
+    user_email = email or f"{username}@{tenant.schema_name}.com"
     if password:
-        _validate_employee_password(password=password)
+        _validate_employee_password(
+            password=password,
+            user=_password_check_user(username=username, email=user_email),
+        )
         login_password = password
     else:
         # Auto-created records (device punches, factories, seeds) get a
         # random password; the invite/reset link can set a known one later.
         login_password = get_random_string(12)
-    with schema_context(get_public_schema_name()):
-        user = TenantUser.objects.create_user(
-            email=user_email,
-            username=username,
-            password=login_password,
-            is_active=True,
-        )
+    # Users live in the shared (public schema) table, visible from every
+    # tenant schema, so no schema switch is needed to create one.
+    user = User.objects.create_user(
+        email=user_email,
+        username=username,
+        password=login_password,
+        is_active=True,
+    )
 
-    tenant = get_current_tenant()
-    tenant.add_user(user, is_superuser=False, is_staff=False)
+    tenant.add_user(user)
     employee = Employee(
         user=user,
         first_name=first_name,
@@ -167,7 +183,7 @@ def employee_update(
             user.is_active = is_active
             user_updates.append("is_active")
         if password:
-            _validate_employee_password(password=password)
+            _validate_employee_password(password=password, user=user)
             with schema_context(get_public_schema_name()):
                 user.set_password(password)
                 if user_updates:
@@ -295,24 +311,37 @@ def device_user_create(*, employee: Employee, serial_number: str) -> None:
         if 500 <= exc.code < 600:
             # Transient 5xx (502 etc.) — let caller retry (Celery autoretry)
             try:
-                body = exc.read().decode(errors="ignore")[:500] if hasattr(exc, "read") else ""
+                body = (
+                    exc.read().decode(errors="ignore")[:500]
+                    if hasattr(exc, "read")
+                    else ""
+                )
             except Exception:
                 body = ""
             detail = f" body: {body}" if body else ""
             raise HTTPError(
-                exc.url, exc.code, f"{exc.msg} for {url}.{detail} (base: {settings.DEVICE_GATEWAY_BASE_URL})",
-                exc.headers, exc.fp
+                exc.url,
+                exc.code,
+                f"{exc.msg} for {url}.{detail} (base: {settings.DEVICE_GATEWAY_BASE_URL})",
+                exc.headers,
+                exc.fp,
             ) from exc
         try:
-            body = exc.read().decode(errors="ignore")[:500] if hasattr(exc, "read") else ""
+            body = (
+                exc.read().decode(errors="ignore")[:500] if hasattr(exc, "read") else ""
+            )
         except Exception:
             body = ""
         detail = f" body: {body}" if body else ""
-        raise ValidationError({"device": f"Gateway returned HTTP {exc.code}.{detail} for {url}"}) from exc
+        raise ValidationError(
+            {"device": f"Gateway returned HTTP {exc.code}.{detail} for {url}"}
+        ) from exc
     except (URLError, TimeoutError, OSError) as exc:
         # Transient — re-raise for retry
         if isinstance(exc, URLError):
-            raise URLError(f"Gateway unreachable at {settings.DEVICE_GATEWAY_BASE_URL} ({url}): {exc.reason}") from exc
+            raise URLError(
+                f"Gateway unreachable at {settings.DEVICE_GATEWAY_BASE_URL} ({url}): {exc.reason}"
+            ) from exc
         raise
 
 
@@ -379,13 +408,12 @@ def employee_role_ensure() -> Role:
 
 def employees_assign_employee_role() -> int:
     from django.db.models import Q
-    from tenant_users.permissions.models import UserTenantPermissions
 
     role = employee_role_ensure()
     admin_user_ids = set(
-        UserTenantPermissions.objects.filter(
-            Q(is_staff=True) | Q(is_superuser=True)
-        ).values_list("profile_id", flat=True)
+        User.objects.filter(Q(is_staff=True) | Q(is_superuser=True)).values_list(
+            "pk", flat=True
+        )
     )
     tenant = getattr(connection, "tenant", None)
     owner_id = getattr(tenant, "owner_id", None) if tenant is not None else None

@@ -35,11 +35,11 @@
     <tbody>
         {% for transaction in page_obj %}
         <tr>
-            <td>{{ transaction.timestamp }}</td>
+            <td>{{ transaction.punch_time }}</td>
             <td>{{ transaction.employee.full_name }}</td>
             <td>{{ transaction.employee.department|default:"—" }}</td>
             <td>{{ transaction.get_direction_display }}</td>
-            <td>{{ transaction.get_source_display }}</td>
+            <td>{{ transaction.get_method_display }}</td>
             <td>{{ transaction.external_id }}</td>
         </tr>
         {% endfor %}

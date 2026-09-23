@@ -1,8 +1,13 @@
-from django.db import models
-from tenant_users.tenants.models import UserProfile
+from django.contrib.auth.models import AbstractUser
 
 
-class TenantUser(UserProfile):
-    username = models.CharField(max_length=150, unique=True, db_index=True)
+class User(AbstractUser):
+    """Shared login account (lives in the public schema).
 
-    REQUIRED_FIELDS = ["username"]
+    Company membership is tracked on ``companies.Company.members``;
+    app permissions come from the employees Role/Permission catalog.
+    ``is_staff``/``is_superuser`` are global flags.
+    """
+
+    class Meta:
+        ordering = ("-id",)

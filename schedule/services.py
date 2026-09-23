@@ -3,13 +3,7 @@ from datetime import date, datetime, timedelta
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from schedule.models import (
-    ScheduleAssignment,
-    Shift,
-    ShiftDay,
-    TemporarySchedule,
-    Timetable,
-)
+from schedule.models import Schedule, Timetable, TimetableBreak
 
 TIMETABLE_TIMES_ORDER_ERROR = (
     "Check-out must be after check-in. For an overnight shift "
@@ -21,12 +15,11 @@ def validate_timetable_times(
     *,
     check_in,
     check_out,
-    check_in_cross_days,
     check_out_cross_days,
 ) -> None:
     """
     Check-out must land strictly after check-in on the effective
-    timeline (each time offset by its cross-day value), so 22:00 ->
+    timeline (check-out offset by its cross-day value), so 22:00 ->
     06:00 is only valid with check_out_cross_days >= 1.
 
     Missing times or cross-day values are skipped here; field-level
@@ -34,16 +27,13 @@ def validate_timetable_times(
     """
     if check_in is None or check_out is None:
         return
-    if check_in_cross_days is None or check_out_cross_days is None:
+    if check_out_cross_days is None:
         return
 
     # Compare on a timeline anchored to one date, offset by the
-    # cross-day fields.
+    # cross-day field.
     anchor = date(2000, 1, 1)
-    effective_in = datetime.combine(
-        anchor + timedelta(days=check_in_cross_days),
-        check_in,
-    )
+    effective_in = datetime.combine(anchor, check_in)
     effective_out = datetime.combine(
         anchor + timedelta(days=check_out_cross_days),
         check_out,
@@ -56,61 +46,40 @@ def validate_timetable_times(
 def timetable_create(
     *,
     name: str,
-    code: str,
-    type: str,
-    work_type: str,
-    workday=1,
+    code: str | None = None,
+    type: str = Timetable.Type.NORMAL,
     check_in=None,
     check_out=None,
+    check_out_cross_days: int = 0,
     work_minutes=None,
     check_in_start=None,
     check_in_end=None,
-    check_out_start=None,
-    check_out_end=None,
-    check_in_cross_days: int = 0,
-    check_out_cross_days: int = 0,
-    require_check_in: bool = True,
-    require_check_out: bool = True,
-    allow_late_in: bool = False,
-    allow_early_out: bool = False,
-    late_in_grace_minutes: int = 0,
-    early_out_grace_minutes: int = 0,
+    grace_period_check_out: bool = False,
+    grace_period_minutes: int = 0,
+    count_break_time_as_work_time: bool = False,
     multiple_in_out: bool = False,
-    day_change_time=None,
-    color: str = "",
     is_active: bool = True,
 ) -> Timetable:
     timetable = Timetable(
         name=name,
         code=code,
         type=type,
-        work_type=work_type,
-        workday=workday,
         check_in=check_in,
         check_out=check_out,
+        check_out_cross_days=check_out_cross_days,
         work_minutes=work_minutes,
         check_in_start=check_in_start,
         check_in_end=check_in_end,
-        check_out_start=check_out_start,
-        check_out_end=check_out_end,
-        check_in_cross_days=check_in_cross_days,
-        check_out_cross_days=check_out_cross_days,
-        require_check_in=require_check_in,
-        require_check_out=require_check_out,
-        allow_late_in=allow_late_in,
-        allow_early_out=allow_early_out,
-        late_in_grace_minutes=late_in_grace_minutes,
-        early_out_grace_minutes=early_out_grace_minutes,
+        grace_period_check_out=grace_period_check_out,
+        grace_period_minutes=grace_period_minutes,
+        count_break_time_as_work_time=count_break_time_as_work_time,
         multiple_in_out=multiple_in_out,
-        day_change_time=day_change_time or "08:00",
-        color=color,
         is_active=is_active,
     )
     timetable.full_clean()
     validate_timetable_times(
         check_in=timetable.check_in,
         check_out=timetable.check_out,
-        check_in_cross_days=timetable.check_in_cross_days,
         check_out_cross_days=timetable.check_out_cross_days,
     )
     timetable.save()
@@ -122,59 +91,38 @@ def timetable_update(
     *,
     timetable: Timetable,
     name: str,
-    code: str,
-    type: str,
-    work_type: str,
-    workday=1,
+    code: str | None = None,
+    type: str = Timetable.Type.NORMAL,
     check_in=None,
     check_out=None,
+    check_out_cross_days: int = 0,
     work_minutes=None,
     check_in_start=None,
     check_in_end=None,
-    check_out_start=None,
-    check_out_end=None,
-    check_in_cross_days: int = 0,
-    check_out_cross_days: int = 0,
-    require_check_in: bool = True,
-    require_check_out: bool = True,
-    allow_late_in: bool = False,
-    allow_early_out: bool = False,
-    late_in_grace_minutes: int = 0,
-    early_out_grace_minutes: int = 0,
+    grace_period_check_out: bool = False,
+    grace_period_minutes: int = 0,
+    count_break_time_as_work_time: bool = False,
     multiple_in_out: bool = False,
-    day_change_time=None,
-    color: str = "",
     is_active: bool = True,
 ) -> Timetable:
     timetable.name = name
     timetable.code = code
     timetable.type = type
-    timetable.work_type = work_type
-    timetable.workday = workday
     timetable.check_in = check_in
     timetable.check_out = check_out
+    timetable.check_out_cross_days = check_out_cross_days
     timetable.work_minutes = work_minutes
     timetable.check_in_start = check_in_start
     timetable.check_in_end = check_in_end
-    timetable.check_out_start = check_out_start
-    timetable.check_out_end = check_out_end
-    timetable.check_in_cross_days = check_in_cross_days
-    timetable.check_out_cross_days = check_out_cross_days
-    timetable.require_check_in = require_check_in
-    timetable.require_check_out = require_check_out
-    timetable.allow_late_in = allow_late_in
-    timetable.allow_early_out = allow_early_out
-    timetable.late_in_grace_minutes = late_in_grace_minutes
-    timetable.early_out_grace_minutes = early_out_grace_minutes
+    timetable.grace_period_check_out = grace_period_check_out
+    timetable.grace_period_minutes = grace_period_minutes
+    timetable.count_break_time_as_work_time = count_break_time_as_work_time
     timetable.multiple_in_out = multiple_in_out
-    timetable.day_change_time = day_change_time or "08:00"
-    timetable.color = color
     timetable.is_active = is_active
     timetable.full_clean()
     validate_timetable_times(
         check_in=timetable.check_in,
         check_out=timetable.check_out,
-        check_in_cross_days=timetable.check_in_cross_days,
         check_out_cross_days=timetable.check_out_cross_days,
     )
     timetable.save()
@@ -188,218 +136,132 @@ def timetable_delete(*, timetable: Timetable) -> Timetable:
     return timetable
 
 
+def _validate_timetable_break(break_: TimetableBreak) -> None:
+    if (
+        break_.start_time is not None
+        and break_.end_time is not None
+        and break_.end_time <= break_.start_time
+    ):
+        raise ValidationError({"end_time": "End time must be after start time."})
+    if (
+        break_.break_time_type == TimetableBreak.BreakType.FLEXIBLE
+        and break_.break_time_minutes is None
+    ):
+        raise ValidationError(
+            {"break_time_minutes": "Break minutes are required for flexible breaks."}
+        )
+
+
 @transaction.atomic
-def shift_create(
+def timetable_break_create(
     *,
-    name: str,
-    code: str,
-    auto_shift: bool = False,
-    cycle_unit: str,
-    cycle_count: int = 1,
-    is_active: bool = True,
-    shift_days: list[dict] | None = None,
-) -> Shift:
-    shift = Shift(
-        name=name,
-        code=code,
-        auto_shift=auto_shift,
-        cycle_unit=cycle_unit,
-        cycle_count=cycle_count,
-        is_active=is_active,
-    )
-    shift.full_clean()
-    shift.save()
-
-    for day_data in shift_days or []:
-        shift_day = ShiftDay(shift=shift, **day_data)
-        shift_day.full_clean()
-        shift_day.save()
-
-    return shift
-
-
-@transaction.atomic
-def shift_update(
-    *,
-    shift: Shift,
-    name: str,
-    code: str,
-    auto_shift: bool = False,
-    cycle_unit: str,
-    cycle_count: int = 1,
-    is_active: bool = True,
-    shift_days: list[dict] | None = None,
-) -> Shift:
-    shift.name = name
-    shift.code = code
-    shift.auto_shift = auto_shift
-    shift.cycle_unit = cycle_unit
-    shift.cycle_count = cycle_count
-    shift.is_active = is_active
-    shift.full_clean()
-    shift.save()
-
-    # Replace the day set to mirror shift_create semantics. Rows are
-    # matched by day_number so the (shift, day_number) unique
-    # constraint — which also covers soft-deleted rows — is never
-    # violated: reused days are updated in place, removed days are
-    # soft-deleted via .delete(), and brand-new days are created.
-    new_days = list(shift_days or [])
-    day_numbers = [day_data["day_number"] for day_data in new_days]
-    if len(set(day_numbers)) != len(day_numbers):
-        raise ValidationError("Duplicate day number in shift days.")
-    existing = {day.day_number: day for day in shift.days.all()}
-    seen: set[int] = set()
-    for day_data in new_days:
-        day_number = day_data["day_number"]
-        seen.add(day_number)
-        if day_number in existing:
-            row = existing[day_number]
-            row.timetable = day_data["timetable"]
-            row.full_clean()
-            row.save()
-        else:
-            row = ShiftDay(shift=shift, **day_data)
-            row.full_clean()
-            row.save()
-    for day_number, row in existing.items():
-        if day_number not in seen:
-            row.delete()
-
-    return shift
-
-
-@transaction.atomic
-def shift_delete(*, shift: Shift) -> Shift:
-    """Soft-deletes the shift and its day rows (recoverable via all_objects)."""
-    for day in shift.days.all():
-        day.delete()
-    shift.delete()
-    return shift
-
-
-@transaction.atomic
-def schedule_assignment_create(
-    *,
-    assignment_type: str,
-    shift: Shift,
-    start_date,
-    end_date,
-    employee=None,
-    department=None,
-    overwrite_existing: bool = False,
-) -> ScheduleAssignment:
-    assignment = ScheduleAssignment(
-        assignment_type=assignment_type,
-        shift=shift,
-        start_date=start_date,
-        end_date=end_date,
-        employee=employee,
-        department=department,
-        overwrite_existing=overwrite_existing,
-    )
-    assignment.full_clean()
-    _validate_schedule_assignment(assignment)
-    assignment.save()
-    return assignment
-
-
-@transaction.atomic
-def schedule_assignment_update(
-    *,
-    assignment: ScheduleAssignment,
-    assignment_type: str,
-    shift: Shift,
-    start_date,
-    end_date,
-    employee=None,
-    department=None,
-    overwrite_existing: bool = False,
-) -> ScheduleAssignment:
-    assignment.assignment_type = assignment_type
-    assignment.shift = shift
-    assignment.start_date = start_date
-    assignment.end_date = end_date
-    assignment.employee = employee
-    assignment.department = department
-    assignment.overwrite_existing = overwrite_existing
-    assignment.full_clean()
-    _validate_schedule_assignment(assignment)
-    assignment.save()
-    return assignment
-
-
-@transaction.atomic
-def schedule_assignment_delete(
-    *, assignment: ScheduleAssignment
-) -> ScheduleAssignment:
-    """Soft-deletes the assignment (recoverable via all_objects)."""
-    assignment.delete()
-    return assignment
-
-
-@transaction.atomic
-def temporary_schedule_create(
-    *,
-    employee,
-    date,
     timetable: Timetable,
-    reason: str = "",
-    overrides_normal_schedule: bool = True,
-) -> TemporarySchedule:
-    temporary = TemporarySchedule(
-        employee=employee,
-        date=date,
+    name: str,
+    break_time_type: str = TimetableBreak.BreakType.FIXED,
+    break_time_minutes=None,
+    start_time=None,
+    end_time=None,
+    grace_period_check_out: bool = False,
+    grace_period_minutes: int = 0,
+) -> TimetableBreak:
+    break_ = TimetableBreak(
         timetable=timetable,
-        reason=reason,
-        overrides_normal_schedule=overrides_normal_schedule,
+        name=name,
+        break_time_type=break_time_type,
+        break_time_minutes=break_time_minutes,
+        start_time=start_time,
+        end_time=end_time,
+        grace_period_check_out=grace_period_check_out,
+        grace_period_minutes=grace_period_minutes,
     )
-    temporary.full_clean()
-    temporary.save()
-    return temporary
+    break_.full_clean()
+    _validate_timetable_break(break_)
+    break_.save()
+    return break_
 
 
 @transaction.atomic
-def temporary_schedule_update(
+def timetable_break_update(
     *,
-    temporary: TemporarySchedule,
-    employee,
-    date,
-    timetable: Timetable,
-    reason: str = "",
-    overrides_normal_schedule: bool = True,
-) -> TemporarySchedule:
-    temporary.employee = employee
-    temporary.date = date
-    temporary.timetable = timetable
-    temporary.reason = reason
-    temporary.overrides_normal_schedule = overrides_normal_schedule
-    temporary.full_clean()
-    temporary.save()
-    return temporary
+    break_: TimetableBreak,
+    name: str,
+    break_time_type: str = TimetableBreak.BreakType.FIXED,
+    break_time_minutes=None,
+    start_time=None,
+    end_time=None,
+    grace_period_check_out: bool = False,
+    grace_period_minutes: int = 0,
+) -> TimetableBreak:
+    break_.name = name
+    break_.break_time_type = break_time_type
+    break_.break_time_minutes = break_time_minutes
+    break_.start_time = start_time
+    break_.end_time = end_time
+    break_.grace_period_check_out = grace_period_check_out
+    break_.grace_period_minutes = grace_period_minutes
+    break_.full_clean()
+    _validate_timetable_break(break_)
+    break_.save()
+    return break_
 
 
 @transaction.atomic
-def temporary_schedule_delete(
-    *, temporary: TemporarySchedule
-) -> TemporarySchedule:
-    """Soft-deletes the temporary schedule (recoverable via all_objects)."""
-    temporary.delete()
-    return temporary
+def timetable_break_delete(*, break_: TimetableBreak) -> TimetableBreak:
+    """Soft-deletes the break (recoverable via all_objects)."""
+    break_.delete()
+    return break_
 
 
-def _validate_schedule_assignment(assignment: ScheduleAssignment) -> None:
-    if assignment.end_date < assignment.start_date:
-        raise ValidationError("End date must be on or after start date.")
+def _validate_schedule(schedule: Schedule) -> None:
+    if schedule.repeat and (schedule.repeat_every is None or schedule.repeat_every < 1):
+        raise ValidationError({"repeat_every": "Repeat interval must be at least 1."})
 
-    if assignment.assignment_type == ScheduleAssignment.AssignmentType.EMPLOYEE:
-        if not assignment.employee:
-            raise ValidationError("Employee is required for employee assignments.")
-        assignment.department = None
-    elif assignment.assignment_type == ScheduleAssignment.AssignmentType.DEPARTMENT:
-        if not assignment.department:
-            raise ValidationError("Department is required for department assignments.")
-        assignment.employee = None
-    elif assignment.assignment_type == ScheduleAssignment.AssignmentType.GROUP:
-        assignment.employee = None
-        assignment.department = None
+
+@transaction.atomic
+def schedule_create(
+    *,
+    name: str,
+    timetable: Timetable,
+    repeat: bool = True,
+    repeat_every: int = 1,
+    repeat_unit: str = Schedule.RepeatUnitType.WEEK,
+) -> Schedule:
+    schedule = Schedule(
+        name=name,
+        timetable=timetable,
+        repeat=repeat,
+        repeat_every=repeat_every,
+        repeat_unit=repeat_unit,
+    )
+    schedule.full_clean()
+    _validate_schedule(schedule)
+    schedule.save()
+    return schedule
+
+
+@transaction.atomic
+def schedule_update(
+    *,
+    schedule: Schedule,
+    name: str,
+    timetable: Timetable,
+    repeat: bool = True,
+    repeat_every: int = 1,
+    repeat_unit: str = Schedule.RepeatUnitType.WEEK,
+) -> Schedule:
+    schedule.name = name
+    schedule.timetable = timetable
+    schedule.repeat = repeat
+    schedule.repeat_every = repeat_every
+    schedule.repeat_unit = repeat_unit
+    schedule.full_clean()
+    _validate_schedule(schedule)
+    schedule.save()
+    return schedule
+
+
+@transaction.atomic
+def schedule_delete(*, schedule: Schedule) -> Schedule:
+    """Soft-deletes the schedule (recoverable via all_objects)."""
+    schedule.delete()
+    return schedule

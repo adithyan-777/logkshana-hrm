@@ -135,13 +135,13 @@
           </span>
           <span class="dash-attention__count">{{ summary.pending_overtime_count }}</span>
         </a>
-        <a class="dash-attention__row" href="{% url 'attendance_correction_list' %}">
+        <a class="dash-attention__row" href="{% url 'report_exceptions' %}">
           <span class="dash-attention__icon"><i class="bx bx-edit-alt"></i></span>
           <span class="dash-attention__copy">
-            <span class="dash-attention__title">Corrections</span>
-            <span class="dash-attention__text">Punch fixes</span>
+            <span class="dash-attention__title">Incomplete days</span>
+            <span class="dash-attention__text">Missing punches</span>
           </span>
-          <span class="dash-attention__count">{{ summary.pending_correction_count }}</span>
+          <span class="dash-attention__count">{{ summary.today_incomplete_count }}</span>
         </a>
       </div>
     </div>

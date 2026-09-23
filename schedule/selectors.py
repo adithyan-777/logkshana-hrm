@@ -1,12 +1,14 @@
+from dataclasses import dataclass
 from datetime import date
 
 from django.db.models import Q, QuerySet
 
 from schedule.models import (
-    ScheduleAssignment,
-    Shift,
-    TemporarySchedule,
+    EmployeeScheduleAssignment,
+    EmployeeScheduleOverride,
+    Schedule,
     Timetable,
+    TimetableBreak,
 )
 
 
@@ -21,150 +23,133 @@ def timetable_list(*, search: str = "") -> QuerySet[Timetable]:
     return queryset
 
 
-def shift_list(*, search: str = "") -> QuerySet[Shift]:
-    queryset = Shift.objects.prefetch_related("days").order_by("name")
-
-    if search:
-        queryset = queryset.filter(
-            Q(name__icontains=search) | Q(code__icontains=search)
-        )
-
-    return queryset
-
-
-def schedule_assignment_list(*, search: str = "") -> QuerySet[ScheduleAssignment]:
-    queryset = ScheduleAssignment.objects.select_related(
-        "shift", "employee", "department"
-    ).order_by("-start_date")
-
-    if search:
-        queryset = queryset.filter(
-            Q(shift__name__icontains=search)
-            | Q(employee__first_name__icontains=search)
-            | Q(employee__last_name__icontains=search)
-            | Q(employee__emp_code__icontains=search)
-            | Q(department__name__icontains=search)
-        )
-
-    return queryset
-
-
-def temporary_schedule_list(*, search: str = "") -> QuerySet[TemporarySchedule]:
-    queryset = TemporarySchedule.objects.select_related(
-        "employee", "timetable"
-    ).order_by("-date")
-
-    if search:
-        queryset = queryset.filter(
-            Q(employee__first_name__icontains=search)
-            | Q(employee__last_name__icontains=search)
-            | Q(employee__emp_code__icontains=search)
-            | Q(timetable__name__icontains=search)
-            | Q(reason__icontains=search)
-        )
-
-    return queryset
-
-
-def schedule_for_employee_on_date(
-    *,
-    employee,
-    day: date,
-) -> tuple[Shift | None, Timetable | None]:
-    """
-    Resolve the (shift, timetable) that applies to an employee on a
-    calendar date. Same resolution order as
-    ``timetable_for_employee_on_date``; temporary schedules carry no
-    shift so the shift side is None for those.
-    """
-    temporary = TemporarySchedule.objects.filter(
-        employee=employee,
-        date=day,
-        overrides_normal_schedule=True,
-    ).first()
-    if temporary is not None:
-        return None, temporary.timetable
-
-    assignment = _assignment_for_day(employee=employee, day=day)
-    if assignment is None:
-        return None, None
-
-    return assignment.shift, _timetable_for_shift_day(
-        shift=assignment.shift,
-        start_date=assignment.start_date,
-        day=day,
+def timetable_break_list(
+    *, timetable: Timetable | None = None, search: str = ""
+) -> QuerySet[TimetableBreak]:
+    queryset = TimetableBreak.objects.select_related("timetable").order_by(
+        "start_time", "name"
     )
 
+    if timetable is not None:
+        queryset = queryset.filter(timetable=timetable)
 
-def timetable_for_employee_on_date(
-    *,
-    employee,
-    day: date,
-) -> Timetable | None:
+    if search:
+        queryset = queryset.filter(
+            Q(name__icontains=search) | Q(timetable__name__icontains=search)
+        )
+
+    return queryset
+
+
+def schedule_list(*, search: str = "") -> QuerySet[Schedule]:
+    queryset = Schedule.objects.select_related("timetable").order_by("name")
+
+    if search:
+        queryset = queryset.filter(
+            Q(name__icontains=search) | Q(timetable__name__icontains=search)
+        )
+
+    return queryset
+
+
+@dataclass(frozen=True)
+class ResolvedSchedule:
+    """Schedule resolution for one (employee, day).
+
+    `is_day_off` True means an override marked the day off (schedule and
+    timetable are None). Both None with `is_day_off` False means no
+    schedule covers the day.
     """
-    Resolve the timetable that applies to an employee on a calendar date.
 
-    Resolution order:
-    1. A TemporarySchedule for the employee on that date that overrides
-       the normal schedule.
-    2. The newest ScheduleAssignment covering the date: employee-type
-       assignments win over department-type, and on overlap the latest
-       start_date wins. The assignment's Shift cycle picks the ShiftDay
-       timetable for the date.
-    3. None when nothing applies (unassigned, or the cycle position has
-       no ShiftDay = day off).
+    schedule: Schedule | None
+    timetable: Timetable | None
+    is_day_off: bool = False
 
-    Cycle position: a weekly shift with cycle_count=1 uses the ISO
-    weekday (Mon=1..Sun=7); every other cycle uses
-    ((day - start_date).days % highest day_number) + 1.
-    """
-    _, timetable = schedule_for_employee_on_date(employee=employee, day=day)
+
+def schedule_is_active_on(*, schedule: Schedule, day: date) -> bool:
+    """True when `schedule` covers `day` per its window + repeat rule."""
+    if not schedule.is_active:
+        return False
+    if schedule.start_date and day < schedule.start_date:
+        return False
+    if schedule.end_date and day > schedule.end_date:
+        return False
+    if not schedule.repeat:
+        return True
+    anchor = schedule.start_date
+    if anchor is None or day < anchor:
+        return anchor is None
+    every = max(schedule.repeat_every or 1, 1)
+    if schedule.repeat_unit == Schedule.RepeatUnitType.WEEK:
+        return ((day - anchor).days // 7) % every == 0
+    if schedule.repeat_unit == Schedule.RepeatUnitType.MONTH:
+        months = (day.year - anchor.year) * 12 + (day.month - anchor.month)
+        return months % every == 0
+    if schedule.repeat_unit == Schedule.RepeatUnitType.YEAR:
+        return (day.year - anchor.year) % every == 0
+    return True
+
+
+def _usable(*, schedule: Schedule) -> Timetable | None:
+    timetable = schedule.timetable
+    if timetable is None or not timetable.is_active:
+        return None
     return timetable
 
 
-def _assignment_for_day(*, employee, day: date) -> ScheduleAssignment | None:
+def resolve_schedule_for_employee_on_date(
+    *, employee, day: date
+) -> ResolvedSchedule:
+    """Resolve which schedule/timetable applies to `employee` on `day`.
+
+    Precedence: one-day override wins, then the active assignment with the
+    highest priority covering the day (most recent start_date breaks ties).
+    """
+    override = (
+        EmployeeScheduleOverride.objects.select_related("schedule__timetable")
+        .filter(employee=employee, date=day)
+        .first()
+    )
+    if override is not None:
+        if override.is_day_off:
+            return ResolvedSchedule(
+                schedule=None, timetable=None, is_day_off=True
+            )
+        if override.schedule is not None:
+            timetable = _usable(schedule=override.schedule)
+            if timetable is not None:
+                return ResolvedSchedule(
+                    schedule=override.schedule, timetable=timetable
+                )
+
     assignment = (
-        ScheduleAssignment.objects.filter(
-            assignment_type=ScheduleAssignment.AssignmentType.EMPLOYEE,
-            employee=employee,
-            start_date__lte=day,
-            end_date__gte=day,
+        EmployeeScheduleAssignment.objects.select_related(
+            "schedule__timetable"
         )
-        .select_related("shift")
-        .order_by("-start_date", "-id")
+        .filter(
+            employees=employee,
+            is_active=True,
+            start_date__lte=day,
+        )
+        .filter(Q(end_date__gte=day) | Q(end_date__isnull=True))
+        .filter(schedule__is_active=True)
+        .order_by("-priority", "-start_date")
         .first()
     )
-    if assignment is not None:
-        return assignment
+    if assignment is not None and schedule_is_active_on(
+        schedule=assignment.schedule, day=day
+    ):
+        timetable = _usable(schedule=assignment.schedule)
+        if timetable is not None:
+            return ResolvedSchedule(
+                schedule=assignment.schedule, timetable=timetable
+            )
 
-    if employee.department_id is None:
-        return None
-
-    return (
-        ScheduleAssignment.objects.filter(
-            assignment_type=ScheduleAssignment.AssignmentType.DEPARTMENT,
-            department_id=employee.department_id,
-            start_date__lte=day,
-            end_date__gte=day,
-        )
-        .select_related("shift")
-        .order_by("-start_date", "-id")
-        .first()
-    )
+    return ResolvedSchedule(schedule=None, timetable=None)
 
 
-def _timetable_for_shift_day(*, shift: Shift, start_date: date, day: date) -> Timetable | None:
-    shift_days = list(shift.days.all())
-    if not shift_days:
-        return None
-
-    if shift.cycle_unit == Shift.CycleUnit.WEEK and shift.cycle_count == 1:
-        position = day.isoweekday()
-    else:
-        cycle_length = max(shift_day.day_number for shift_day in shift_days)
-        position = (day - start_date).days % cycle_length + 1
-
-    for shift_day in shift_days:
-        if shift_day.day_number == position:
-            return shift_day.timetable
-    return None
+def timetable_for_employee_on_date(*, employee, day: date) -> Timetable | None:
+    """Convenience wrapper returning just the timetable (None on day-off)."""
+    return resolve_schedule_for_employee_on_date(
+        employee=employee, day=day
+    ).timetable

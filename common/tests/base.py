@@ -15,9 +15,8 @@ TEST_PASSWORD = "password"
 def _ensure_public_tenant():
     """Ensure the public tenant and a bootstrap owner user exist.
 
-    The owner is created via direct save (not UserProfileManager.create_user,
-    which itself requires the public tenant to already exist) to break the
-    chicken-and-egg dependency between the public tenant and its owner.
+    The owner is created first so it can be assigned as the public
+    tenant's owner (Company.owner is required).
     """
     public_schema = get_public_schema_name()
     public_tenant = Company.objects.filter(schema_name=public_schema).first()
@@ -57,7 +56,7 @@ class BaseTenantTestCase(FastTenantTestCase):
         tenant.name = "Test Company"
         tenant.paid_until = date(2099, 1, 1)
         tenant.on_trial = True
-        # TenantBase.owner is a required non-null FK. setup_tenant runs in the
+        # Company.owner is a required non-null FK. setup_tenant runs in the
         # public schema (before the test tenant is saved), so bootstrap the
         # public tenant + owner user first, then reuse that owner.
         with schema_context(get_public_schema_name()):
@@ -81,14 +80,12 @@ class BaseTenantTestCase(FastTenantTestCase):
                 cls.user.username = f"testuser_{schema}"
                 cls.user.set_password(TEST_PASSWORD)
                 cls.user.save()
-            cls.user.tenants.add(cls.tenant)
-
-        from tenant_users.permissions.models import UserTenantPermissions
-
-        UserTenantPermissions.objects.update_or_create(
-            profile=cls.user,
-            defaults={"is_staff": True},
-        )
+            cls.tenant.add_user(cls.user)
+        # Global staff flag makes the test user an admin (user_is_admin)
+        # with every app permission.
+        if not cls.user.is_staff:
+            cls.user.is_staff = True
+            cls.user.save(update_fields=["is_staff"])
 
     def setUp(self):
         super().setUp()

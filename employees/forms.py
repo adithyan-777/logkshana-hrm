@@ -9,7 +9,11 @@ class EmployeeForm(forms.ModelForm):
         required=False,
         min_length=8,
         widget=forms.PasswordInput(render_value=False),
-        help_text="Min 8 characters. On edit, leave blank to keep the current password.",
+        help_text=(
+            "Min 8 characters; can't be too similar to the name/email, "
+            "entirely numeric, or a commonly used password. "
+            "On edit, leave blank to keep the current password."
+        ),
     )
 
     class Meta:
@@ -38,19 +42,38 @@ class EmployeeForm(forms.ModelForm):
         # Password is required when creating, optional when editing.
         if self.instance is None or not self.instance.pk:
             self.fields["password"].required = True
-            self.fields["password"].help_text = "Min 8 characters."
+            self.fields["password"].help_text = (
+                "Min 8 characters; can't be too similar to the name/email, "
+                "entirely numeric, or a commonly used password."
+            )
         else:
             self.fields["password"].required = False
 
+    def _password_check_user(self):
+        """User-like object so validators can check similarity."""
+        instance = getattr(self, "instance", None)
+        existing = getattr(instance, "user", None)
+        if existing is not None:
+            return existing
+        from users.models import User
+
+        return User(
+            username="",
+            email=(self.cleaned_data.get("email") or ""),
+        )
+
     def clean_password(self):
+        from django.contrib.auth.password_validation import validate_password
+
         password = self.cleaned_data.get("password") or ""
         is_create = self.instance is None or not self.instance.pk
         if is_create and not password:
             raise forms.ValidationError("Password is required.")
-        if password and len(password) < 8:
-            raise forms.ValidationError(
-                "Password must be at least 8 characters long."
-            )
+        if password:
+            try:
+                validate_password(password, user=self._password_check_user())
+            except forms.ValidationError as exc:
+                raise forms.ValidationError(exc.messages)
         return password
 
 

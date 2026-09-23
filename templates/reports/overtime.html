@@ -22,18 +22,18 @@
             <th>Department</th>
             <th>Minutes</th>
             <th>Status</th>
-            <th>Reason</th>
+            <th>Shift</th>
         </tr>
     </thead>
     <tbody>
         {% for record in page_obj %}
         <tr>
-            <td>{{ record.date }}</td>
+            <td>{{ record.day }}</td>
             <td>{{ record.employee.full_name }}</td>
             <td>{{ record.employee.department|default:"—" }}</td>
-            <td>{{ record.minutes }}m</td>
+            <td>{{ record.overtime_minutes }}m</td>
             <td><span class="badge status-{{ record.status }}">{{ record.get_status_display }}</span></td>
-            <td>{{ record.reason|default:"—" }}</td>
+            <td>{{ record.shift|default:"—" }}</td>
         </tr>
         {% endfor %}
     </tbody>

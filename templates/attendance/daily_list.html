@@ -38,7 +38,6 @@
             <th>Date</th>
             <th>Employee</th>
             <th>Status</th>
-            <th>Scheduled</th>
             <th>Worked</th>
             <th>Late</th>
             <th>OT</th>
@@ -48,16 +47,15 @@
     <tbody>
         {% for record in page_obj %}
         <tr>
-            <td>{{ record.date }}</td>
+            <td>{{ record.day }}</td>
             <td>{{ record.employee.full_name }}</td>
             <td><span class="badge status-{{ record.status }}">{{ record.get_status_display }}</span></td>
-            <td>{{ record.scheduled_minutes }}m</td>
             <td>{{ record.worked_minutes }}m</td>
             <td>{{ record.late_minutes }}m</td>
             <td>{{ record.overtime_minutes }}m</td>
             <td class="table-actions">
                 {% if can_edit %}
-                <a href="{% url 'daily_edit' record.pk %}" class="btn-icon" title="Edit daily record" aria-label="Edit daily record {{ record.date }}">
+                <a href="{% url 'daily_edit' record.pk %}" class="btn-icon" title="Edit daily record" aria-label="Edit daily record {{ record.day }}">
                     <i class="bx bx-edit admin-icon admin-icon--18"></i>
                 </a>
                 {% endif %}
@@ -66,9 +64,9 @@
                   type="button"
                   class="btn-icon btn-icon--danger"
                   title="Delete daily record"
-                  aria-label="Delete daily record {{ record.date }}"
+                  aria-label="Delete daily record {{ record.day }}"
                   hx-delete="{% url 'daily_delete' record.pk %}"
-                  hx-confirm="Delete daily record {{ record.date }}?"
+                  hx-confirm="Delete daily record {{ record.day }}?"
                   hx-swap="none"
                 >
                     <i class="bx bx-trash admin-icon admin-icon--18"></i>

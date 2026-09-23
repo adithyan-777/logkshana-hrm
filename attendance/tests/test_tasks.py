@@ -2,7 +2,10 @@ from unittest.mock import patch
 
 from django.test import override_settings
 
-from attendance.tasks import device_attendance_sync_all_task, device_attendance_sync_task
+from attendance.tasks import (
+    device_attendance_sync_all_task,
+    device_attendance_sync_task,
+)
 from common.tests.base import BaseTenantTestCase
 from common.tests.factories import device_factory
 

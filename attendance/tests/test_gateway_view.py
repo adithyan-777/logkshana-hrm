@@ -4,7 +4,7 @@ from django.test import override_settings
 from django.urls import reverse
 from django_tenants.test.client import TenantClient
 
-from attendance.models import AttendanceTransaction
+from attendance.models import AttendanceActivity
 from common.tests.base import BaseTenantTestCase
 from common.tests.factories import device_factory, employee_factory
 
@@ -63,14 +63,14 @@ class GatewayViewTests(BaseTenantTestCase):
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(AttendanceTransaction.objects.count(), 0)
+        self.assertEqual(AttendanceActivity.objects.count(), 0)
 
     def test_rejects_wrong_auth(self):
         response = self.post_gateway(
             self.gateway_payload(), HTTP_AUTHORIZATION="Bearer wrong-secret"
         )
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(AttendanceTransaction.objects.count(), 0)
+        self.assertEqual(AttendanceActivity.objects.count(), 0)
 
     def test_accepts_x_gateway_token_header(self):
         client = TenantClient(self.tenant)
@@ -81,7 +81,7 @@ class GatewayViewTests(BaseTenantTestCase):
             HTTP_X_GATEWAY_TOKEN=TEST_GATEWAY_SECRET,
         )
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(AttendanceTransaction.objects.count(), 1)
+        self.assertEqual(AttendanceActivity.objects.count(), 1)
 
     def test_accepts_legacy_secret_key_param(self):
         client = TenantClient(self.tenant)
@@ -91,7 +91,7 @@ class GatewayViewTests(BaseTenantTestCase):
             content_type="application/json",
         )
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(AttendanceTransaction.objects.count(), 1)
+        self.assertEqual(AttendanceActivity.objects.count(), 1)
 
     def test_single_push_creates_punch_with_gateway_extras(self):
         response = self.post_gateway(self.gateway_payload())
@@ -102,8 +102,8 @@ class GatewayViewTests(BaseTenantTestCase):
         self.assertEqual(body["serial_number"], "ZK-001")
         self.assertIn("id", body)
 
-        punch = AttendanceTransaction.objects.get()
-        self.assertEqual(punch.external_employee_id, "1001")
+        punch = AttendanceActivity.objects.get()
+        self.assertEqual(punch.employee.emp_code, "1001")
         self.assertEqual(punch.raw_data["verify_mode"], 1)
         self.assertEqual(punch.raw_data["work_code"], "0")
         self.assertEqual(punch.raw_data["id"], 101)
@@ -126,9 +126,9 @@ class GatewayViewTests(BaseTenantTestCase):
 
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json()["external_id"], "gateway:2")
-        punch = AttendanceTransaction.objects.get()
+        punch = AttendanceActivity.objects.get()
         self.assertEqual(punch.external_id, "gateway:2")
-        self.assertEqual(punch.external_employee_id, "1001")
+        self.assertEqual(punch.employee.emp_code, "1001")
         self.assertEqual(punch.raw_data["gateway_id"], "gateway-1")
         self.assertEqual(punch.raw_data["gateway_log_id"], 2)
         self.assertEqual(punch.raw_data["verify_mode"], 1)
@@ -142,7 +142,7 @@ class GatewayViewTests(BaseTenantTestCase):
         response = self.post_gateway(payload)
 
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(AttendanceTransaction.objects.count(), 1)
+        self.assertEqual(AttendanceActivity.objects.count(), 1)
 
     def test_single_push_missing_user_id_is_400(self):
         payload = self.gateway_payload()
@@ -151,13 +151,13 @@ class GatewayViewTests(BaseTenantTestCase):
         response = self.post_gateway(payload)
 
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(AttendanceTransaction.objects.count(), 0)
+        self.assertEqual(AttendanceActivity.objects.count(), 0)
 
     def test_single_push_unknown_employee_is_400(self):
         response = self.post_gateway(self.gateway_payload(user_id="MISSING"))
 
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(AttendanceTransaction.objects.count(), 0)
+        self.assertEqual(AttendanceActivity.objects.count(), 0)
 
     def test_single_push_replay_is_idempotent(self):
         first = self.post_gateway(self.gateway_payload())
@@ -166,7 +166,7 @@ class GatewayViewTests(BaseTenantTestCase):
         self.assertEqual(first.status_code, 201)
         self.assertEqual(second.status_code, 201)
         self.assertEqual(first.json()["id"], second.json()["id"])
-        self.assertEqual(AttendanceTransaction.objects.count(), 1)
+        self.assertEqual(AttendanceActivity.objects.count(), 1)
 
     def test_batch_push_creates_all(self):
         payload = [
@@ -180,7 +180,7 @@ class GatewayViewTests(BaseTenantTestCase):
         body = response.json()
         self.assertEqual(body["created"], 2)
         self.assertEqual(body["errors"], 0)
-        self.assertEqual(AttendanceTransaction.objects.count(), 2)
+        self.assertEqual(AttendanceActivity.objects.count(), 2)
 
     def test_batch_push_partial_failure_is_207(self):
         payload = [
@@ -194,13 +194,13 @@ class GatewayViewTests(BaseTenantTestCase):
         body = response.json()
         self.assertEqual(body["created"], 1)
         self.assertEqual(body["errors"], 1)
-        self.assertEqual(AttendanceTransaction.objects.count(), 1)
+        self.assertEqual(AttendanceActivity.objects.count(), 1)
 
     def test_invalid_json_is_400(self):
         response = self.post_gateway("{not-json")
 
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(AttendanceTransaction.objects.count(), 0)
+        self.assertEqual(AttendanceActivity.objects.count(), 0)
 
     def test_get_is_not_allowed(self):
         client = TenantClient(self.tenant)

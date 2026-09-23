@@ -30,17 +30,17 @@
     <table class="data-table">
         <thead>
             <tr>
-                <th>Timestamp</th>
+                <th>Punch time</th>
                 <th>Direction</th>
-                <th>Source</th>
+                <th>Method</th>
             </tr>
         </thead>
         <tbody>
             {% for punch in recent_punches %}
             <tr>
-                <td>{{ punch.timestamp }}</td>
+                <td>{{ punch.punch_time }}</td>
                 <td>{{ punch.get_direction_display }}</td>
-                <td>{{ punch.get_source_display }}</td>
+                <td>{{ punch.get_method_display }}</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -70,7 +70,6 @@
         <tr>
             <th>Date</th>
             <th>Status</th>
-            <th>Scheduled</th>
             <th>Worked</th>
             <th>Late</th>
             <th>OT</th>
@@ -79,9 +78,8 @@
     <tbody>
         {% for record in page_obj %}
         <tr>
-            <td>{{ record.date }}</td>
+            <td>{{ record.day }}</td>
             <td><span class="badge status-{{ record.status }}">{{ record.get_status_display }}</span></td>
-            <td>{{ record.scheduled_minutes }}m</td>
             <td>{{ record.worked_minutes }}m</td>
             <td>{{ record.late_minutes }}m</td>
             <td>{{ record.overtime_minutes }}m</td>

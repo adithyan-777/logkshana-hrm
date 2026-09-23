@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 from django.core.exceptions import ValidationError
 
-from attendance.models import AttendanceTransaction
+from attendance.models import AttendanceActivity
 from attendance.services import device_attendance_pull
 from common.tests.base import BaseTenantTestCase
 from common.tests.factories import device_factory, employee_factory
@@ -47,9 +47,9 @@ class DeviceAttendancePullTests(BaseTenantTestCase):
         self.assertEqual(result["created"], 2)
         self.assertEqual(result["skipped"], 0)
         self.assertEqual(result["last_log_id"], 102)
-        self.assertEqual(AttendanceTransaction.objects.count(), 2)
+        self.assertEqual(AttendanceActivity.objects.count(), 2)
         self.assertTrue(
-            AttendanceTransaction.objects.filter(external_id="gateway:101").exists()
+            AttendanceActivity.objects.filter(external_id="gateway:101").exists()
         )
 
         self.device.refresh_from_db()
@@ -79,7 +79,7 @@ class DeviceAttendancePullTests(BaseTenantTestCase):
         self.assertEqual(result["skipped"], 0)
         self.assertEqual(result["last_log_id"], 201)
         self.assertTrue(
-            AttendanceTransaction.objects.filter(external_id="gateway:201").exists()
+            AttendanceActivity.objects.filter(external_id="gateway:201").exists()
         )
 
     @patch("attendance.services.device_gateway_attendance_fetch")
@@ -104,7 +104,7 @@ class DeviceAttendancePullTests(BaseTenantTestCase):
         self.assertEqual(first["created"], 2)
         self.assertEqual(second["created"], 0)
         self.assertEqual(second["skipped"], 2)
-        self.assertEqual(AttendanceTransaction.objects.count(), 2)
+        self.assertEqual(AttendanceActivity.objects.count(), 2)
 
     @patch("attendance.services.device_gateway_attendance_fetch")
     def test_uses_device_last_gateway_log_id_for_incremental_fetch(self, mock_fetch):

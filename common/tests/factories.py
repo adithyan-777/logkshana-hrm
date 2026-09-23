@@ -186,66 +186,37 @@ def holiday_factory(*, name="New Year", **kwargs):
     return holiday_create(name=name, **defaults)
 
 
-def attendance_transaction_factory(*, employee=None, external_id=None, **kwargs):
+def activity_factory(*, employee=None, external_id=None, **kwargs):
     from uuid import uuid4
 
     from django.utils import timezone
 
-    from attendance.models import AttendanceTransaction
-    from attendance.services import attendance_transaction_create
+    from attendance.models import AttendanceActivity
+    from attendance.services import activity_create
 
     if employee is None:
         employee = employee_factory(first_name="Punch", emp_code="AT001")
 
     defaults = {
         "external_id": external_id or f"EXT-{uuid4().hex[:8]}",
-        "timestamp": timezone.now(),
-        "direction": AttendanceTransaction.Direction.IN,
-        "source": AttendanceTransaction.Source.MANUAL,
+        "punch_time": timezone.now(),
+        "direction": AttendanceActivity.Direction.IN,
+        "method": AttendanceActivity.AttendanceActivityMethodType.MANUAL,
     }
     defaults.update(kwargs)
-    return attendance_transaction_create(employee=employee, **defaults)
+    return activity_create(employee=employee, **defaults)
 
 
-def daily_attendance_factory(*, employee=None, **kwargs):
-    from attendance.models import DailyAttendance
-    from attendance.services import daily_attendance_create
+def attendance_record_factory(*, employee=None, **kwargs):
+    from attendance.models import Attendance
+    from attendance.services import attendance_record_create
 
     if employee is None:
         employee = employee_factory(first_name="Daily", emp_code="DA001")
 
     defaults = {
-        "date": date(2026, 2, 1),
-        "status": DailyAttendance.Status.PRESENT,
-        "worked_minutes": 480,
-        "scheduled_minutes": 480,
+        "day": date(2026, 2, 1),
+        "status": Attendance.Status.PRESENT,
     }
     defaults.update(kwargs)
-    return daily_attendance_create(employee=employee, **defaults)
-
-
-def attendance_correction_factory(*, employee=None, **kwargs):
-    from attendance.models import AttendanceCorrection
-    from attendance.services import attendance_correction_create
-
-    if employee is None:
-        employee = employee_factory(first_name="Correct", emp_code="AC001")
-
-    defaults = {
-        "date": date(2026, 2, 5),
-        "reason": "Forgot to punch",
-        "status": AttendanceCorrection.Status.PENDING,
-    }
-    defaults.update(kwargs)
-    return attendance_correction_create(employee=employee, **defaults)
-
-
-def attendance_rule_factory(*, name="Default Rule", **kwargs):
-    from attendance.services import attendance_rule_create
-
-    defaults = {
-        "late_grace_minutes": 10,
-        "early_leave_grace_minutes": 5,
-    }
-    defaults.update(kwargs)
-    return attendance_rule_create(name=name, **defaults)
+    return attendance_record_create(employee=employee, **defaults)

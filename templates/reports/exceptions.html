@@ -24,20 +24,20 @@
             <th>Check In</th>
             <th>Check Out</th>
             <th>Late (min)</th>
-            <th>Notes</th>
+            <th>Shift</th>
         </tr>
     </thead>
     <tbody>
         {% for record in page_obj %}
         <tr>
-            <td>{{ record.date }}</td>
+            <td>{{ record.day }}</td>
             <td>{{ record.employee.full_name }}</td>
             <td>{{ record.employee.department|default:"—" }}</td>
             <td><span class="badge status-{{ record.status }}">{{ record.get_status_display }}</span></td>
             <td>{% if record.has_check_in %}Yes{% else %}No{% endif %}</td>
             <td>{% if record.has_check_out %}Yes{% else %}No{% endif %}</td>
             <td>{{ record.late_minutes }}m</td>
-            <td>{{ record.notes|default:"—" }}</td>
+            <td>{{ record.shift|default:"—" }}</td>
         </tr>
         {% endfor %}
     </tbody>

@@ -46,23 +46,21 @@ SHARED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "tenant_users.permissions",
-    "tenant_users.tenants",
+    "django_celery_beat",
+    "django_celery_results",
+    "django_q",
+    "waffle",
     "rest_framework",
     "companies",
     "users",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
-    "django_celery_beat",
-    "django_celery_results",
-    "waffle",
 ]
 
 TENANT_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
-    "tenant_users.permissions",
     "employees",
     "schedule",
     "leave",
@@ -86,7 +84,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
-    "tenant_users.tenants.middleware.TenantAccessMiddleware",
+    "companies.middleware.CompanyMembershipMiddleware",
     "waffle.middleware.WaffleMiddleware",
 ]
 
@@ -109,18 +107,14 @@ TEMPLATES = [
 ]
 
 AUTHENTICATION_BACKENDS = [
-    "tenant_users.permissions.backend.UserBackend",
+    "django.contrib.auth.backends.ModelBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
 
-TENANT_USERS_DOMAIN = os.getenv("TENANT_USERS_DOMAIN")
+BASE_DOMAIN = os.getenv("BASE_DOMAIN")
 
-# Tenant users settings
-AUTH_USER_MODEL = "users.TenantUser"
-TENANT_USERS_PERMS_QUERYSET = (
-    "tenant_users.permissions.utils.get_optimized_tenant_perms_queryset"
-)
-TENANT_USERS_ACCESS_ERROR_MESSAGE = "Access denied. Please contact your administrator."
+# Custom user model (shared table in the public schema).
+AUTH_USER_MODEL = "users.User"
 
 WSGI_APPLICATION = "config.wsgi.application"
 
@@ -192,6 +186,20 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = os.getenv("TIMEZONE", "Asia/Qatar")  # match your Django TIME_ZONE
 
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+
+
+## django-q2 settings (attendance calc, one task per employee).
+# ORM broker: no extra infra, tables live in the public schema via SHARED_APPS.
+# Tasks carry their tenant schema_name explicitly and switch schema themselves.
+Q_CLUSTER = {
+    "name": "pattika",
+    "workers": int(os.getenv("Q2_WORKERS", "2")),
+    "recycle": int(os.getenv("Q2_RECYCLE", "500")),
+    "timeout": int(os.getenv("Q2_TIMEOUT", "120")),
+    "retry": int(os.getenv("Q2_RETRY", "300")),
+    "orm": "default",
+    "catch_up": False,
+}
 
 
 # Internationalization

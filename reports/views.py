@@ -6,7 +6,7 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
-from attendance.models import AttendanceTransaction
+from attendance.models import AttendanceActivity
 from common.http import is_htmx_partial
 from common.pagination import paginate_queryset
 from employees.decorators import require_permission
@@ -392,7 +392,7 @@ def punch_log_view(request: HttpRequest) -> HttpResponse:
             employee_id=employee_id,
         )
     else:
-        queryset = AttendanceTransaction.objects.none()
+        queryset = AttendanceActivity.objects.none()
 
     export_response = _maybe_export(
         request,

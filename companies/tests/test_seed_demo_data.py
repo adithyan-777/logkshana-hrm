@@ -70,9 +70,9 @@ class SeedDemoDataCommandTests(BaseTenantTestCase):
     def test_attaches_conventional_subdomain(self):
         from django.conf import settings
 
-        base_domain = getattr(settings, "TENANT_USERS_DOMAIN", None)
+        base_domain = getattr(settings, "BASE_DOMAIN", None)
         if not base_domain:
-            self.skipTest("TENANT_USERS_DOMAIN is not configured")
+            self.skipTest("BASE_DOMAIN is not configured")
         domain = f"conv-{self.tenant.schema_name}.test"
 
         call_command(
@@ -101,7 +101,7 @@ class SeedDemoDataCommandTests(BaseTenantTestCase):
             verbosity=0,
         )
 
-        base_domain = getattr(settings, "TENANT_USERS_DOMAIN", None)
+        base_domain = getattr(settings, "BASE_DOMAIN", None)
         if base_domain:
             conventional = f"{self.tenant.schema_name}.{base_domain}"
             self.assertFalse(Domain.objects.filter(domain=conventional).exists())

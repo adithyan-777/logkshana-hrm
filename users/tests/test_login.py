@@ -11,7 +11,7 @@ OTHER_SCHEMA = "other_login_test"
 OTHER_DOMAIN = "other.fast-test.com"
 
 
-class TenantUserLoginTests(BaseTenantTestCase):
+class UserLoginTests(BaseTenantTestCase):
     def setUp(self):
         super().setUp()
         self.client.logout()

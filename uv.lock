@@ -464,6 +464,31 @@ wheels = [
 ]
 
 [[package]]
+name = "django-picklefield"
+version = "3.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/93/03/13114bccbd1ec8c026ac1ff33dae75ae6c6a5632e4769ee9cda283b9f57e/django_picklefield-3.4.0.tar.gz", hash = "sha256:3a1f740536c0e60d0dba43aa89ccdbe86760d4c3f8ec47799eae122baa741d0a", size = 12555, upload-time = "2025-11-27T03:11:53.13Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/79/b7/139eb1419ca7b27fd714925b8d0eed6efb592479dcf2155fed6c0c87c956/django_picklefield-3.4.0-py3-none-any.whl", hash = "sha256:929bcfbae5b48bd22a52bc04521fdfdd152eee36abb9f20228f9480f9df65f45", size = 10031, upload-time = "2025-11-27T03:11:51.937Z" },
+]
+
+[[package]]
+name = "django-q2"
+version = "1.11.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "django-picklefield" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c8/6d/d5e103f31e64d61ad20da154200105d9f80a8e7b582afe80a377c70a1e3e/django_q2-1.11.1.tar.gz", hash = "sha256:640caf961f9098f26e00a22b743c4eb63da681a5390829b1ed951db677866e67", size = 100892, upload-time = "2026-08-26T02:47:43.592Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/aa/77/5448ec49605848eae6d6812994e71a312c2535821cf93853e1756e0b26a8/django_q2-1.11.1-py3-none-any.whl", hash = "sha256:b7e7cc030811babc1824de6c5888faec9e84ecd21572401bfdf48770ea67805f", size = 129780, upload-time = "2026-08-26T02:47:42.108Z" },
+]
+
+[[package]]
 name = "django-stubs"
 version = "6.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -494,19 +519,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/4c/70/5f80a3acf99d26dea89e892d4573f0e650904e573708b5fbf3bfc9cec72c/django_stubs_ext-6.1.1.tar.gz", hash = "sha256:c35263135558d4c5d12b69e1f4c98632bf59bc3ab5118f7d4882d12800e3a7dd", size = 7217, upload-time = "2026-09-14T08:45:52.44Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/99/c3/305a9f7611c0dc96d2a638bc3a67bdcde5a7faa5f4669188db018b8af6fc/django_stubs_ext-6.1.1-py3-none-any.whl", hash = "sha256:64aebb7ce2c327a4a2b75207d67034e879fd7edf027c93487be69da363dc79fa", size = 10853, upload-time = "2026-09-14T08:45:51.289Z" },
-]
-
-[[package]]
-name = "django-tenant-users"
-version = "2.2.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "django" },
-    { name = "django-tenants" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a0/d8/be99ef976b75525f047aef7d4f93996599dd0dc08623b03b8cfe4cafb42c/django_tenant_users-2.2.1.tar.gz", hash = "sha256:1fac19d52625aaa250681a1d7a052eac1d4bbe876d79963c3e7d3dd67f7e712d", size = 16904, upload-time = "2025-10-08T02:01:06.794Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/14/58/8a6daa6c6ffac6bc580b059c09590778caa796e49f6b9e29de7945ededcc/django_tenant_users-2.2.1-py3-none-any.whl", hash = "sha256:09d36ba33a1ecbd8fab83e88f94397334a29245f984b2caf0f0f704044a5c28c", size = 22412, upload-time = "2025-10-08T02:01:05.602Z" },
 ]
 
 [[package]]
@@ -769,7 +781,7 @@ dependencies = [
     { name = "django-allauth", extra = ["socialaccount"] },
     { name = "django-celery-beat" },
     { name = "django-celery-results" },
-    { name = "django-tenant-users" },
+    { name = "django-q2" },
     { name = "django-tenants" },
     { name = "django-waffle" },
     { name = "djangorestframework" },
@@ -797,7 +809,7 @@ requires-dist = [
     { name = "django-allauth", extras = ["socialaccount"], specifier = ">=65.19.0" },
     { name = "django-celery-beat", specifier = "==2.9.0" },
     { name = "django-celery-results", specifier = ">=2.6.0" },
-    { name = "django-tenant-users", specifier = ">=2.2.1" },
+    { name = "django-q2", specifier = ">=1.11.1" },
     { name = "django-tenants", specifier = ">=3.14.0" },
     { name = "django-waffle", specifier = ">=5.0.0" },
     { name = "djangorestframework", specifier = ">=3.18.0" },

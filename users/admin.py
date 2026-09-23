@@ -1,11 +1,10 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
-# Register your models here.
-
-from users.models import TenantUser
+from users.models import User
 
 
-@admin.register(TenantUser)
-class TenantUserAdmin(admin.ModelAdmin):
+@admin.register(User)
+class UserAdmin(DjangoUserAdmin):
     search_fields = ("username", "email")
     ordering = ("-id",)

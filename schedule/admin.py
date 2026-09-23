@@ -1,6 +1,12 @@
 from django.contrib import admin
 
-from schedule.models import Schedule, Timetable, TimetableBreak
+from schedule.models import (
+    EmployeeScheduleAssignment,
+    EmployeeScheduleOverride,
+    Schedule,
+    Timetable,
+    TimetableBreak,
+)
 
 
 class TimetableBreakInline(admin.TabularInline):
@@ -46,3 +52,40 @@ class ScheduleAdmin(admin.ModelAdmin):
     search_fields = ("name", "timetable__name")
     autocomplete_fields = ("timetable",)
     list_select_related = ("timetable",)
+
+
+@admin.register(EmployeeScheduleAssignment)
+class EmployeeScheduleAssignmentAdmin(admin.ModelAdmin):
+    list_display = (
+        "name",
+        "schedule",
+        "start_date",
+        "end_date",
+        "priority",
+        "is_active",
+    )
+    list_filter = ("is_active", "schedule")
+    search_fields = ("name", "schedule__name", "employees__emp_code")
+    autocomplete_fields = ("schedule",)
+    list_select_related = ("schedule",)
+    filter_horizontal = ("employees",)
+
+
+@admin.register(EmployeeScheduleOverride)
+class EmployeeScheduleOverrideAdmin(admin.ModelAdmin):
+    list_display = (
+        "employee",
+        "date",
+        "schedule",
+        "is_day_off",
+    )
+    list_filter = ("is_day_off",)
+    search_fields = (
+        "employee__emp_code",
+        "employee__first_name",
+        "employee__last_name",
+        "reason",
+    )
+    autocomplete_fields = ("employee", "schedule")
+    list_select_related = ("employee", "schedule")
+    date_hierarchy = "date"

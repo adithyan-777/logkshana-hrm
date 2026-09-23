@@ -16,17 +16,10 @@ from django_tenants.utils import (
 from companies.models import Company, Domain
 from companies.services import company_primary_branch_get_or_create
 
-from attendance.models import (
-    AttendanceCorrection,
-    AttendanceRule,
-    AttendanceTransaction,
-    DailyAttendance,
-)
+from attendance.models import Attendance, AttendanceActivity
 from attendance.services import (
-    attendance_correction_create,
-    attendance_rule_create,
-    attendance_transaction_create,
-    daily_attendance_create,
+    activity_create,
+    attendance_record_create,
 )
 from employees.models import Department, Employee, Position
 from employees.services import employee_create
@@ -37,12 +30,8 @@ from leave.services import (
     leave_request_create,
     leave_type_create,
 )
-from schedule.models import ScheduleAssignment, Shift, Timetable
-from schedule.services import (
-    schedule_assignment_create,
-    shift_create,
-    timetable_create,
-)
+from schedule.models import EmployeeScheduleAssignment, Schedule, Timetable
+from schedule.services import schedule_create, timetable_create
 
 
 def _get_or_create_department(*, name: str, code: str) -> Department:
@@ -112,29 +101,26 @@ def _get_or_create_timetable(*, name: str, code: str, **kwargs) -> Timetable:
 
     defaults = {
         "type": Timetable.Type.NORMAL,
-        "work_type": Timetable.WorkType.WORK,
         "check_in": time(9, 0),
         "check_out": time(18, 0),
-        "late_in_grace_minutes": 10,
-        "early_out_grace_minutes": 5,
+        "grace_period_minutes": 10,
         "is_active": True,
     }
     defaults.update(kwargs)
     return timetable_create(name=name, code=code, **defaults)
 
 
-def _get_or_create_shift(*, name: str, code: str, shift_days: list[dict]) -> Shift:
-    shift = Shift.objects.filter(code=code).first()
-    if shift:
-        return shift
+def _get_or_create_schedule(*, name: str, timetable: Timetable) -> Schedule:
+    schedule = Schedule.objects.filter(name=name, timetable=timetable).first()
+    if schedule:
+        return schedule
 
-    return shift_create(
+    return schedule_create(
         name=name,
-        code=code,
-        cycle_unit="week",
-        cycle_count=1,
-        is_active=True,
-        shift_days=shift_days,
+        timetable=timetable,
+        repeat=True,
+        repeat_every=1,
+        repeat_unit=Schedule.RepeatUnitType.WEEK,
     )
 
 
@@ -145,16 +131,14 @@ def seed_demo_data(*, branch=None) -> dict[str, int]:
         "positions": 0,
         "employees": 0,
         "timetables": 0,
-        "shifts": 0,
+        "schedules": 0,
         "assignments": 0,
         "leave_types": 0,
         "leave_policies": 0,
         "holidays": 0,
         "leave_requests": 0,
-        "attendance_rules": 0,
-        "attendance_transactions": 0,
-        "daily_attendance": 0,
-        "attendance_corrections": 0,
+        "attendance_activities": 0,
+        "attendance_records": 0,
     }
 
     def count_if_new(before, after, key):
@@ -240,85 +224,48 @@ def seed_demo_data(*, branch=None) -> dict[str, int]:
         check_in=time(14, 0),
         check_out=time(22, 0),
     )
-    day_off = _get_or_create_timetable(
-        name="Demo Day Off",
-        code="DEMO-OFF",
-        work_type=Timetable.WorkType.OFF,
-        check_in=None,
-        check_out=None,
-    )
     count_if_new(before, Timetable.objects.count(), "timetables")
 
-    before = Shift.objects.count()
-    standard_week = _get_or_create_shift(
+    before = Schedule.objects.count()
+    standard_schedule = _get_or_create_schedule(
         name="Demo Standard Week",
-        code="DEMO-WEEK",
-        shift_days=[
-            {
-                "day_number": day_number,
-                "timetable": morning if day_number <= 5 else day_off,
-            }
-            for day_number in range(1, 8)
-        ],
+        timetable=morning,
     )
-    count_if_new(before, Shift.objects.count(), "shifts")
+    evening_schedule = _get_or_create_schedule(
+        name="Demo Evening Week",
+        timetable=evening,
+    )
+    count_if_new(before, Schedule.objects.count(), "schedules")
 
     assignment_start = date(2026, 1, 1)
     assignment_end = date(2026, 12, 31)
-    before = ScheduleAssignment.objects.count()
+    before = EmployeeScheduleAssignment.objects.count()
 
-    if not ScheduleAssignment.objects.filter(
-        assignment_type=ScheduleAssignment.AssignmentType.DEPARTMENT,
-        department=engineering,
-        shift=standard_week,
-    ).exists():
-        schedule_assignment_create(
-            assignment_type=ScheduleAssignment.AssignmentType.DEPARTMENT,
-            shift=standard_week,
-            start_date=assignment_start,
-            end_date=assignment_end,
-            department=engineering,
-        )
-
-    for employee in (ahmed, sara):
-        if not ScheduleAssignment.objects.filter(
-            assignment_type=ScheduleAssignment.AssignmentType.EMPLOYEE,
-            employee=employee,
-            shift=standard_week,
-        ).exists():
-            schedule_assignment_create(
-                assignment_type=ScheduleAssignment.AssignmentType.EMPLOYEE,
-                shift=standard_week,
+    def _assign(*, name: str, schedule: Schedule, employees: list) -> None:
+        assignment = EmployeeScheduleAssignment.objects.filter(
+            name=name, schedule=schedule
+        ).first()
+        if assignment is None:
+            assignment = EmployeeScheduleAssignment.objects.create(
+                name=name,
+                schedule=schedule,
                 start_date=assignment_start,
                 end_date=assignment_end,
-                employee=employee,
             )
+        assignment.employees.add(*employees)
 
-    if not ScheduleAssignment.objects.filter(
-        assignment_type=ScheduleAssignment.AssignmentType.EMPLOYEE,
-        employee=fatima,
-        shift=standard_week,
-    ).exists():
-        evening_shift = _get_or_create_shift(
-            name="Demo Evening Week",
-            code="DEMO-EVE-WEEK",
-            shift_days=[
-                {
-                    "day_number": day_number,
-                    "timetable": evening if day_number <= 5 else day_off,
-                }
-                for day_number in range(1, 8)
-            ],
-        )
-        schedule_assignment_create(
-            assignment_type=ScheduleAssignment.AssignmentType.EMPLOYEE,
-            shift=evening_shift,
-            start_date=assignment_start,
-            end_date=assignment_end,
-            employee=fatima,
-        )
+    _assign(
+        name="Demo Standard Assignment",
+        schedule=standard_schedule,
+        employees=[ahmed, sara, omar],
+    )
+    _assign(
+        name="Demo Evening Assignment",
+        schedule=evening_schedule,
+        employees=[fatima],
+    )
 
-    count_if_new(before, ScheduleAssignment.objects.count(), "assignments")
+    count_if_new(before, EmployeeScheduleAssignment.objects.count(), "assignments")
 
     # ------------------------------------------------------------------
     # Leave
@@ -394,93 +341,54 @@ def seed_demo_data(*, branch=None) -> dict[str, int]:
     # ------------------------------------------------------------------
     # Attendance
     # ------------------------------------------------------------------
-    before = AttendanceRule.objects.count()
-    if not AttendanceRule.objects.filter(name="Demo Standard Rule").exists():
-        attendance_rule_create(
-            name="Demo Standard Rule",
-            late_grace_minutes=10,
-            early_leave_grace_minutes=5,
-            duplicate_punch_window_minutes=2,
-        )
-
-    count_if_new(before, AttendanceRule.objects.count(), "attendance_rules")
-
     today = timezone.localdate()
     yesterday = today - timedelta(days=1)
 
-    before = AttendanceTransaction.objects.count()
+    before = AttendanceActivity.objects.count()
     for employee, punch_date in ((ahmed, today), (sara, today), (omar, yesterday)):
         external_in = f"DEMO-{employee.emp_code}-IN-{punch_date.isoformat()}"
         external_out = f"DEMO-{employee.emp_code}-OUT-{punch_date.isoformat()}"
 
-        if not AttendanceTransaction.objects.filter(external_id=external_in).exists():
+        if not AttendanceActivity.objects.filter(external_id=external_in).exists():
             check_in = timezone.make_aware(datetime.combine(punch_date, time(9, 5)))
-            attendance_transaction_create(
+            activity_create(
                 employee=employee,
+                punch_time=check_in,
+                direction=AttendanceActivity.Direction.IN,
+                method=AttendanceActivity.AttendanceActivityMethodType.BIOMETRIC,
                 external_id=external_in,
-                timestamp=check_in,
-                direction=AttendanceTransaction.Direction.IN,
-                source=AttendanceTransaction.Source.BIOMETRIC,
             )
 
-        if not AttendanceTransaction.objects.filter(external_id=external_out).exists():
+        if not AttendanceActivity.objects.filter(external_id=external_out).exists():
             check_out = timezone.make_aware(datetime.combine(punch_date, time(18, 10)))
-            attendance_transaction_create(
+            activity_create(
                 employee=employee,
+                punch_time=check_out,
+                direction=AttendanceActivity.Direction.OUT,
+                method=AttendanceActivity.AttendanceActivityMethodType.BIOMETRIC,
                 external_id=external_out,
-                timestamp=check_out,
-                direction=AttendanceTransaction.Direction.OUT,
-                source=AttendanceTransaction.Source.BIOMETRIC,
             )
     count_if_new(
-        before, AttendanceTransaction.objects.count(), "attendance_transactions"
+        before, AttendanceActivity.objects.count(), "attendance_activities"
     )
 
-    before = DailyAttendance.objects.count()
-    for employee, record_date, status, late in (
-        (ahmed, today, DailyAttendance.Status.PRESENT, 5),
-        (sara, today, DailyAttendance.Status.LATE, 15),
-        (omar, yesterday, DailyAttendance.Status.PRESENT, 0),
-        (fatima, yesterday, DailyAttendance.Status.EARLY_OUT, 0),
+    before = Attendance.objects.count()
+    for employee, record_day, status in (
+        (ahmed, today, Attendance.Status.PRESENT),
+        (sara, today, Attendance.Status.LATE),
+        (omar, yesterday, Attendance.Status.PRESENT),
+        (fatima, yesterday, Attendance.Status.EARLY_OUT),
     ):
-        if not DailyAttendance.objects.filter(
-            employee=employee, date=record_date
+        if not Attendance.objects.filter(
+            employee=employee, day=record_day
         ).exists():
-            daily_attendance_create(
+            attendance_record_create(
                 employee=employee,
-                date=record_date,
+                day=record_day,
                 status=status,
-                shift=standard_week,
-                timetable=morning,
-                scheduled_minutes=480,
-                worked_minutes=465
-                if status == DailyAttendance.Status.EARLY_OUT
-                else 480,
-                late_minutes=late,
-                early_leave_minutes=15
-                if status == DailyAttendance.Status.EARLY_OUT
-                else 0,
-                has_check_in=True,
-                has_check_out=True,
+                shift=morning,
             )
-    count_if_new(before, DailyAttendance.objects.count(), "daily_attendance")
-
-    before = AttendanceCorrection.objects.count()
-
-    if not AttendanceCorrection.objects.filter(
-        employee=omar,
-        date=yesterday,
-        reason="Forgot evening punch",
-    ).exists():
-        check_in = timezone.make_aware(datetime.combine(yesterday, time(9, 0)))
-        attendance_correction_create(
-            employee=omar,
-            date=yesterday,
-            check_in=check_in,
-            reason="Forgot evening punch",
-            status=AttendanceCorrection.Status.PENDING,
-        )
-    count_if_new(before, AttendanceCorrection.objects.count(), "attendance_corrections")
+    count_if_new(before, Attendance.objects.count(), "attendance_records")
 
     return created
 
@@ -521,7 +429,7 @@ class Command(BaseCommand):
             "--skip-subdomain",
             action="store_true",
             help=(
-                "Do not auto-attach the conventional <schema>.TENANT_USERS_DOMAIN "
+                "Do not auto-attach the conventional <schema>.BASE_DOMAIN "
                 "subdomain (e.g. demo.localhost)."
             ),
         )
@@ -620,13 +528,10 @@ class Command(BaseCommand):
     @staticmethod
     def _ensure_owner_access(*, owner, tenant: Company) -> None:
         """Attach the owner to the tenant with staff rights (admin login)."""
-        from tenant_users.permissions.models import UserTenantPermissions
-
-        owner.tenants.add(tenant)
-        UserTenantPermissions.objects.update_or_create(
-            profile=owner,
-            defaults={"is_staff": True},
-        )
+        tenant.add_user(owner)
+        if not owner.is_staff:
+            owner.is_staff = True
+            owner.save(update_fields=["is_staff"])
 
     def _resolve_tenant(
         self, *, schema_name: str | None, owner
@@ -694,13 +599,12 @@ class Command(BaseCommand):
         """All hostnames to attach to the tenant.
 
         Besides --domain this includes the conventional
-        <schema>.TENANT_USERS_DOMAIN subdomain (e.g. demo.localhost, per
-        django-tenant-users' provision_tenant convention), which works
+        <schema>.BASE_DOMAIN subdomain (e.g. demo.localhost), which works
         without any /etc/hosts entry on modern systems.
         """
         hostnames = ["localhost", "127.0.0.1"] if domain == "localhost" else [domain]
         if not skip_subdomain:
-            base_domain = getattr(settings, "TENANT_USERS_DOMAIN", None)
+            base_domain = getattr(settings, "BASE_DOMAIN", None)
             if base_domain:
                 conventional = f"{schema_name}.{base_domain}"
                 if conventional not in hostnames:

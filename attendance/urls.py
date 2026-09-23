@@ -49,50 +49,6 @@ urlpatterns = [
         views.daily_attendance_delete_view,
         name="daily_attendance_delete",
     ),
-    path("corrections/", views.correction_list_view, name="attendance_correction_list"),
-    path("corrections/add/", views.correction_add, name="attendance_correction_add"),
-    path(
-        "corrections/<int:correction_id>/edit/",
-        views.correction_edit,
-        name="correction_edit",
-    ),
-    path(
-        "corrections/<int:attendance_correction_id>/edit/",
-        views.attendance_correction_edit,
-        name="attendance_correction_edit",
-    ),
-    path(
-        "corrections/<int:correction_id>/delete/",
-        views.correction_delete_view,
-        name="correction_delete",
-    ),
-    path(
-        "corrections/<int:attendance_correction_id>/delete/",
-        views.attendance_correction_delete_view,
-        name="attendance_correction_delete",
-    ),
-    path("rules/", views.rule_list_view, name="attendance_rule_list"),
-    path("rules/add/", views.rule_add, name="attendance_rule_add"),
-    path(
-        "rules/<int:rule_id>/edit/",
-        views.rule_edit,
-        name="rule_edit",
-    ),
-    path(
-        "rules/<int:attendance_rule_id>/edit/",
-        views.attendance_rule_edit,
-        name="attendance_rule_edit",
-    ),
-    path(
-        "rules/<int:rule_id>/delete/",
-        views.rule_delete_view,
-        name="rule_delete",
-    ),
-    path(
-        "rules/<int:attendance_rule_id>/delete/",
-        views.attendance_rule_delete_view,
-        name="attendance_rule_delete",
-    ),
     path("me/", views.my_attendance_view, name="my_attendance"),
     path("gateway/", views.gateway_view, name="gateway"),
 ]

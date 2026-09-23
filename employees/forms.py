@@ -55,9 +55,9 @@ class EmployeeForm(forms.ModelForm):
         existing = getattr(instance, "user", None)
         if existing is not None:
             return existing
-        from users.models import TenantUser
+        from users.models import User
 
-        return TenantUser(
+        return User(
             username="",
             email=(self.cleaned_data.get("email") or ""),
         )

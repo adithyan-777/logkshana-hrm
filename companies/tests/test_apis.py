@@ -2,7 +2,7 @@ from django.test import override_settings
 from django.urls import reverse
 from django_tenants.test.client import TenantClient
 
-from attendance.models import AttendanceTransaction
+from attendance.models import AttendanceActivity
 from common.tests.base import BaseTenantTestCase
 from common.tests.factories import device_factory, employee_factory
 
@@ -46,7 +46,7 @@ class AttendanceLogCreateApiTests(BaseTenantTestCase):
         self.assertEqual(payload["employee_id"], "E001")
         self.assertEqual(payload["serial_number"], "ZK-001")
         self.assertTrue(payload["external_id"].startswith("device:ZK-001:E001:"))
-        self.assertEqual(AttendanceTransaction.objects.count(), 1)
+        self.assertEqual(AttendanceActivity.objects.count(), 1)
 
     def test_accepts_gateway_native_payload(self):
         """Gateway pushes {id, serial_number, user_id, timestamp, ...}."""
@@ -72,7 +72,7 @@ class AttendanceLogCreateApiTests(BaseTenantTestCase):
         self.assertEqual(response.status_code, 201)
         payload = response.json()
         self.assertEqual(payload["employee_id"], "1001")
-        self.assertEqual(AttendanceTransaction.objects.count(), 1)
+        self.assertEqual(AttendanceActivity.objects.count(), 1)
 
     def test_gateway_log_id_keys_external_id(self):
         """gateway_log_id is optional; when present it keys the punch."""
@@ -98,7 +98,7 @@ class AttendanceLogCreateApiTests(BaseTenantTestCase):
 
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json()["external_id"], "gateway:2")
-        punch = AttendanceTransaction.objects.get()
+        punch = AttendanceActivity.objects.get()
         self.assertEqual(punch.external_id, "gateway:2")
         self.assertEqual(punch.raw_data["gateway_id"], "gateway-1")
         self.assertEqual(punch.raw_data["gateway_log_id"], 2)
@@ -119,7 +119,7 @@ class AttendanceLogCreateApiTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(AttendanceTransaction.objects.count(), 0)
+        self.assertEqual(AttendanceActivity.objects.count(), 0)
 
     def test_rejects_wrong_auth(self):
         device_factory(serial_number="ZK-001", company=self.tenant)
@@ -138,7 +138,7 @@ class AttendanceLogCreateApiTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(AttendanceTransaction.objects.count(), 0)
+        self.assertEqual(AttendanceActivity.objects.count(), 0)
 
     def test_accepts_x_gateway_token_header(self):
         device_factory(serial_number="ZK-001", company=self.tenant)
@@ -157,7 +157,7 @@ class AttendanceLogCreateApiTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(AttendanceTransaction.objects.count(), 1)
+        self.assertEqual(AttendanceActivity.objects.count(), 1)
 
     def test_rejects_missing_fields(self):
         client = TenantClient(self.tenant)
@@ -173,7 +173,7 @@ class AttendanceLogCreateApiTests(BaseTenantTestCase):
         body = response.json()
         self.assertIn("employee_id", body)
         self.assertIn("timestamp", body)
-        self.assertEqual(AttendanceTransaction.objects.count(), 0)
+        self.assertEqual(AttendanceActivity.objects.count(), 0)
 
     def test_rejects_unknown_device(self):
         employee_factory(first_name="Alice", emp_code="E001")
@@ -192,7 +192,7 @@ class AttendanceLogCreateApiTests(BaseTenantTestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("serial_number", response.json())
-        self.assertEqual(AttendanceTransaction.objects.count(), 0)
+        self.assertEqual(AttendanceActivity.objects.count(), 0)
 
     def test_rejects_unknown_employee(self):
         device_factory(serial_number="ZK-001", company=self.tenant)
@@ -211,7 +211,7 @@ class AttendanceLogCreateApiTests(BaseTenantTestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("employee_id", response.json())
-        self.assertEqual(AttendanceTransaction.objects.count(), 0)
+        self.assertEqual(AttendanceActivity.objects.count(), 0)
 
     def test_replay_is_idempotent(self):
         device_factory(serial_number="ZK-001", company=self.tenant)
@@ -233,4 +233,4 @@ class AttendanceLogCreateApiTests(BaseTenantTestCase):
         self.assertEqual(first.status_code, 201)
         self.assertEqual(second.status_code, 201)
         self.assertEqual(first.json()["id"], second.json()["id"])
-        self.assertEqual(AttendanceTransaction.objects.count(), 1)
+        self.assertEqual(AttendanceActivity.objects.count(), 1)

@@ -16,10 +16,9 @@ from django.utils.text import slugify
 from allauth.account.forms import default_token_generator
 from allauth.account.utils import user_pk_to_url_str
 from django.urls import reverse
-from companies.models import Device
+from companies.models import Company, Device
 from django_tenants.utils import get_public_schema_name, schema_context
-from tenant_users.tenants.utils import get_current_tenant
-from users.models import TenantUser
+from users.models import User
 
 from employees.tasks import device_user_create_task
 
@@ -47,7 +46,7 @@ def _validate_employee_password(*, password: str, user=None) -> str:
 
 def _password_check_user(*, username: str = "", email: str = ""):
     """Unsaved user instance so validators can check similarity."""
-    return TenantUser(username=username or "", email=email or "")
+    return User(username=username or "", email=email or "")
 
 
 def _generate_username(*, first_name: str, last_name: str) -> str:
@@ -84,10 +83,14 @@ def employee_create(
     """
     from django.utils.crypto import get_random_string
 
-    tenant = get_current_tenant()
+    tenant = connection.tenant
+    if not isinstance(tenant, Company):
+        # Test clients (FakeTenant) and other lightweight tenant refs only
+        # carry the schema name — resolve the real Company row for M2M writes.
+        tenant = Company.objects.get(schema_name=connection.schema_name)
     mobile = (mobile or "").strip()
     username = _generate_username(first_name=first_name, last_name=last_name)
-    user_email = email or f"{username}@{tenant.slug}.com"
+    user_email = email or f"{username}@{tenant.schema_name}.com"
     if password:
         _validate_employee_password(
             password=password,
@@ -98,16 +101,16 @@ def employee_create(
         # Auto-created records (device punches, factories, seeds) get a
         # random password; the invite/reset link can set a known one later.
         login_password = get_random_string(12)
-    with schema_context(get_public_schema_name()):
-        user = TenantUser.objects.create_user(
-            email=user_email,
-            username=username,
-            password=login_password,
-            is_active=True,
-        )
+    # Users live in the shared (public schema) table, visible from every
+    # tenant schema, so no schema switch is needed to create one.
+    user = User.objects.create_user(
+        email=user_email,
+        username=username,
+        password=login_password,
+        is_active=True,
+    )
 
-    tenant = get_current_tenant()
-    tenant.add_user(user, is_superuser=False, is_staff=False)
+    tenant.add_user(user)
     employee = Employee(
         user=user,
         first_name=first_name,
@@ -405,13 +408,12 @@ def employee_role_ensure() -> Role:
 
 def employees_assign_employee_role() -> int:
     from django.db.models import Q
-    from tenant_users.permissions.models import UserTenantPermissions
 
     role = employee_role_ensure()
     admin_user_ids = set(
-        UserTenantPermissions.objects.filter(
-            Q(is_staff=True) | Q(is_superuser=True)
-        ).values_list("profile_id", flat=True)
+        User.objects.filter(Q(is_staff=True) | Q(is_superuser=True)).values_list(
+            "pk", flat=True
+        )
     )
     tenant = getattr(connection, "tenant", None)
     owner_id = getattr(tenant, "owner_id", None) if tenant is not None else None

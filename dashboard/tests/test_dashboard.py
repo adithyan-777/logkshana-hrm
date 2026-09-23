@@ -6,11 +6,10 @@ from django.http import HttpResponse
 from django.test import RequestFactory, SimpleTestCase
 from django.urls import reverse
 
-from attendance.models import AttendanceCorrection, DailyAttendance, OvertimeRecord
+from attendance.models import Attendance
 from common.tests.base import TEST_PASSWORD, BaseTenantTestCase
 from common.tests.factories import (
-    attendance_correction_factory,
-    daily_attendance_factory,
+    attendance_record_factory,
     employee_factory,
     leave_request_factory,
 )
@@ -45,15 +44,15 @@ class DashboardSummaryTests(BaseTenantTestCase):
     def test_calculates_today_kpis(self):
         employee = employee_factory(first_name="Dash", emp_code="D001")
         employee_factory(first_name="Inactive", emp_code="D002", is_active=False)
-        daily_attendance_factory(
+        attendance_record_factory(
             employee=employee,
-            date=date(2026, 2, 10),
-            status=DailyAttendance.Status.PRESENT,
+            day=date(2026, 2, 10),
+            status=Attendance.Status.PRESENT,
         )
-        daily_attendance_factory(
+        attendance_record_factory(
             employee=employee_factory(first_name="Absent", emp_code="D003"),
-            date=date(2026, 2, 10),
-            status=DailyAttendance.Status.ABSENT,
+            day=date(2026, 2, 10),
+            status=Attendance.Status.ABSENT,
         )
         leave_request_factory(employee=employee, status=LeaveRequest.Status.PENDING)
 
@@ -65,26 +64,14 @@ class DashboardSummaryTests(BaseTenantTestCase):
         self.assertEqual(summary.present_percentage, 50.0)
         self.assertEqual(summary.pending_leave_count, 1)
 
-    def test_counts_pending_overtime_and_corrections(self):
+    def test_pending_queues_are_zero_without_approval_models(self):
         employee = employee_factory(first_name="Pending", emp_code="D004")
-        daily = daily_attendance_factory(employee=employee, date=date(2026, 3, 1))
-        OvertimeRecord.objects.create(
-            employee=employee,
-            date=date(2026, 3, 1),
-            daily_attendance=daily,
-            minutes=30,
-            status=OvertimeRecord.Status.PENDING,
-        )
-        attendance_correction_factory(
-            employee=employee,
-            date=date(2026, 3, 1),
-            status=AttendanceCorrection.Status.PENDING,
-        )
+        attendance_record_factory(employee=employee, day=date(2026, 3, 1))
 
         summary = dashboard_summary_get(target_date=date(2026, 3, 1))
 
-        self.assertEqual(summary.pending_overtime_count, 1)
-        self.assertEqual(summary.pending_correction_count, 1)
+        self.assertEqual(summary.pending_overtime_count, 0)
+        self.assertEqual(summary.pending_correction_count, 0)
 
     def test_attendance_chart_data(self):
         summary = dashboard_summary_get(target_date=date(2026, 2, 10))

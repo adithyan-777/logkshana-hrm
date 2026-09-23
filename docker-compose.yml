@@ -1,15 +1,19 @@
-# Pattika stack (local-Postgres dev): Redis + Django/Gunicorn + Celery worker + Celery beat.
+# Pattika stack (local-Postgres dev): Redis + Django/Gunicorn + Celery worker + Celery beat + django-q2 cluster.
 #
 # Postgres runs on the HOST (local install), not in Docker.
 # Usage:
 #   cp .env.example .env   # then fill in secrets
 #   docker compose up --build redis          # phase 1: broker only, Django runs locally
 #   docker compose up --build redis worker   # phase 2: containerized worker
-#   docker compose up --build                # full stack (web/worker/beat + redis)
+#   docker compose up --build                # full stack (web/worker/beat/qcluster + redis)
 #
 # Beat uses the DB scheduler (django_celery_beat), so periodic tasks are
 # managed via Django admin or:
 #   docker compose exec web python manage.py seed_device_attendance_sync_schedule
+#
+# django-q2 (attendance calc, one task per employee) schedules live in the
+# public schema; register the nightly fanout once per deploy:
+#   docker compose exec web python manage.py ensure_q2_schedules
 #
 # WARNING: never scale beat past 1 replica (duplicate scheduled runs).
 #
@@ -143,6 +147,30 @@ services:
         condition: service_started
     restart: unless-stopped
     # NEVER: docker compose up --scale beat=2 (duplicate periodic runs)
+
+  qcluster:
+    build: .
+    entrypoint: ["/app/entrypoint.sh"]
+    command: ["python", "manage.py", "qcluster"]
+    env_file:
+      - .env
+    environment:
+      # Container DB: CONTAINER_DB_HOST wins if set, else DB_HOST, else host-gateway.
+      # Laptop .env: DB_HOST=localhost (host-side) + CONTAINER_DB_HOST=host.docker.internal.
+      # Server .env: DB_HOST=<rds-endpoint> alone is enough.
+      DB_HOST: ${CONTAINER_DB_HOST:-${DB_HOST:-host.docker.internal}}
+      DB_PORT: ${DB_PORT:-5432}
+      DEBUG: ${DEBUG:-False}
+      Q2_WORKERS: ${Q2_WORKERS:-2}
+      WAIT_FOR_TABLES: "django_q_task,companies_company"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      web:
+        condition: service_started
+    restart: unless-stopped
+    # NEVER: docker compose up --scale qcluster=2 with the ORM broker
+    # (duplicate task pickup). Scale via Q2_WORKERS instead.
 
   nginx:
     image: nginx:1.29-alpine

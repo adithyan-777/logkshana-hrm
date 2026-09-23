@@ -1,15 +1,15 @@
-from datetime import date
+from datetime import date, timedelta
 
 from django.test import RequestFactory
 from django.urls import reverse
 
+from attendance.models import Attendance
 from common.tests.base import BaseTenantTestCase
 from common.tests.factories import (
-    daily_attendance_factory,
+    attendance_record_factory,
     department_factory,
     employee_factory,
 )
-from attendance.models import DailyAttendance
 from reports.columns import (
     ATTENDANCE_SUMMARY,
     INDIVIDUAL_ATTENDANCE,
@@ -26,10 +26,10 @@ FEB_RANGE = {"date_from": "2026-02-01", "date_to": "2026-02-28"}
 
 
 def _attendance_for(employee=None):
-    return daily_attendance_factory(
+    return attendance_record_factory(
         employee=employee,
-        date=date(2026, 2, 1),
-        status=DailyAttendance.Status.PRESENT,
+        day=date(2026, 2, 1),
+        status=Attendance.Status.PRESENT,
     )
 
 
@@ -122,9 +122,9 @@ class ReportProjectionTests(BaseTenantTestCase):
             "absent_days": 0,
             "late_days": 0,
             "leave_days": 0,
-            "total_worked_minutes": 90,
-            "total_late_minutes": 0,
-            "total_overtime_minutes": 0,
+            "total_worked": timedelta(minutes=90),
+            "total_late": timedelta(0),
+            "total_overtime": timedelta(0),
         }
 
         columns = filter_columns(ATTENDANCE_SUMMARY, ["present_days", "employee"])

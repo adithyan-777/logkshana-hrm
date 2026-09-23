@@ -41,17 +41,17 @@
 
     <div class="field-row">
         <div class="field">
-            <label for="{{ form.timestamp.id_for_label }}">Timestamp *</label>
-            {{ form.timestamp }}
-            {% if form.timestamp.errors %}<span class="error">{{ form.timestamp.errors }}</span>{% endif %}
+            <label for="{{ form.punch_time.id_for_label }}">Punch time *</label>
+            {{ form.punch_time }}
+            {% if form.punch_time.errors %}<span class="error">{{ form.punch_time.errors }}</span>{% endif %}
         </div>
         <div class="field">
             <label for="{{ form.direction.id_for_label }}">Direction</label>
             {{ form.direction }}
         </div>
         <div class="field">
-            <label for="{{ form.source.id_for_label }}">Source</label>
-            {{ form.source }}
+            <label for="{{ form.method.id_for_label }}">Method</label>
+            {{ form.method }}
         </div>
     </div>
 

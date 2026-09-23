@@ -26,13 +26,7 @@ def _make_plain_user(testcase):
             password=TEST_PASSWORD,
             is_active=True,
         )
-    user.tenants.add(testcase.tenant)
-    from tenant_users.permissions.models import UserTenantPermissions
-
-    UserTenantPermissions.objects.update_or_create(
-        profile=user,
-        defaults={"is_staff": False, "is_superuser": False},
-    )
+    testcase.tenant.add_user(user)
     return user
 
 

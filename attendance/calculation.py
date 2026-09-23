@@ -42,7 +42,7 @@ def direction_from_gateway_status(status) -> str:
     """
     try:
         code = int(status)
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         return "unknown"
     return "out" if code in _GATEWAY_OUT_STATUSES else "unknown"
 
@@ -50,13 +50,13 @@ def direction_from_gateway_status(status) -> str:
 def dedupe_punches(punches, *, window_minutes: int = 1) -> list:
     """Drop punches within ``window_minutes`` of the previous kept punch.
 
-    ``punches`` must be sorted by timestamp ascending. The first punch
+    ``punches`` must be sorted by punch_time ascending. The first punch
     is always kept (a device double-tap at check-in still counts once).
     """
     kept = []
     window = timedelta(minutes=max(0, window_minutes))
     for punch in punches:
-        if kept and punch.timestamp - kept[-1].timestamp <= window:
+        if kept and punch.punch_time - kept[-1].punch_time <= window:
             continue
         kept.append(punch)
     return kept
@@ -138,13 +138,13 @@ def summarize_pairs(pairs) -> DaySummary:
     first check-in and last check-out minus worked minutes.
     """
     pairs = list(pairs)
-    first_in = next((c.timestamp for c, _ in pairs if c is not None), None)
+    first_in = next((c.punch_time for c, _ in pairs if c is not None), None)
     last_out = None
     for _, check_out in pairs:
         if check_out is not None:
-            last_out = check_out.timestamp
+            last_out = check_out.punch_time
     worked_minutes = sum(
-        minutes_between(c.timestamp, o.timestamp)
+        minutes_between(c.punch_time, o.punch_time)
         for c, o in pairs
         if c is not None and o is not None
     )
@@ -165,3 +165,88 @@ def summarize_pairs(pairs) -> DaySummary:
 def minutes_between(start: datetime, end: datetime) -> int:
     """Whole minutes from ``start`` to ``end`` (floored, never negative)."""
     return max(0, int((end - start).total_seconds() // 60))
+
+
+def scheduled_minutes(
+    *,
+    timetable,
+    expected_in: datetime | None,
+    expected_out: datetime | None,
+    breaks=None,
+) -> int:
+    """Minutes the employee is expected to work on the day.
+
+    Span between ``expected_in/out`` minus unpaid break overlap. Breaks
+    are assumed on the check-in day (overnight shifts included). When
+    there are no fixed times (flexible timetable), falls back to
+    ``timetable.work_minutes`` (or 0).
+    """
+    if expected_in is None or expected_out is None:
+        return max(0, timetable.work_minutes or 0)
+    span = minutes_between(expected_in, expected_out)
+    if getattr(timetable, "count_break_time_as_work_time", False):
+        return span
+    if breaks is None:
+        breaks = timetable.breaks.all()
+    day = expected_in.date()
+    unpaid = 0
+    for b in breaks:
+        start = timezone.make_aware(datetime.combine(day, b.start_time))
+        end = timezone.make_aware(datetime.combine(day, b.end_time))
+        overlap = minutes_between(
+            max(expected_in, start), min(expected_out, end)
+        )
+        if getattr(b, "break_time_type", "fixed") == "flexible":
+            overlap = min(overlap, b.break_time_minutes or 0)
+        unpaid += overlap
+    return max(0, span - unpaid)
+
+
+class DayVariances(NamedTuple):
+    """Late / early / overtime minutes for one day."""
+
+    late_minutes: int
+    early_minutes: int
+    overtime_minutes: int
+
+
+def day_variances(
+    *,
+    first_in: datetime | None,
+    last_out: datetime | None,
+    worked_minutes: int,
+    expected_in: datetime | None,
+    expected_out: datetime | None,
+    scheduled: int,
+    late_grace_minutes: int = 0,
+    early_grace_minutes: int = 0,
+) -> DayVariances:
+    """Compare actual punches against expected times.
+
+    Grace is subtracted after the raw difference (callers map
+    ``Timetable.grace_period_minutes`` / ``grace_period_check_out`` to
+    these two arguments). Overtime is worked time beyond scheduled
+    minutes.
+    """
+    late = (
+        max(
+            0,
+            minutes_between(expected_in, first_in) - max(0, late_grace_minutes),
+        )
+        if expected_in is not None and first_in is not None
+        else 0
+    )
+    early = (
+        max(
+            0,
+            minutes_between(last_out, expected_out)
+            - max(0, early_grace_minutes),
+        )
+        if expected_out is not None and last_out is not None
+        else 0
+    )
+    return DayVariances(
+        late_minutes=late,
+        early_minutes=early,
+        overtime_minutes=max(0, worked_minutes - scheduled),
+    )

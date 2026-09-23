@@ -1,19 +1,14 @@
 from django.db.models import Q, QuerySet
 
-from attendance.models import (
-    AttendanceCorrection,
-    AttendanceRule,
-    AttendanceTransaction,
-    DailyAttendance,
-)
+from attendance.models import Attendance, AttendanceActivity
 from employees.models import Employee
 
 
-def attendance_transaction_list(
+def attendance_activity_list(
     *, search: str = "", employee: Employee | None = None
-) -> QuerySet[AttendanceTransaction]:
-    queryset = AttendanceTransaction.objects.select_related("employee").order_by(
-        "-timestamp"
+) -> QuerySet[AttendanceActivity]:
+    queryset = AttendanceActivity.objects.select_related("employee").order_by(
+        "-punch_time"
     )
 
     if employee is not None:
@@ -30,12 +25,12 @@ def attendance_transaction_list(
     return queryset
 
 
-def daily_attendance_list(
+def attendance_list(
     *, search: str = "", employee: Employee | None = None
-) -> QuerySet[DailyAttendance]:
-    queryset = DailyAttendance.objects.select_related(
-        "employee", "shift", "timetable"
-    ).order_by("-date")
+) -> QuerySet[Attendance]:
+    queryset = Attendance.objects.select_related(
+        "employee", "shift"
+    ).order_by("-day")
 
     if employee is not None:
         queryset = queryset.filter(employee=employee)
@@ -47,29 +42,5 @@ def daily_attendance_list(
             | Q(employee__emp_code__icontains=search)
             | Q(status__icontains=search)
         )
-
-    return queryset
-
-
-def attendance_correction_list(*, search: str = "") -> QuerySet[AttendanceCorrection]:
-    queryset = AttendanceCorrection.objects.select_related("employee").order_by("-date")
-
-    if search:
-        queryset = queryset.filter(
-            Q(employee__first_name__icontains=search)
-            | Q(employee__last_name__icontains=search)
-            | Q(employee__emp_code__icontains=search)
-            | Q(reason__icontains=search)
-            | Q(status__icontains=search)
-        )
-
-    return queryset
-
-
-def attendance_rule_list(*, search: str = "") -> QuerySet[AttendanceRule]:
-    queryset = AttendanceRule.objects.order_by("name")
-
-    if search:
-        queryset = queryset.filter(Q(name__icontains=search))
 
     return queryset

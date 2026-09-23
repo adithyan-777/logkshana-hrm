@@ -4,7 +4,7 @@ from datetime import date
 from django.db.models import Count, Q
 from django.utils import timezone
 
-from attendance.models import AttendanceCorrection, DailyAttendance, OvertimeRecord
+from attendance.models import Attendance
 from employees.models import Employee
 from leave.models import LeaveRequest
 
@@ -51,17 +51,18 @@ def dashboard_summary_get(*, target_date: date | None = None) -> DashboardSummar
 
     active_employee_count = Employee.objects.filter(is_active=True).count()
 
-    today_stats = DailyAttendance.objects.filter(date=target_date).aggregate(
-        present_count=Count("id", filter=Q(status=DailyAttendance.Status.PRESENT)),
-        absent_count=Count("id", filter=Q(status=DailyAttendance.Status.ABSENT)),
-        late_count=Count("id", filter=Q(status=DailyAttendance.Status.LATE)),
-        leave_count=Count("id", filter=Q(status=DailyAttendance.Status.LEAVE)),
+    today_stats = Attendance.objects.filter(day=target_date).aggregate(
+        present_count=Count("id", filter=Q(status=Attendance.Status.PRESENT)),
+        absent_count=Count("id", filter=Q(status=Attendance.Status.ABSENT)),
+        late_count=Count("id", filter=Q(status=Attendance.Status.LATE)),
+        leave_count=Count("id", filter=Q(status=Attendance.Status.LEAVE)),
         incomplete_count=Count(
-            "id", filter=Q(status=DailyAttendance.Status.INCOMPLETE)
+            "id", filter=Q(status=Attendance.Status.INCOMPLETE)
         ),
+        # No punch-direction flags are stored on the row: an incomplete
+        # day is the "missing punch" signal.
         missing_punch_count=Count(
-            "id",
-            filter=Q(has_check_in=False) | Q(has_check_out=False),
+            "id", filter=Q(status=Attendance.Status.INCOMPLETE)
         ),
     )
 
@@ -86,10 +87,7 @@ def dashboard_summary_get(*, target_date: date | None = None) -> DashboardSummar
         pending_leave_count=LeaveRequest.objects.filter(
             status=LeaveRequest.Status.PENDING,
         ).count(),
-        pending_overtime_count=OvertimeRecord.objects.filter(
-            status=OvertimeRecord.Status.PENDING,
-        ).count(),
-        pending_correction_count=AttendanceCorrection.objects.filter(
-            status=AttendanceCorrection.Status.PENDING,
-        ).count(),
+        # No approval queues exist in the 2-model attendance flow.
+        pending_overtime_count=0,
+        pending_correction_count=0,
     )

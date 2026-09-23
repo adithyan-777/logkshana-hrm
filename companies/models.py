@@ -1,22 +1,51 @@
+from django.conf import settings
 from django.db import models
 
-from django_tenants.models import DomainMixin
-from tenant_users.tenants.models import TenantBase
+from django_tenants.models import DomainMixin, TenantMixin
 
 from common.models import BaseModel
 
 
-class Company(TenantBase):
+class Company(TenantMixin):
     name = models.CharField(max_length=100)
     paid_until = models.DateField()
     on_trial = models.BooleanField()
     created_on = models.DateField(auto_now_add=True)
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="owned_companies",
+        null=True,
+        blank=True,
+    )
+    members = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name="companies",
+        blank=True,
+    )
 
     # default true, schema will be automatically created and synced when it is saved
     auto_create_schema = True
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Owner implies membership.
+        if self.owner_id and not self.members.filter(pk=self.owner_id).exists():
+            self.members.add(self.owner_id)
+
+    def add_user(self, user, **kwargs) -> None:
+        """Attach an existing user to this company (membership)."""
+        self.members.add(user)
+
+    def remove_user(self, user) -> None:
+        """Detach a user from this company (owner cannot be removed)."""
+        if self.owner_id is not None and user.pk == self.owner_id:
+            raise ValueError("Cannot remove the company owner.")
+        self.members.remove(user)
 
 
 class Branch(BaseModel):

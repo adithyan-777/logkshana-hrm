@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
-from attendance.models import AttendanceTransaction
+from attendance.models import AttendanceActivity
 from common.tests.base import BaseTenantTestCase
 from common.tests.factories import device_factory, employee_factory
 from companies.models import Branch
@@ -110,16 +110,17 @@ class AttendanceLogCreateTests(BaseTenantTestCase):
         )
 
         self.assertEqual(punch.employee, employee)
-        self.assertEqual(punch.source, AttendanceTransaction.Source.BIOMETRIC)
-        self.assertEqual(punch.direction, AttendanceTransaction.Direction.UNKNOWN)
-        self.assertEqual(punch.external_employee_id, "E001")
-        self.assertEqual(punch.timestamp, timestamp)
+        self.assertEqual(
+            punch.method, AttendanceActivity.AttendanceActivityMethodType.BIOMETRIC
+        )
+        self.assertEqual(punch.direction, AttendanceActivity.Direction.UNKNOWN)
+        self.assertEqual(punch.punch_time, timestamp)
         self.assertEqual(
             punch.external_id,
             f"device:ZK-001:E001:{timestamp.isoformat()}",
         )
         self.assertEqual(
-            AttendanceTransaction.objects.filter(employee=employee).count(),
+            AttendanceActivity.objects.filter(employee=employee).count(),
             1,
         )
 
@@ -134,7 +135,7 @@ class AttendanceLogCreateTests(BaseTenantTestCase):
             )
 
         self.assertIn("serial_number", ctx.exception.message_dict)
-        self.assertEqual(AttendanceTransaction.objects.count(), 0)
+        self.assertEqual(AttendanceActivity.objects.count(), 0)
 
     def test_rejects_inactive_device(self):
         device_factory(serial_number="ZK-OFF", company=self.tenant, is_active=False)
@@ -148,7 +149,7 @@ class AttendanceLogCreateTests(BaseTenantTestCase):
             )
 
         self.assertIn("serial_number", ctx.exception.message_dict)
-        self.assertEqual(AttendanceTransaction.objects.count(), 0)
+        self.assertEqual(AttendanceActivity.objects.count(), 0)
 
     def test_rejects_unknown_emp_code(self):
         device_factory(serial_number="ZK-001", company=self.tenant)
@@ -161,7 +162,7 @@ class AttendanceLogCreateTests(BaseTenantTestCase):
             )
 
         self.assertIn("employee_id", ctx.exception.message_dict)
-        self.assertEqual(AttendanceTransaction.objects.count(), 0)
+        self.assertEqual(AttendanceActivity.objects.count(), 0)
 
     def test_rejects_inactive_employee(self):
         device_factory(serial_number="ZK-001", company=self.tenant)
@@ -175,7 +176,7 @@ class AttendanceLogCreateTests(BaseTenantTestCase):
             )
 
         self.assertIn("employee_id", ctx.exception.message_dict)
-        self.assertEqual(AttendanceTransaction.objects.count(), 0)
+        self.assertEqual(AttendanceActivity.objects.count(), 0)
 
     def test_rejects_duplicate_emp_code(self):
         device_factory(serial_number="ZK-001", company=self.tenant)
@@ -190,7 +191,7 @@ class AttendanceLogCreateTests(BaseTenantTestCase):
             )
 
         self.assertIn("employee_id", ctx.exception.message_dict)
-        self.assertEqual(AttendanceTransaction.objects.count(), 0)
+        self.assertEqual(AttendanceActivity.objects.count(), 0)
 
     def test_replay_returns_existing_punch(self):
         device_factory(serial_number="ZK-001", company=self.tenant)
@@ -209,4 +210,4 @@ class AttendanceLogCreateTests(BaseTenantTestCase):
         )
 
         self.assertEqual(first.id, second.id)
-        self.assertEqual(AttendanceTransaction.objects.count(), 1)
+        self.assertEqual(AttendanceActivity.objects.count(), 1)

@@ -1,559 +1,165 @@
-from django.conf import settings
-from django.core.validators import MinValueValidator
 from django.db import models
 
 from common.models import BaseModel
-
-# ============================================================
-# ATTENDANCE TRANSACTION
-# ============================================================
+from schedule.models import Timetable
 
 
-class AttendanceTransaction(BaseModel):
-    """
-    Normalized/raw attendance punch.
+class AttendanceActivity(BaseModel):
 
-    This model is provider-agnostic. Provider-specific information
-    should be stored by the integration layer and/or in raw_data.
-
-    Example providers:
-        - ZKTeco BioTime
-        - Suprema
-        - Hikvision
-        - Anviz
-    """
+    '''
+        Stores activity of the employee lead to attendance.
+        Like biometric check in/out or web based check in/out
+    '''
+    class AttendanceActivityMethodType(models.TextChoices):
+        BIOMETRIC = 'biometric', 'Biometric'
+        WEB = 'web', 'Web'
+        MOBILE = 'mobile', 'Mobile'
+        MANUAL = 'manual', 'Manual'
 
     class Direction(models.TextChoices):
-        IN = "in", "Check In"
-        OUT = "out", "Check Out"
-        UNKNOWN = "unknown", "Unknown"
+        IN = 'in', 'Check In'
+        OUT = 'out', 'Check Out'
+        UNKNOWN = 'unknown', 'Unknown'
 
-    class Source(models.TextChoices):
-        BIOMETRIC = "biometric", "Biometric"
-        WEB = "web", "Web"
-        MOBILE = "mobile", "Mobile"
-        MANUAL = "manual", "Manual"
-        IMPORT = "import", "Import"
 
     employee = models.ForeignKey(
         "employees.Employee",
-        on_delete=models.PROTECT,
-        related_name="attendance_transactions",
+        on_delete=models.CASCADE,
+        related_name="attendance_activities",
     )
-
-    # ID supplied by the external provider.
-    external_id = models.CharField(
-        max_length=255,
-    )
-
-    timestamp = models.DateTimeField()
-
+    punch_time = models.DateTimeField()
     direction = models.CharField(
-        max_length=20,
+        max_length=10,
         choices=Direction.choices,
         default=Direction.UNKNOWN,
     )
+    # Idempotency key for the ingest stream (e.g. gateway:<log_id>).
+    # Blank for hand-entered punches.
+    external_id = models.CharField(max_length=255, blank=True, default="")
+    # Original provider payload (status codes, verify mode, ...).
+    raw_data = models.JSONField(default=dict, blank=True)
 
-    source = models.CharField(
-        max_length=20,
-        choices=Source.choices,
-        default=Source.BIOMETRIC,
+    method = models.CharField(max_length=10, 
+        choices=AttendanceActivityMethodType.choices,
+        default=AttendanceActivityMethodType.BIOMETRIC
     )
 
-    # Optional provider/user information.
-    external_employee_id = models.CharField(
-        max_length=255,
-        blank=True,
-    )
-
-    # Keep the original provider payload.
-    raw_data = models.JSONField(
-        default=dict,
-        blank=True,
-    )
-
-    class Meta:
-        ordering = ["-timestamp"]
-
-        indexes = [
-            models.Index(
-                fields=["employee", "timestamp"],
-            ),
-        ]
-
-    def __str__(self):
-        return f"{self.employee} - {self.timestamp}"
-
-
-# ============================================================
-# ATTENDANCE PERIOD
-# ============================================================
-
-
-class AttendancePeriod(BaseModel):
-    """
-    A matched IN -> OUT working period.
-
-    Example:
-
-        09:00 -> 13:00
-        14:00 -> 18:00
-
-    produces two periods.
-    """
-
-    daily_attendance = models.ForeignKey(
-        "DailyAttendance",
-        on_delete=models.CASCADE,
-        related_name="periods",
-    )
-
-    check_in = models.ForeignKey(
-        AttendanceTransaction,
-        null=True,
-        blank=True,
-        on_delete=models.PROTECT,
-        related_name="check_in_periods",
-    )
-
-    check_out = models.ForeignKey(
-        AttendanceTransaction,
-        null=True,
-        blank=True,
-        on_delete=models.PROTECT,
-        related_name="check_out_periods",
-    )
-
-    worked_minutes = models.PositiveIntegerField(
-        default=0,
-    )
-
-    is_valid = models.BooleanField(
-        default=True,
-    )
-
-    class Meta:
-        ordering = ["check_in"]
-
-
-# ============================================================
-# DAILY ATTENDANCE
-# ============================================================
-
-
-class DailyAttendance(BaseModel):
+class Attendance(BaseModel):
     class Status(models.TextChoices):
-        PRESENT = "present", "Present"
-        ABSENT = "absent", "Absent"
-        LATE = "late", "Late"
-        EARLY_OUT = "early_out", "Early Out"
-        INCOMPLETE = "incomplete", "Incomplete"
-        DAY_OFF = "day_off", "Day Off"
-        HOLIDAY = "holiday", "Holiday"
-        LEAVE = "leave", "Leave"
-        WORKED_HOLIDAY = "worked_holiday", "Worked Holiday"
-        OVERTIME = "overtime", "Overtime"
+        PRESENT = 'present', 'Present'
+        ABSENT = 'absent', 'Absent'
+        LATE = 'late', 'Late'
+        EARLY_OUT = 'early_out', 'Early Out'
+        INCOMPLETE = 'incomplete', 'Incomplete'
+        DAY_OFF = 'day_off', 'Day Off'
+        LEAVE = 'leave', 'Leave'
+        HOLIDAY = 'holiday', 'Holiday'
 
     employee = models.ForeignKey(
         "employees.Employee",
-        on_delete=models.PROTECT,
-        related_name="daily_attendance",
+        on_delete=models.CASCADE,
+        related_name="attendances",
     )
-
-    date = models.DateField()
-
-    # --------------------------------------------------------
-    # Schedule used for calculation
-    # --------------------------------------------------------
-
+    attendance_activities = models.ManyToManyField(
+        AttendanceActivity, related_name="attendances"
+    )
     shift = models.ForeignKey(
-        "schedule.Shift",
+        Timetable,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        on_delete=models.PROTECT,
-        related_name="attendance_results",
+        related_name="attendances",
     )
-
-    timetable = models.ForeignKey(
-        "schedule.Timetable",
-        null=True,
-        blank=True,
-        on_delete=models.PROTECT,
-        related_name="attendance_results",
-    )
-
-    # --------------------------------------------------------
-    # Expected working time
-    # --------------------------------------------------------
-
-    expected_in = models.DateTimeField(
-        null=True,
-        blank=True,
-    )
-
-    expected_out = models.DateTimeField(
-        null=True,
-        blank=True,
-    )
-
-    scheduled_minutes = models.PositiveIntegerField(
-        default=0,
-    )
-
-    # --------------------------------------------------------
-    # Actual working time
-    # --------------------------------------------------------
-
-    first_in = models.DateTimeField(
-        null=True,
-        blank=True,
-    )
-
-    last_out = models.DateTimeField(
-        null=True,
-        blank=True,
-    )
-
-    worked_minutes = models.PositiveIntegerField(
-        default=0,
-    )
-
-    break_minutes = models.PositiveIntegerField(
-        default=0,
-    )
-
-    # --------------------------------------------------------
-    # Attendance calculations
-    # --------------------------------------------------------
-
-    late_minutes = models.PositiveIntegerField(
-        default=0,
-    )
-
-    early_leave_minutes = models.PositiveIntegerField(
-        default=0,
-    )
-
-    overtime_minutes = models.PositiveIntegerField(
-        default=0,
-    )
-
-    absent_minutes = models.PositiveIntegerField(
-        default=0,
-    )
-
-    # --------------------------------------------------------
-    # Status
-    # --------------------------------------------------------
-
+    over_time = models.DurationField(blank=True, null=True)
+    day = models.DateField()
+    total_work_time = models.DurationField(blank=True, null=True)
+    late_time = models.DurationField(blank=True, null=True)
+    early_leave_time = models.DurationField(blank=True, null=True)
     status = models.CharField(
-        max_length=30,
+        max_length=20,
         choices=Status.choices,
         default=Status.PRESENT,
     )
-
-    has_check_in = models.BooleanField(
-        default=False,
-    )
-
-    has_check_out = models.BooleanField(
-        default=False,
-    )
-
-    # --------------------------------------------------------
-    # Calculation metadata
-    # --------------------------------------------------------
-
-    is_calculated = models.BooleanField(
-        default=False,
-    )
-
-    calculated_at = models.DateTimeField(
-        null=True,
-        blank=True,
-    )
-
-    calculation_version = models.PositiveIntegerField(
-        default=1,
-    )
-
-    notes = models.TextField(
-        blank=True,
-    )
+    # True once the calc job has written this row; hand-made corrections
+    # stay False so recalculation never overwrites them.
+    is_calculated = models.BooleanField(default=False)
+    calculated_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        ordering = ["-date"]
-
         constraints = [
             models.UniqueConstraint(
-                fields=["employee", "date"],
+                fields=("employee", "day"),
                 name="unique_employee_attendance_day",
             )
         ]
-
         indexes = [
-            models.Index(
-                fields=["employee", "date"],
-            ),
-            models.Index(
-                fields=["date", "status"],
-            ),
+            models.Index(fields=["employee", "day"]),
         ]
 
-    def __str__(self):
-        return f"{self.employee} - {self.date}"
+    @staticmethod
+    def _duration_minutes(value) -> int:
+        if value is None:
+            return 0
+        return int(value.total_seconds() // 60)
 
+    @property
+    def worked_minutes(self) -> int:
+        return self._duration_minutes(self.total_work_time)
 
-# ============================================================
-# ATTENDANCE CORRECTION
-# ============================================================
+    @property
+    def overtime_minutes(self) -> int:
+        return self._duration_minutes(self.over_time)
 
+    @property
+    def late_minutes(self) -> int:
+        return self._duration_minutes(self.late_time)
 
-class AttendanceCorrection(BaseModel):
-    class Status(models.TextChoices):
-        PENDING = "pending", "Pending"
-        APPROVED = "approved", "Approved"
-        REJECTED = "rejected", "Rejected"
-        CANCELLED = "cancelled", "Cancelled"
+    @property
+    def early_leave_minutes(self) -> int:
+        return self._duration_minutes(self.early_leave_time)
 
-    employee = models.ForeignKey(
-        "employees.Employee",
-        on_delete=models.PROTECT,
-        related_name="attendance_corrections",
-    )
+    def _punches(self):
+        return list(
+            self.attendance_activities.order_by("punch_time", "id"),
+        )
 
-    date = models.DateField()
+    def _effective_boundaries(self):
+        """First check-in / last check-out mirroring pairing alternation."""
+        first_in = None
+        last_out = None
+        open_in = False
+        for punch in self._punches():
+            direction = punch.direction
+            if direction not in (
+                AttendanceActivity.Direction.IN,
+                AttendanceActivity.Direction.OUT,
+            ):
+                direction = (
+                    AttendanceActivity.Direction.OUT
+                    if open_in
+                    else AttendanceActivity.Direction.IN
+                )
+            if direction == AttendanceActivity.Direction.IN:
+                if first_in is None:
+                    first_in = punch.punch_time
+                open_in = True
+            else:
+                last_out = punch.punch_time
+                open_in = False
+        return first_in, last_out
 
-    check_in = models.DateTimeField(
-        null=True,
-        blank=True,
-    )
+    @property
+    def first_in(self):
+        return self._effective_boundaries()[0]
 
-    check_out = models.DateTimeField(
-        null=True,
-        blank=True,
-    )
+    @property
+    def last_out(self):
+        return self._effective_boundaries()[1]
 
-    reason = models.TextField()
+    @property
+    def has_check_in(self) -> bool:
+        return self.first_in is not None
 
-    status = models.CharField(
-        max_length=20,
-        choices=Status.choices,
-        default=Status.PENDING,
-    )
-
-    requested_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="attendance_corrections_requested",
-    )
-
-    approved_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="attendance_corrections_approved",
-    )
-
-    approved_at = models.DateTimeField(
-        null=True,
-        blank=True,
-    )
-
-
-# ============================================================
-# OVERTIME
-# ============================================================
-
-
-class OvertimeRecord(BaseModel):
-    class Status(models.TextChoices):
-        PENDING = "pending", "Pending"
-        APPROVED = "approved", "Approved"
-        REJECTED = "rejected", "Rejected"
-        AUTO_APPROVED = "auto_approved", "Auto Approved"
-
-    employee = models.ForeignKey(
-        "employees.Employee",
-        on_delete=models.PROTECT,
-        related_name="overtime_records",
-    )
-
-    date = models.DateField()
-
-    daily_attendance = models.ForeignKey(
-        DailyAttendance,
-        on_delete=models.CASCADE,
-        related_name="overtime_records",
-    )
-
-    start_time = models.DateTimeField(
-        null=True,
-        blank=True,
-    )
-
-    end_time = models.DateTimeField(
-        null=True,
-        blank=True,
-    )
-
-    minutes = models.PositiveIntegerField(
-        default=0,
-    )
-
-    reason = models.TextField(
-        blank=True,
-    )
-
-    status = models.CharField(
-        max_length=20,
-        choices=Status.choices,
-        default=Status.PENDING,
-    )
-
-    requested_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="overtime_requested",
-    )
-
-    approved_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="overtime_approved",
-    )
-
-    approved_at = models.DateTimeField(
-        null=True,
-        blank=True,
-    )
-
-
-# ============================================================
-# ATTENDANCE RULES
-# ============================================================
-
-
-class AttendanceRule(BaseModel):
-    name = models.CharField(
-        max_length=100,
-    )
-
-    # --------------------------------------------------------
-    # Missing punches
-    # --------------------------------------------------------
-
-    require_check_in = models.BooleanField(
-        default=True,
-    )
-
-    require_check_out = models.BooleanField(
-        default=True,
-    )
-
-    missing_check_in_as_absence = models.BooleanField(
-        default=True,
-    )
-
-    missing_check_out_as_incomplete = models.BooleanField(
-        default=True,
-    )
-
-    # --------------------------------------------------------
-    # Late / early
-    # --------------------------------------------------------
-
-    late_grace_minutes = models.PositiveIntegerField(
-        default=0,
-    )
-
-    early_leave_grace_minutes = models.PositiveIntegerField(
-        default=0,
-    )
-
-    late_to_absence_minutes = models.PositiveIntegerField(
-        default=0,
-    )
-
-    # --------------------------------------------------------
-    # Punch handling
-    # --------------------------------------------------------
-
-    duplicate_punch_window_minutes = models.PositiveIntegerField(
-        default=1,
-    )
-
-    allow_multiple_in_out = models.BooleanField(
-        default=False,
-    )
-
-    is_active = models.BooleanField(
-        default=True,
-    )
-
-    class Meta:
-        verbose_name = "Attendance rule"
-        verbose_name_plural = "Attendance rules"
-
-
-# ============================================================
-# CALCULATION RUN
-# ============================================================
-
-
-class AttendanceCalculationRun(BaseModel):
-    class Status(models.TextChoices):
-        RUNNING = "running", "Running"
-        COMPLETED = "completed", "Completed"
-        FAILED = "failed", "Failed"
-
-    start_date = models.DateField()
-
-    end_date = models.DateField()
-
-    status = models.CharField(
-        max_length=20,
-        choices=Status.choices,
-        default=Status.RUNNING,
-    )
-
-    employees_count = models.PositiveIntegerField(
-        default=0,
-    )
-
-    records_processed = models.PositiveIntegerField(
-        default=0,
-    )
-
-    records_created = models.PositiveIntegerField(
-        default=0,
-    )
-
-    records_updated = models.PositiveIntegerField(
-        default=0,
-    )
-
-    error_count = models.PositiveIntegerField(
-        default=0,
-    )
-
-    started_at = models.DateTimeField(
-        null=True,
-        blank=True,
-    )
-
-    completed_at = models.DateTimeField(
-        null=True,
-        blank=True,
-    )
-
-    error_message = models.TextField(
-        blank=True,
-    )
+    @property
+    def has_check_out(self) -> bool:
+        return self.last_out is not None

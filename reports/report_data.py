@@ -1,6 +1,14 @@
 from reports.columns import ReportColumn
 from reports.exports import ReportData
 from reports.utils import format_datetime, format_minutes
+from schedule.calculation import expected_datetimes
+
+
+def duration_minutes(value) -> int | None:
+    """Whole minutes in a DurationField value (None stays None)."""
+    if value is None:
+        return None
+    return int(value.total_seconds() // 60)
 
 
 def project_report_data(
@@ -25,9 +33,9 @@ def attendance_summary_row_dicts(rows) -> list[dict]:
             "absent_days": row["absent_days"],
             "late_days": row["late_days"],
             "leave_days": row["leave_days"],
-            "worked": format_minutes(row["total_worked_minutes"]),
-            "late_minutes": row["total_late_minutes"] or 0,
-            "overtime_minutes": row["total_overtime_minutes"] or 0,
+            "worked": format_minutes(duration_minutes(row["total_worked"])),
+            "late_minutes": duration_minutes(row["total_late"]) or 0,
+            "overtime_minutes": duration_minutes(row["total_overtime"]) or 0,
         }
         for row in rows
     ]
@@ -42,22 +50,32 @@ def attendance_summary_report_data(rows, columns: list[ReportColumn]) -> ReportD
 
 
 def individual_attendance_row_dicts(records) -> list[dict]:
-    return [
-        {
-            "date": record.date,
-            "status": record.get_status_display(),
-            "status_code": record.status,
-            "expected_in": format_datetime(record.expected_in),
-            "expected_out": format_datetime(record.expected_out),
-            "first_in": format_datetime(record.first_in),
-            "last_out": format_datetime(record.last_out),
-            "worked": format_minutes(record.worked_minutes),
-            "late": format_minutes(record.late_minutes),
-            "early_leave": format_minutes(record.early_leave_minutes),
-            "overtime": format_minutes(record.overtime_minutes),
-        }
-        for record in records
-    ]
+    dicts = []
+    for record in records:
+        if record.shift is not None:
+            expected_in, expected_out = expected_datetimes(
+                timetable=record.shift, day=record.day
+            )
+        else:
+            expected_in, expected_out = None, None
+        dicts.append(
+            {
+                "date": record.day,
+                "status": record.get_status_display(),
+                "status_code": record.status,
+                "expected_in": format_datetime(expected_in),
+                "expected_out": format_datetime(expected_out),
+                "first_in": format_datetime(record.first_in),
+                "last_out": format_datetime(record.last_out),
+                "worked": format_minutes(duration_minutes(record.total_work_time)),
+                "late": format_minutes(duration_minutes(record.late_time)),
+                "early_leave": format_minutes(
+                    duration_minutes(record.early_leave_time)
+                ),
+                "overtime": format_minutes(duration_minutes(record.over_time)),
+            }
+        )
+    return dicts
 
 
 def individual_attendance_report_data(
@@ -79,8 +97,8 @@ def department_attendance_row_dicts(rows) -> list[dict]:
             "present_days": row["present_days"],
             "absent_days": row["absent_days"],
             "late_days": row["late_days"],
-            "late_minutes": row["total_late_minutes"] or 0,
-            "overtime_minutes": row["total_overtime_minutes"] or 0,
+            "late_minutes": duration_minutes(row["total_late"]) or 0,
+            "overtime_minutes": duration_minutes(row["total_overtime"]) or 0,
         }
         for row in rows
     ]
@@ -105,25 +123,25 @@ def exception_report_data(records) -> ReportData:
             "Check In",
             "Check Out",
             "Late (min)",
-            "Notes",
+            "Shift",
         ],
         rows=[
             [
-                record.date,
+                record.day,
                 record.employee.full_name,
                 record.employee.department.name if record.employee.department else "",
                 record.get_status_display(),
                 "Yes" if record.has_check_in else "No",
                 "Yes" if record.has_check_out else "No",
                 record.late_minutes,
-                record.notes,
+                record.shift.name if record.shift else "—",
             ]
             for record in records
         ],
     )
 
 
-def punch_log_report_data(transactions) -> ReportData:
+def punch_log_report_data(activities) -> ReportData:
     return ReportData(
         title="Punch Log",
         headers=[
@@ -136,16 +154,16 @@ def punch_log_report_data(transactions) -> ReportData:
         ],
         rows=[
             [
-                format_datetime(transaction.timestamp),
-                transaction.employee.full_name,
-                transaction.employee.department.name
-                if transaction.employee.department
+                format_datetime(activity.punch_time),
+                activity.employee.full_name,
+                activity.employee.department.name
+                if activity.employee.department
                 else "",
-                transaction.get_direction_display(),
-                transaction.get_source_display(),
-                transaction.external_id,
+                activity.get_direction_display(),
+                activity.get_method_display(),
+                activity.external_id,
             ]
-            for transaction in transactions
+            for activity in activities
         ],
     )
 
@@ -159,16 +177,16 @@ def overtime_report_data(records) -> ReportData:
             "Department",
             "Minutes",
             "Status",
-            "Reason",
+            "Shift",
         ],
         rows=[
             [
-                record.date,
+                record.day,
                 record.employee.full_name,
                 record.employee.department.name if record.employee.department else "",
-                record.minutes,
+                record.overtime_minutes,
                 record.get_status_display(),
-                record.reason,
+                record.shift.name if record.shift else "—",
             ]
             for record in records
         ],

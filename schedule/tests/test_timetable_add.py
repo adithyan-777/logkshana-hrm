@@ -5,6 +5,8 @@ extra break-formset row. Both must validate: blank optionals fall back to
 model defaults and untouched break rows are skipped.
 """
 
+import json
+
 from django.urls import reverse
 
 from common.tests.base import BaseTenantTestCase
@@ -43,7 +45,10 @@ class TimetableAddBrowserPostTests(BaseTenantTestCase):
         response = self.client.post(reverse("timetable_add"), _base_data())
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("timetableCreated", response.headers.get("HX-Trigger"))
+        trigger = json.loads(response.headers.get("HX-Trigger"))
+        self.assertTrue(trigger.get("timetableCreated"))
+        self.assertTrue(trigger.get("closeModal"))
+        self.assertIn("created", trigger.get("showToast", {}).get("message", ""))
         timetable = Timetable.objects.get(name="Morning")
         self.assertEqual(timetable.grace_period_minutes, 0)
         self.assertEqual(timetable.check_out_cross_days, 0)

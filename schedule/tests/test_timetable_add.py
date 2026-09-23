@@ -49,6 +49,22 @@ class TimetableAddBrowserPostTests(BaseTenantTestCase):
         self.assertEqual(timetable.check_out_cross_days, 0)
         self.assertEqual(timetable.breaks.count(), 0)
 
+class TimetableAddDrawerTests(BaseTenantTestCase):
+    def test_full_page_get_redirects_to_list_drawer(self):
+        response = self.client.get(reverse("timetable_add"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("timetable_list"), response.url)
+        self.assertIn("drawer=", response.url)
+
+    def test_htmx_get_returns_form_fragment(self):
+        response = self.client.get(reverse("timetable_add"), HTTP_HX_REQUEST="true")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="timetable-form"')
+
+
+class TimetableAddPartialBreakTests(BaseTenantTestCase):
     def test_partial_break_row_fails_validation(self):
         response = self.client.post(
             reverse("timetable_add"),

@@ -45,12 +45,8 @@
                 {{ form.type }}
                 {% if form.type.errors %}<span class="error">{{ form.type.errors }}</span>{% endif %}
             </div>
-
-            <div class="field checkbox">
-                {{ form.is_active }}
-                <label for="{{ form.is_active.id_for_label }}">Active</label>
-            </div>
         </div>
+        {{ form.is_active.as_hidden }}
     </fieldset>
 
     <fieldset class="form-section">
@@ -165,12 +161,6 @@
                     {% if break_form.break_time_minutes.errors %}<span class="error">{{ break_form.break_time_minutes.errors }}</span>{% endif %}
                 </div>
             </div>
-            {% if formset.can_delete %}
-            <div class="field checkbox">
-                {{ break_form.DELETE }}
-                <label for="{{ break_form.DELETE.id_for_label }}">Delete</label>
-            </div>
-            {% endif %}
         </div>
         {% endfor %}
     </fieldset>

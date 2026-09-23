@@ -26,7 +26,7 @@
       id="daily-list"
       class="data-table-wrap"
       hx-get="{% url 'daily_attendance_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="dailyAttendanceCreated, dailyUpdated, dailyDeleted from:body"
+      hx-trigger="dailyAttendanceCreated from:body, dailyUpdated from:body, dailyDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >

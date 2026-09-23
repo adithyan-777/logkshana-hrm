@@ -25,7 +25,7 @@
       id="employee-list"
       class="data-table-wrap"
       hx-get="{% url 'employee_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="employeeCreated, employeeUpdated, employeeDeleted from:body"
+      hx-trigger="employeeCreated from:body, employeeUpdated from:body, employeeDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >

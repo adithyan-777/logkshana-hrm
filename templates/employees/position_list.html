@@ -25,7 +25,7 @@
       id="position-list"
       class="data-table-wrap"
       hx-get="{% url 'position_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="positionCreated, positionUpdated, positionDeleted from:body"
+      hx-trigger="positionCreated from:body, positionUpdated from:body, positionDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >

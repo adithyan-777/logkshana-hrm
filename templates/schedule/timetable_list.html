@@ -26,7 +26,7 @@
       id="timetable-list"
       class="data-table-wrap"
       hx-get="{% url 'timetable_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="timetableCreated, timetableUpdated, timetableDeleted from:body"
+      hx-trigger="timetableCreated from:body, timetableUpdated from:body, timetableDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >

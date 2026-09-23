@@ -26,7 +26,7 @@
       id="leave-type-list"
       class="data-table-wrap"
       hx-get="{% url 'leave_type_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="leaveTypeCreated, leaveTypeUpdated, leaveTypeDeleted from:body"
+      hx-trigger="leaveTypeCreated from:body, leaveTypeUpdated from:body, leaveTypeDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >

@@ -32,7 +32,14 @@ def _assign(*, schedule, employees, start, end):
 def _punch(*, employee, day, hour, minute=0):
     return activity_create(
         employee=employee,
-        punch_time=timezone.make_aware(datetime(day.year, day.month, day.day, hour, minute)),
+        punch_time=datetime(
+            day.year,
+            day.month,
+            day.day,
+            hour,
+            minute,
+            tzinfo=timezone.get_current_timezone(),
+        ),
         recalculate=False,
     )
 

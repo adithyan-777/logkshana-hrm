@@ -14,7 +14,6 @@ from common.tests.base import TEST_PASSWORD, BaseTenantTestCase
 from common.tests.factories import employee_factory, schedule_factory, timetable_factory
 from schedule.models import EmployeeScheduleAssignment
 
-
 DAY = date(2026, 3, 9)  # a Monday
 
 

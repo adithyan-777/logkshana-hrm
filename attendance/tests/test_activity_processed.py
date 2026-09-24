@@ -16,8 +16,13 @@ def _punch(*, employee, day, hour, minute=0, **kwargs):
     kwargs.setdefault("recalculate", False)
     return activity_create(
         employee=employee,
-        punch_time=timezone.make_aware(
-            datetime(day.year, day.month, day.day, hour, minute)
+        punch_time=datetime(
+            day.year,
+            day.month,
+            day.day,
+            hour,
+            minute,
+            tzinfo=timezone.get_current_timezone(),
         ),
         **kwargs,
     )

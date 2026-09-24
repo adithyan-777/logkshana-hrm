@@ -6,9 +6,7 @@ from attendance.models import AttendanceActivity
 from attendance.services import device_attendance_pull
 from common.tests.base import BaseTenantTestCase
 from common.tests.factories import device_factory, employee_factory
-from companies.models import Device
 from employees.models import Employee
-
 
 SAMPLE_LOGS = [
     {

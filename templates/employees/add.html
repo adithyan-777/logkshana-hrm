@@ -98,12 +98,6 @@
     </div>
 
     <div class="field">
-        <label for="{{ form.mobile.id_for_label }}">Mobile</label>
-        {{ form.mobile }}
-        {% if form.mobile.errors %}<span class="error">{{ form.mobile.errors }}</span>{% endif %}
-    </div>
-
-    <div class="field">
         <label for="{{ form.password.id_for_label }}">Password *</label>
         {{ form.password }}
         {% if form.password.errors %}<span class="error">{{ form.password.errors }}</span>{% endif %}
@@ -114,14 +108,6 @@
         {{ form.hire_date }}
         {% if form.hire_date.errors %}<span class="error">{{ form.hire_date.errors }}</span>{% endif %}
     </div>
-
-    <label class="form-switch">
-                {{ form.is_active }}
-                <span class="form-switch__ui" aria-hidden="true"></span>
-                <span class="form-switch__label">Active</span>
-            </label>
-    {% if form.is_active.errors %}<span class="error">{{ form.is_active.errors }}</span>{% endif %}
-
     <div class="form-actions">
         <button class="btn btn--primary" type="submit">Add Employee</button>
     </div>

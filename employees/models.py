@@ -131,8 +131,6 @@ class Employee(BaseModel):
     hire_date = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
 
-    class Meta:
-        ordering = ["-id"]
 
     def __str__(self):
         return f"{self.emp_code} - {self.first_name} {self.last_name}"

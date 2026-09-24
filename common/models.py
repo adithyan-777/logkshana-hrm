@@ -61,12 +61,6 @@ class SoftDeleteModel(models.Model):
     class Meta:
         abstract = True
 
-    def delete(self, using=None, keep_parents=False):
-        from django.utils import timezone
-
-        self.deleted_at = timezone.now()
-        self.save(update_fields=["deleted_at"])
-
     def hard_delete(self, using=None, keep_parents=False):
         super().delete(using=using, keep_parents=keep_parents)
 

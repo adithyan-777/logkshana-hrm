@@ -43,7 +43,7 @@ class Timetable(BaseModel):
     # (overnight checkout attribution).
     day_change_time = models.TimeField(
         default=dt_time(8, 0),
-        help_text="Punches before this time may belong to the previous attendance day.",
+        help_text="Punches before this time may belong to the previous attendance day.", 
     )
 
     # Flexible timetable

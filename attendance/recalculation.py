@@ -9,16 +9,19 @@ Pure pairing/variance math lives in ``attendance.calculation``.
 from datetime import date, datetime, time, timedelta
 
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from attendance.calculation import (
     day_variances,
     dedupe_punches,
+    minutes_between,
     pair_punches,
     scheduled_minutes,
     summarize_pairs,
 )
 from attendance.models import Attendance, AttendanceActivity
+from employees.models import Employee
 from schedule.calculation import expected_datetimes
 from schedule.models import EmployeeScheduleAssignment
 from schedule.selectors import resolve_schedule_for_employee_on_date
@@ -154,6 +157,9 @@ def recalculate_attendance(
         },
     )
     row.attendance_activities.set(punches)
+    AttendanceActivity.objects.filter(
+        pk__in=[punch.pk for punch in punches]
+    ).update(is_attendance_processed=True)
     return row
 
 
@@ -187,3 +193,154 @@ def _record_empty_day(
     )
     row.attendance_activities.clear()
     return row
+
+
+def calculate_attendance(*, day: date | None = None) -> dict:
+    """Print scheduled employees grouped as absentees, late arrivals,
+    and work hours.
+
+    Absentees: covered by an active schedule assignment but with no
+    activity punch on `day`.
+    Late arrivals: punched, but the first punch is after the expected
+    check-in (plus timetable grace).
+    Work hours: punched-out employees with a complete in/out pair.
+    Created attendance: Attendance rows written via recalculate_attendance
+    for scheduled employees with more than one punch on `day`.
+    Returns {"absentees": [...], "late_arrivals": [...], "work_hours": ...,
+    "created": [...]}
+    where work_hours holds (employee, minutes, first_in, last_out) tuples.
+    """
+    if day is None:
+        day = timezone.localtime(timezone.now()).date()
+
+    scheduled_ids = set(
+        EmployeeScheduleAssignment.objects.filter(
+            is_active=True,
+            start_date__lte=day,
+            schedule__is_active=True,
+        )
+        .filter(Q(end_date__gte=day) | Q(end_date__isnull=True))
+        .values_list("employees__pk", flat=True)
+    )
+    scheduled_ids.discard(None)
+
+    punched_ids = set(
+        AttendanceActivity.objects.filter(punch_time__date=day).values_list(
+            "employee_id", flat=True
+        )
+    )
+
+    absentees = list(
+        Employee.objects.filter(pk__in=scheduled_ids - punched_ids).order_by(
+            "first_name", "last_name"
+        )
+    )
+
+    late_arrivals = []
+    work_hours = []
+    eligible_for_creation = []
+    for employee in (
+        Employee.objects.filter(pk__in=scheduled_ids & punched_ids)
+        .order_by("first_name", "last_name")
+        .iterator()
+    ):
+        punches = list(
+            AttendanceActivity.objects.filter(
+                employee=employee, punch_time__date=day
+            ).order_by("punch_time")
+        )
+        if not punches:
+            continue
+        # NOTE: single-punch employees (checked in but never out) are
+        # deliberately skipped for creation here — they need separate
+        # handling (INCOMPLETE / missing-punch follow-up), not a normal
+        # attendance row. Only employees with more than one punch get
+        # an Attendance row below.
+        if len(punches) > 1:
+            eligible_for_creation.append(employee)
+        resolved = resolve_schedule_for_employee_on_date(
+            employee=employee, day=day
+        )
+        timetable = resolved.timetable
+        if (
+            not resolved.is_day_off
+            and timetable is not None
+        ):
+            expected_in, _ = expected_datetimes(
+                timetable=timetable, day=day
+            )
+            if expected_in is not None:
+                late_minutes = minutes_between(
+                    expected_in, punches[0].punch_time
+                ) - (timetable.grace_period_minutes or 0)
+                if late_minutes > 0:
+                    late_arrivals.append((employee, late_minutes))
+        summary = summarize_pairs(
+            pair_punches(
+                dedupe_punches(
+                    punches,
+                    window_minutes=(
+                        timetable.duplicate_punch_window_minutes
+                        if timetable is not None
+                        else 1
+                    ),
+                ),
+                allow_multiple_in_out=(
+                    timetable.multiple_in_out
+                    if timetable is not None
+                    else False
+                ),
+            )
+        )
+        if summary.has_check_in and summary.has_check_out:
+            work_hours.append(
+                (
+                    employee,
+                    summary.worked_minutes,
+                    summary.first_in,
+                    summary.last_out,
+                )
+            )
+
+    for employee in absentees:
+        print(employee.full_name)
+    print("--------------------------------------------------")
+    print("Late arrivals:")
+    print("--------------------------------------------------")
+    for employee, late_minutes in late_arrivals:
+        print(f"{employee.full_name} (+{late_minutes}m)")
+    print("--------------------------------------------------")
+    print("Work hours:")
+    print("--------------------------------------------------")
+    for employee, worked_minutes, first_in, last_out in work_hours:
+        hours, minutes = divmod(worked_minutes, 60)
+        print("--------------------------------------------------")
+        print(
+            f"{employee.full_name}: {hours}h {minutes:02d}m "
+            f"(in {first_in:%H:%M} out {last_out:%H:%M})"
+        )
+        print("--------------------------------------------------")
+    print("--------------------------------------------------")
+    print("Created attendance:")
+    print("--------------------------------------------------")
+    created = []
+    for employee in eligible_for_creation:
+        # recalculate_attendance is atomic per employee and never
+        # overwrites hand-made rows (is_calculated=False) without force.
+        row = recalculate_attendance(employee=employee, day=day)
+        if row is not None:
+            created.append(row)
+            print(f"{employee.full_name} -> {row.status}")
+    print("--------------------------------------------------")
+    return {
+        "absentees": absentees,
+        "late_arrivals": late_arrivals,
+        "work_hours": work_hours,
+        "created": created,
+    }
+
+
+# from django_tenants.utils import schema_context
+# with schema_context('tty'):
+#     from attendance.recalculation import calculate_attendance
+#     calculate_attendance()

@@ -10,9 +10,10 @@ class AttendanceActivityAdmin(admin.ModelAdmin):
         "punch_time",
         "direction",
         "method",
+        "is_attendance_processed",
         "external_id",
     )
-    list_filter = ("direction", "method")
+    list_filter = ("direction", "method", "is_attendance_processed")
     search_fields = (
         "employee__emp_code",
         "employee__first_name",

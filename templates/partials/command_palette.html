@@ -5,6 +5,7 @@
   x-data="commandPalette"
   @open-command-palette.window="open()"
   x-show="$store.ui.commandOpen"
+  x-transition.opacity.duration.280ms
   x-cloak
   @keydown.escape.window="if ($store.ui.commandOpen) close()"
 >

@@ -1,0 +1,104 @@
+/*
+  Date selector — Flatpickr-enhanced fields + input chrome.
+  Calendar popup UI lives in flatpickr-theme.css.
+*/
+
+/* Base — matches .form-input / .field input sizing */
+.field input[type="date"],
+.field input[type="time"],
+.field input[type="datetime-local"],
+.field input[type="month"],
+.field input[type="week"],
+.form-field input[type="date"],
+.form-field input[type="time"],
+.form-field input[type="datetime-local"],
+.form-field input[type="month"],
+.form-field input[type="week"],
+.report-filters input[type="date"],
+.report-filters input[type="time"],
+.report-filters input[type="datetime-local"],
+.form-input[type="date"],
+.form-input[type="time"],
+.form-input[type="datetime-local"],
+.field input.has-flatpickr,
+.form-field input.has-flatpickr,
+.report-filters input.has-flatpickr,
+.form-input.has-flatpickr {
+  position: relative;
+  min-height: var(--control-h);
+  padding-right: calc(var(--space-3) + 26px);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-normal);
+  cursor: pointer;
+}
+
+.field input.has-flatpickr,
+.form-field input.has-flatpickr,
+.report-filters input.has-flatpickr,
+.form-input.has-flatpickr {
+  background-color: var(--bg-prompt);
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px 16px;
+}
+
+.field input.has-flatpickr[data-fp-type="date"],
+.form-field input.has-flatpickr[data-fp-type="date"],
+.report-filters input.has-flatpickr[data-fp-type="date"],
+.form-input.has-flatpickr[data-fp-type="date"],
+.field input.has-flatpickr[data-fp-type="datetime-local"],
+.form-field input.has-flatpickr[data-fp-type="datetime-local"],
+.report-filters input.has-flatpickr[data-fp-type="datetime-local"],
+.form-input.has-flatpickr[data-fp-type="datetime-local"] {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238A1538' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='17' rx='3'/%3E%3Cpath d='M8 2v4M16 2v4M3 9.5h18'/%3E%3Ccircle cx='12' cy='15' r='1.4' fill='%238A1538' stroke='none'/%3E%3C/svg%3E");
+}
+
+.field input.has-flatpickr[data-fp-type="time"],
+.form-field input.has-flatpickr[data-fp-type="time"],
+.report-filters input.has-flatpickr[data-fp-type="time"],
+.form-input.has-flatpickr[data-fp-type="time"] {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238A1538' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3.5 2'/%3E%3C/svg%3E");
+}
+
+:root[data-theme="dark"] .field input.has-flatpickr[data-fp-type="date"],
+:root[data-theme="dark"] .form-field input.has-flatpickr[data-fp-type="date"],
+:root[data-theme="dark"] .report-filters input.has-flatpickr[data-fp-type="date"],
+:root[data-theme="dark"] .form-input.has-flatpickr[data-fp-type="date"],
+:root[data-theme="dark"] .field input.has-flatpickr[data-fp-type="datetime-local"],
+:root[data-theme="dark"] .form-field input.has-flatpickr[data-fp-type="datetime-local"],
+:root[data-theme="dark"] .report-filters input.has-flatpickr[data-fp-type="datetime-local"],
+:root[data-theme="dark"] .form-input.has-flatpickr[data-fp-type="datetime-local"] {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23E8A0B4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='17' rx='3'/%3E%3Cpath d='M8 2v4M16 2v4M3 9.5h18'/%3E%3Ccircle cx='12' cy='15' r='1.4' fill='%23E8A0B4' stroke='none'/%3E%3C/svg%3E");
+}
+
+:root[data-theme="dark"] .field input.has-flatpickr[data-fp-type="time"],
+:root[data-theme="dark"] .form-field input.has-flatpickr[data-fp-type="time"],
+:root[data-theme="dark"] .report-filters input.has-flatpickr[data-fp-type="time"],
+:root[data-theme="dark"] .form-input.has-flatpickr[data-fp-type="time"] {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23E8A0B4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3.5 2'/%3E%3C/svg%3E");
+}
+
+/* Disabled / readonly */
+.field input.has-flatpickr:disabled,
+.form-field input.has-flatpickr:disabled,
+.field input[type="date"]:disabled,
+.form-field input[type="date"]:disabled,
+.report-filters input[type="date"]:disabled,
+.field input[type="datetime-local"]:disabled,
+.field input[type="time"]:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Small screens — keep tap target roomy */
+@media (max-width: 640px) {
+  .field input[type="date"],
+  .form-field input[type="date"],
+  .report-filters input[type="date"],
+  .field input[type="datetime-local"],
+  .field input[type="time"],
+  .field input.has-flatpickr,
+  .form-field input.has-flatpickr {
+    min-height: 40px;
+  }
+}

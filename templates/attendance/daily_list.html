@@ -26,7 +26,7 @@
       id="daily-list"
       class="data-table-wrap"
       hx-get="{% url 'daily_attendance_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="dailyAttendanceCreated, dailyUpdated, dailyDeleted from:body"
+      hx-trigger="dailyAttendanceCreated from:body, dailyUpdated from:body, dailyDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -48,16 +48,15 @@
         {% for record in page_obj %}
         <tr>
             <td>{{ record.day }}</td>
-            <td>{{ record.employee.full_name }}</td>
+            <td>{% include "partials/emp_cell.html" with employee=record.employee %}</td>
             <td><span class="badge status-{{ record.status }}">{{ record.get_status_display }}</span></td>
             <td>{{ record.worked_minutes }}m</td>
             <td>{{ record.late_minutes }}m</td>
             <td>{{ record.overtime_minutes }}m</td>
             <td class="table-actions">
                 {% if can_edit %}
-                <a href="{% url 'daily_edit' record.pk %}" class="btn-icon" title="Edit daily record" aria-label="Edit daily record {{ record.day }}">
-                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
-                </a>
+                {% url 'daily_edit' record.pk as daily_edit_url %}
+                {% include "partials/drawer_link.html" with url=daily_edit_url title="Edit daily record" icon="bx-edit" class="btn-icon" %}
                 {% endif %}
                 {% if can_delete %}
                 <button
@@ -83,7 +82,7 @@
     {% if search %}
     No daily records match "{{ search }}".
     {% else %}
-    No daily attendance yet. <a href="{% url 'daily_attendance_add' %}">Add the first record</a>.
+    No daily attendance yet. {% url 'daily_attendance_add' as daily_attendance_add_url %}{% include "partials/drawer_link.html" with url=daily_attendance_add_url title="Add daily record" label="Add the first record" %}.
     {% endif %}
 </p>
 {% endif %}

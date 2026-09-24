@@ -26,7 +26,7 @@
       id="leave-policy-list"
       class="data-table-wrap"
       hx-get="{% url 'leave_policy_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="leavePolicyCreated, leavePolicyUpdated, leavePolicyDeleted from:body"
+      hx-trigger="leavePolicyCreated from:body, leavePolicyUpdated from:body, leavePolicyDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -61,9 +61,8 @@
             </td>
             <td class="table-actions">
                 {% if can_edit %}
-                <a href="{% url 'leave_policy_edit' policy.pk %}" class="btn-icon" title="Edit leave policy" aria-label="Edit {{ policy.name }}">
-                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
-                </a>
+                {% url 'leave_policy_edit' policy.pk as leave_policy_edit_url %}
+                {% include "partials/drawer_link.html" with url=leave_policy_edit_url title="Edit leave policy" icon="bx-edit" class="btn-icon" %}
                 {% endif %}
                 {% if can_delete %}
                 <button
@@ -89,7 +88,7 @@
     {% if search %}
     No leave policies match "{{ search }}".
     {% else %}
-    No leave policies yet. <a href="{% url 'leave_policy_add' %}">Add the first policy</a>.
+    No leave policies yet. {% url 'leave_policy_add' as leave_policy_add_url %}{% include "partials/drawer_link.html" with url=leave_policy_add_url title="Add leave policy" label="Add the first policy" %}.
     {% endif %}
 </p>
 {% endif %}

@@ -26,7 +26,7 @@
       id="timetable-list"
       class="data-table-wrap"
       hx-get="{% url 'timetable_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="timetableCreated, timetableUpdated, timetableDeleted from:body"
+      hx-trigger="timetableCreated from:body, timetableUpdated from:body, timetableDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -35,11 +35,10 @@
 <table class="data-table">
     <thead>
         <tr>
-            <th>Code</th>
             <th>Name</th>
             <th>Type</th>
-            <th>Check in</th>
-            <th>Check out</th>
+            <th>Work period</th>
+            <th>Break</th>
             <th>Status</th>
             <th></th>
         </tr>
@@ -47,11 +46,34 @@
     <tbody>
         {% for timetable in page_obj %}
         <tr>
-            <td>{{ timetable.code }}</td>
-            <td>{{ timetable.name }}</td>
+            <td>
+              <div class="tt-list-name">{{ timetable.name }}</div>
+              <div class="help-text">{{ timetable.code }}</div>
+            </td>
             <td>{{ timetable.get_type_display }}</td>
-            <td>{{ timetable.check_in|default:"—" }}</td>
-            <td>{{ timetable.check_out|default:"—" }}</td>
+            <td>
+              {% if timetable.check_in and timetable.check_out %}
+                {{ timetable.check_in|time:"H:i" }}
+                –
+                {{ timetable.check_out|time:"H:i" }}
+                {% if timetable.check_out_cross_days %}
+                  <span class="help-text">(+{{ timetable.check_out_cross_days }}d)</span>
+                {% endif %}
+              {% elif timetable.work_minutes %}
+                {{ timetable.work_minutes }} min
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>
+              {% with break=timetable.breaks.all.0 %}
+                {% if break %}
+                  {{ break.start_time|time:"H:i" }}–{{ break.end_time|time:"H:i" }}
+                {% else %}
+                  —
+                {% endif %}
+              {% endwith %}
+            </td>
             <td>
                 {% if timetable.is_active %}
                 <span class="badge active">Active</span>
@@ -61,9 +83,8 @@
             </td>
             <td class="table-actions">
                 {% if can_edit %}
-                <a href="{% url 'timetable_edit' timetable.pk %}" class="btn-icon" title="Edit timetable" aria-label="Edit {{ timetable.name }}">
-                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
-                </a>
+                {% url 'timetable_edit' timetable.pk as timetable_edit_url %}
+                {% include "partials/drawer_link.html" with url=timetable_edit_url title="Edit timetable" icon="bx-edit" class="btn-icon" %}
                 {% endif %}
                 {% if can_delete %}
                 <button
@@ -89,7 +110,7 @@
     {% if search %}
     No timetables match "{{ search }}".
     {% else %}
-    No timetables yet. <a href="{% url 'timetable_add' %}">Add the first timetable</a>.
+    No timetables yet. {% url 'timetable_add' as timetable_add_url %}{% include "partials/drawer_link.html" with url=timetable_add_url title="Add timetable" label="Add the first timetable" %}.
     {% endif %}
 </p>
 {% endif %}

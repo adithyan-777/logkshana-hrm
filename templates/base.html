@@ -7,8 +7,10 @@
   <title>{% block title %}{{ page_heading|default:"Dashboard" }}{% endblock %} · ITTISAL HRMS</title>
   <script>
     (function () {
+      const modeKey = "logkshana-theme-mode";
       const prefsKey = "ittisal-ui-prefs";
       const defaults = {
+        mode: "system",
         layout: "compact",
         scale: "md",
         sidebarVariant: "inset",
@@ -16,11 +18,17 @@
       };
       const prefs = { ...defaults };
       try {
+        const mode = window.localStorage.getItem(modeKey);
+        if (mode === "system" || mode === "light" || mode === "dark") prefs.mode = mode;
         const raw = window.localStorage.getItem(prefsKey) || window.localStorage.getItem("logkshana-ui-prefs");
         if (raw) Object.assign(prefs, JSON.parse(raw));
       } catch (_) {}
+      if (!["light", "dark", "system"].includes(prefs.mode)) prefs.mode = "system";
 
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const theme = prefs.mode === "dark" ? "dark" : prefs.mode === "light" ? "light" : prefersDark ? "dark" : "light";
       const root = document.documentElement;
+      root.setAttribute("data-theme", theme);
       root.setAttribute("data-layout", prefs.layout || defaults.layout);
       root.setAttribute("data-scale", prefs.scale || defaults.scale);
       root.setAttribute("data-sidebar-variant", prefs.sidebarVariant || defaults.sidebarVariant);
@@ -29,9 +37,12 @@
   </script>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist@5.2.5/index.min.css" rel="stylesheet">
-  <link href="https://cdn.boxicons.com/3.0.8/fonts/basic/boxicons.min.css" rel="stylesheet">
-  <link href="https://cdn.boxicons.com/3.0.8/fonts/filled/boxicons-filled.min.css" rel="stylesheet">
-  <link href="https://cdn.boxicons.com/3.0.8/fonts/brands/boxicons-brands.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@boxicons/core@1.0.6/fonts/basic/boxicons.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@boxicons/core@1.0.6/fonts/filled/boxicons-filled.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@boxicons/core@1.0.6/fonts/brands/boxicons-brands.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@boxicons/core@1.0.6/fonts/animations.min.css" rel="stylesheet">
+  <link rel="icon" href="{% static 'brand/icon.svg' %}" type="image/svg+xml">
+  <meta name="theme-color" content="#8A1538">
   {% include "partials/stylesheets.html" %}
   <script src="{% static 'js/vendor/htmx.min.js' %}" defer></script>
   <script src="{% static 'js/alpine-app.js' %}" defer></script>
@@ -109,6 +120,8 @@
   {% include "partials/command_palette.html#command_palette" %}
 
   <script src="{% static 'js/theme.js' %}"></script>
+  <script src="{% static 'js/vendor/flatpickr.min.js' %}"></script>
+  <script src="{% static 'js/date-picker.js' %}"></script>
   <script src="{% static 'js/vendor/chart.umd.min.js' %}"></script>
   <script src="{% static 'js/dashboard-charts.js' %}"></script>
 </body>

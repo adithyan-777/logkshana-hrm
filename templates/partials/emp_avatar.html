@@ -1,0 +1,2 @@
+{% comment %}Round name avatar. Expects: initials, variant (0-7), size (xs/sm/md/lg/xl), label.{% endcomment %}
+<span class="emp-avatar emp-avatar--{{ size }} emp-avatar--{{ variant }}" {% if label %}title="{{ label }}"{% endif %} aria-hidden="true">{{ initials }}</span>

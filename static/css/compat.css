@@ -8,8 +8,8 @@
   margin-bottom: var(--space-3);
 }
 
-.field > label,
-.field label {
+.field > label:not(.form-switch):not(.tt-switch),
+.field label:not(.form-switch):not(.tt-switch) {
   display: block;
   font-size: 14px;
   font-weight: 500;
@@ -34,13 +34,30 @@
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--input);
   border-radius: var(--r-md);
-  background: var(--bg-prompt);
+  background-color: var(--bg-prompt);
   color: var(--text);
   font: inherit;
   box-shadow: none;
   appearance: none;
   -webkit-appearance: none;
   transition: var(--motion-interactive);
+}
+
+.field select,
+.report-filters select,
+.form-field select {
+  padding-right: calc(var(--space-3) + 22px);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%238A7F84' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px 16px;
+  cursor: pointer;
+}
+
+:root[data-theme="dark"] .field select,
+:root[data-theme="dark"] .report-filters select,
+:root[data-theme="dark"] .form-field select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%23C3C1BA' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 .field input:not([type="checkbox"]):not([type="radio"]):focus,
@@ -61,15 +78,76 @@
   align-items: center;
   gap: var(--space-2);
   margin-bottom: 0;
+  cursor: pointer;
+  user-select: none;
 }
 
 .field.checkbox {
   margin-bottom: var(--space-3);
 }
 
-.field.checkbox input {
+.field.checkbox label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.field.checkbox input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  width: 40px;
+  height: 22px;
+  min-height: 22px;
+  margin: 0;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--border);
+  box-shadow: none;
+  cursor: pointer;
+  transition: background var(--t-fast, 150ms) ease;
+}
+
+.field.checkbox input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
+  transition: transform var(--t-fast, 150ms) ease;
+}
+
+.field.checkbox input[type="checkbox"]:checked {
+  background: #16a34a;
+}
+
+.field.checkbox input[type="checkbox"]:checked::after {
+  transform: translateX(18px);
+}
+
+.field.checkbox input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--accent, #e11d48);
+  outline-offset: 2px;
+}
+
+.formset-table .field.checkbox input[type="checkbox"],
+.formset-table input[type="checkbox"] {
+  appearance: auto;
+  -webkit-appearance: checkbox;
   width: auto;
+  height: auto;
   min-height: auto;
+  border-radius: var(--r-sm, 4px);
+  background: var(--bg-prompt);
+}
+
+.formset-table input[type="checkbox"]::after {
+  content: none;
 }
 
 .permission-multiselect {
@@ -128,8 +206,25 @@
 
 .field-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
   gap: var(--space-3);
+  align-items: start;
+  min-width: 0;
+}
+
+.field-row > .field,
+.field-row > .form-switch,
+.field-row > .tt-toggle-block {
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+.field-row > .field > .form-input,
+.field-row > .field > .form-select,
+.field-row > .field > input,
+.field-row > .field > select,
+.field-row > .field > textarea {
+  max-width: 100%;
 }
 
 .field .error,
@@ -137,15 +232,23 @@
   font-size: 12.5px;
   color: var(--danger);
   margin-top: 4px;
+  display: block;
 }
 
 .help-text {
   color: var(--text-muted);
   font-size: 13px;
-  margin: 0 0 var(--space-3);
+  margin: var(--space-1) 0 0;
+  line-height: 1.4;
 }
 
-form button[type="submit"]:not(.btn) {
+.field > .help-text:first-child,
+.tt-panel > .help-text:first-child {
+  margin-top: 0;
+}
+
+.app form button[type="submit"]:not(.btn),
+#modal-body form button[type="submit"]:not(.btn) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -155,14 +258,15 @@ form button[type="submit"]:not(.btn) {
   border-radius: var(--r-md);
   border: 1px solid transparent;
   background: var(--accent);
-  color: #fff;
+  color: var(--text-inverse, #fff);
   font-size: var(--control-font);
   font-weight: 500;
   cursor: pointer;
-  margin-top: var(--space-3);
+  transition: var(--motion-interactive);
 }
 
-form button[type="submit"]:not(.btn):hover {
+.app form button[type="submit"]:not(.btn):hover,
+#modal-body form button[type="submit"]:not(.btn):hover {
   background: var(--accent-hover);
 }
 
@@ -174,10 +278,13 @@ form button[type="submit"]:not(.btn):hover {
   background: var(--bg-elevated);
 }
 
-.form-section legend {
+.form-section legend,
+fieldset.tt-panel > legend,
+fieldset.form-section > legend {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
   padding: 0 var(--space-1);
+  color: var(--text);
 }
 
 .employee-table {
@@ -185,6 +292,13 @@ form button[type="submit"]:not(.btn):hover {
   border-collapse: collapse;
   font-size: 14px;
   line-height: 1.4;
+}
+
+.employee-table-wrap,
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
 }
 
 .employee-table th,

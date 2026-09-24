@@ -1,4 +1,5 @@
 {% extends "layouts/app_shell.html" %}
+{% load avatar %}
 
 {% block title %}Profile{% endblock %}
 
@@ -8,6 +9,13 @@
     <span class="card__title">Account</span>
   </div>
   <div class="card__body">
+    <div class="emp-cell" style="margin-bottom: var(--space-3);">
+      {% avatar user size="xl" %}
+      <div class="emp-cell__text">
+        <span class="emp-cell__name">{{ user.get_full_name|default:user.username }}</span>
+        <span class="emp-cell__sub">{{ user.email|default:"—" }}</span>
+      </div>
+    </div>
     <dl class="profile-details">
       <div class="profile-details__row">
         <dt>Username</dt>

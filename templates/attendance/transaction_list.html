@@ -26,7 +26,7 @@
       id="transaction-list"
       class="data-table-wrap"
       hx-get="{% url 'attendance_transaction_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="attendanceTransactionCreated, transactionUpdated, transactionDeleted from:body"
+      hx-trigger="attendanceTransactionCreated from:body, transactionUpdated from:body, transactionDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -46,16 +46,15 @@
     <tbody>
         {% for transaction in page_obj %}
         <tr>
-            <td>{{ transaction.employee.full_name }}</td>
+            <td>{% include "partials/emp_cell.html" with employee=transaction.employee %}</td>
             <td>{{ transaction.punch_time }}</td>
             <td>{{ transaction.get_direction_display }}</td>
             <td>{{ transaction.get_method_display }}</td>
             <td>{{ transaction.external_id }}</td>
             <td class="table-actions">
                 {% if can_edit %}
-                <a href="{% url 'transaction_edit' transaction.pk %}" class="btn-icon" title="Edit punch" aria-label="Edit punch {{ transaction.external_id }}">
-                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
-                </a>
+                {% url 'transaction_edit' transaction.pk as transaction_edit_url %}
+                {% include "partials/drawer_link.html" with url=transaction_edit_url title="Edit punch" icon="bx-edit" class="btn-icon" %}
                 {% endif %}
                 {% if can_delete %}
                 <button
@@ -81,7 +80,7 @@
     {% if search %}
     No punches match "{{ search }}".
     {% else %}
-    No punches yet. <a href="{% url 'attendance_transaction_add' %}">Record the first punch</a>.
+    No punches yet. {% url 'attendance_transaction_add' as attendance_transaction_add_url %}{% include "partials/drawer_link.html" with url=attendance_transaction_add_url title="Record punch" label="Record the first punch" %}.
     {% endif %}
 </p>
 {% endif %}

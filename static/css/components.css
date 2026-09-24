@@ -40,33 +40,44 @@
   transition-duration: var(--t-instant);
 }
 
-.btn--primary {
+.btn--primary,
+a.btn--primary,
+button.btn--primary {
   background: var(--accent);
   border-color: transparent;
-  color: #fff;
+  color: var(--text-inverse);
 }
 
-.btn--primary:hover {
+.btn--primary:hover,
+a.btn--primary:hover,
+button.btn--primary:hover {
   background: var(--accent-hover);
   border-color: transparent;
-  color: #fff;
+  color: var(--text-inverse);
   box-shadow: none;
 }
 
-.btn--primary:active {
+.btn--primary:active,
+a.btn--primary:active,
+button.btn--primary:active {
   background: var(--accent-pressed);
+  color: var(--text-inverse);
 }
 
-.btn--warm {
+.btn--warm,
+a.btn--warm,
+button.btn--warm {
   background: var(--accent-warm);
   border-color: transparent;
-  color: #fff;
+  color: var(--text-inverse);
 }
 
-.btn--warm:hover {
+.btn--warm:hover,
+a.btn--warm:hover,
+button.btn--warm:hover {
   background: var(--accent-warm-hover);
   border-color: transparent;
-  color: #fff;
+  color: var(--text-inverse);
 }
 
 .btn--soft {
@@ -91,7 +102,7 @@
 }
 
 .btn--ghost {
-  background: transparent;
+  background: var(--accent-muted);
   border-color: transparent;
   box-shadow: none;
 }
@@ -102,16 +113,20 @@
   box-shadow: none;
 }
 
-.btn--danger {
+.btn--danger,
+a.btn--danger,
+button.btn--danger {
   background: var(--danger);
   border-color: transparent;
-  color: #fff;
+  color: var(--text-inverse);
 }
 
-.btn--danger:hover {
+.btn--danger:hover,
+a.btn--danger:hover,
+button.btn--danger:hover {
   background: color-mix(in srgb, var(--danger) 88%, #000);
   box-shadow: none;
-  color: #fff;
+  color: var(--text-inverse);
 }
 
 .btn-icon {
@@ -159,6 +174,10 @@
   border-radius: var(--r-card);
   box-shadow: var(--shadow-card);
   transition: var(--motion-interactive);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .card:hover {
@@ -181,7 +200,16 @@
   letter-spacing: -0.01em;
 }
 
-.card__body { padding: var(--space-4); }
+.card__body {
+  padding: var(--space-4);
+  min-width: 0;
+}
+
+.card__body > form,
+.card__body > .tt-form-shell {
+  min-width: 0;
+  max-width: 100%;
+}
 
 .card--table:hover {
   transform: none;
@@ -737,6 +765,104 @@
   color: var(--text);
 }
 
+/* Name avatar — round initials, deterministic 0-7 color variants.
+   Tint-on-elevated keeps contrast in both light and dark mode. */
+.emp-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-pill);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  user-select: none;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  line-height: 1;
+}
+
+.emp-avatar--xs { width: 24px; height: 24px; font-size: 9px; }
+.emp-avatar--sm { width: 28px; height: 28px; font-size: 10px; }
+.emp-avatar--md { width: 32px; height: 32px; font-size: 11px; }
+.emp-avatar--lg { width: 40px; height: 40px; font-size: 13px; }
+.emp-avatar--xl { width: 56px; height: 56px; font-size: 18px; }
+
+.emp-avatar--0 {
+  background: var(--accent-muted);
+  color: var(--accent-pressed);
+  border-color: color-mix(in srgb, var(--accent) 32%, transparent);
+}
+.emp-avatar--1 {
+  background: color-mix(in srgb, var(--success) 14%, var(--bg-elevated));
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 30%, transparent);
+}
+.emp-avatar--2 {
+  background: color-mix(in srgb, var(--info) 14%, var(--bg-elevated));
+  color: var(--info);
+  border-color: color-mix(in srgb, var(--info) 30%, transparent);
+}
+.emp-avatar--3 {
+  background: color-mix(in srgb, var(--warning) 16%, var(--bg-elevated));
+  color: light-dark(#9a6b00, var(--warning));
+  border-color: color-mix(in srgb, var(--warning) 32%, transparent);
+}
+.emp-avatar--4 {
+  background: color-mix(in srgb, #8b5cf6 14%, var(--bg-elevated));
+  color: light-dark(#6d28d9, #a78bfa);
+  border-color: color-mix(in srgb, #8b5cf6 32%, transparent);
+}
+.emp-avatar--5 {
+  background: color-mix(in srgb, #0d9488 14%, var(--bg-elevated));
+  color: light-dark(#0f766e, #2dd4bf);
+  border-color: color-mix(in srgb, #0d9488 32%, transparent);
+}
+.emp-avatar--6 {
+  background: color-mix(in srgb, var(--danger) 12%, var(--bg-elevated));
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 30%, transparent);
+}
+.emp-avatar--7 {
+  background: var(--bg-muted);
+  color: var(--text-muted);
+  border-color: var(--border);
+}
+
+/* Table / list cell: avatar + name stack */
+.emp-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.emp-cell__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.emp-cell__name {
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emp-cell__sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .profile-menu__panel {
   position: absolute;
   top: calc(100% + 8px);
@@ -1173,7 +1299,7 @@
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--input);
   border-radius: var(--r-md);
-  background: var(--bg-prompt);
+  background-color: var(--bg-prompt);
   color: var(--text);
   font: inherit;
   line-height: var(--text-body-sm-lh);
@@ -1182,6 +1308,19 @@
   -webkit-appearance: none;
   transition: var(--motion-interactive);
   transform: none;
+}
+
+.form-select {
+  padding-right: calc(var(--space-3) + 22px);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%238A7F84' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px 16px;
+  cursor: pointer;
+}
+
+:root[data-theme="dark"] .form-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%23C3C1BA' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 .form-input::placeholder,
@@ -1214,11 +1353,70 @@
 
 .form-actions {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2);
   margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-header, var(--border));
 }
 
-.form-section {
+.tt-form-shell > .form-actions,
+#modal-body form > .form-actions {
+  margin-top: var(--space-2);
+}
+
+.form-actions .btn--ghost,
+.form-actions a.btn--ghost {
+  margin-left: 0;
+}
+
+/* Accordion sections (details/summary) */
+details.form-section {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+  background: var(--bg-elevated);
+}
+
+details.form-section > .form-section__title {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+details.form-section > .form-section__title::-webkit-details-marker,
+details.form-section > .form-section__title::marker {
+  display: none;
+  content: none;
+}
+
+details.form-section > .form-section__title::after {
+  content: "▾";
+  color: var(--text-muted);
+  font-size: 12px;
+  transition: transform var(--t-fast) var(--ease);
+}
+
+details.form-section:not([open]) > .form-section__title::after {
+  transform: rotate(-90deg);
+}
+
+details.form-section > .form-section__body {
+  margin-top: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Legacy alias — prefer details.form-section / fieldset.tt-panel */
+.form-section:not(details):not(fieldset) {
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   padding: var(--space-3);
@@ -1289,19 +1487,22 @@
   align-items: center;
   gap: var(--space-2);
   margin-bottom: var(--space-3);
+  min-width: 0;
 }
 
 .toolbar__search {
-  flex: 1;
-  min-width: 200px;
+  flex: 1 1 200px;
+  min-width: 0;
   max-width: 320px;
 }
 
 .data-table-wrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   background: var(--bg-elevated);
+  max-width: 100%;
 }
 
 .data-table {
@@ -1480,10 +1681,17 @@ table.dataTable tbody tr:hover td {
   box-shadow: none !important;
   appearance: none;
   -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%238e8e8e' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%238A7F84' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
   background-repeat: no-repeat !important;
   background-position: right 10px center !important;
   background-size: 12px !important;
+}
+
+:root[data-theme="dark"] .dt-container .dt-length select,
+:root[data-theme="dark"] .dt-container .dataTables_length select,
+:root[data-theme="dark"] .dataTables_wrapper .dataTables_length select,
+:root[data-theme="dark"] .dataTables_wrapper select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%23C3C1BA' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
 }
 
 .dt-container .dt-search input,
@@ -1783,35 +1991,41 @@ div.dt-container button.dt-paging-button:focus-visible {
   margin: 4px 0;
 }
 
-/* Modal */
+/* Modal — right drawer; follows data-sidebar-variant (default | inset) */
 .admin-modal {
   position: fixed;
   inset: 0;
   z-index: 50;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-4);
-  opacity: 0;
+  align-items: stretch;
+  justify-content: flex-end;
+  padding: 0;
+  overflow: hidden;
   visibility: hidden;
   pointer-events: none;
-  transition: opacity var(--t-base) var(--ease), visibility var(--t-base) var(--ease);
+  transition: visibility var(--modal-backdrop-t) var(--modal-backdrop-ease);
 }
 
 .admin-modal.is-open {
-  opacity: 1;
   visibility: visible;
   pointer-events: auto;
 }
 
+/*
+  Blur stays applied; only opacity animates (animating backdrop-filter is janky).
+  Parent no longer fades — avoids a double opacity*blur fade.
+*/
 .admin-modal__backdrop {
   position: absolute;
   inset: 0;
   background: var(--modal-backdrop-bg);
-  backdrop-filter: blur(var(--modal-backdrop-blur));
-  -webkit-backdrop-filter: blur(var(--modal-backdrop-blur));
+  -webkit-backdrop-filter: var(--modal-backdrop-filter);
+  backdrop-filter: var(--modal-backdrop-filter);
   opacity: 0;
-  transition: opacity var(--t-base) var(--ease);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  transition: opacity var(--modal-backdrop-t) var(--modal-backdrop-ease);
+  will-change: opacity;
 }
 
 .admin-modal.is-open .admin-modal__backdrop {
@@ -1820,36 +2034,105 @@ div.dt-container button.dt-paging-button:focus-visible {
 
 .admin-modal__dialog {
   position: relative;
-  width: 100%;
-  max-width: 480px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 100%);
+  height: 100%;
+  max-height: 100%;
   background: var(--bg-popover);
-  border: 1px solid var(--border);
-  border-radius: var(--r-card);
+  border: 0;
+  border-left: 1px solid var(--border);
+  border-radius: 0;
   box-shadow: var(--shadow-popover);
-  opacity: 0;
-  transform: translateY(4px) scale(0.98);
-  transition: opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+  transform: translateX(100%);
+  transition:
+    transform var(--modal-backdrop-t) var(--modal-backdrop-ease),
+    border-radius var(--modal-backdrop-t) var(--modal-backdrop-ease),
+    box-shadow var(--modal-backdrop-t) var(--modal-backdrop-ease);
 }
 
 .admin-modal.is-open .admin-modal__dialog {
-  opacity: 1;
-  transform: translateY(0) scale(1);
+  transform: translateX(0);
+}
+
+.admin-modal--wide .admin-modal__dialog {
+  width: min(640px, 100%);
+}
+
+/* Default — edge-flush sheet */
+:root[data-sidebar-variant="default"] .admin-modal {
+  padding: 0;
+}
+
+:root[data-sidebar-variant="default"] .admin-modal__dialog {
+  border-radius: 0;
+  border: 0;
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-popover);
+}
+
+/* Inset — floating panel matching shell gap + radius */
+:root[data-sidebar-variant="inset"] .admin-modal {
+  padding: var(--shell-gap);
+}
+
+:root[data-sidebar-variant="inset"] .admin-modal__dialog {
+  border: 1px solid var(--border);
+  border-radius: var(--r-shell);
+  box-shadow: var(--shadow-popover-lg);
+  transform: translateX(calc(100% + var(--shell-gap)));
+}
+
+:root[data-sidebar-variant="inset"] .admin-modal.is-open .admin-modal__dialog {
+  transform: translateX(0);
+}
+
+@media (max-width: 768px) {
+  :root[data-sidebar-variant="inset"] .admin-modal {
+    padding: var(--space-2);
+  }
+
+  :root[data-sidebar-variant="inset"] .admin-modal__dialog {
+    border-radius: var(--r-card);
+    transform: translateX(calc(100% + var(--space-2)));
+  }
+
+  :root[data-sidebar-variant="inset"] .admin-modal.is-open .admin-modal__dialog {
+    transform: translateX(0);
+  }
 }
 
 .admin-modal__head {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border-header);
 }
 
 .admin-modal__title { font-size: 16px; font-weight: 600; }
 
-.admin-modal__body { padding: var(--space-4); }
+.admin-modal__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--space-4);
+}
+
+.admin-modal__body > * {
+  min-width: 0;
+  max-width: 100%;
+}
 
 .admin-modal__foot {
   display: flex;
+  flex-shrink: 0;
   justify-content: flex-end;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
@@ -1943,8 +2226,11 @@ div.dt-container button.dt-paging-button:focus-visible {
 .command-palette__backdrop {
   position: absolute;
   inset: 0;
-  background: color-mix(in srgb, var(--bg-shell) 55%, transparent);
-  backdrop-filter: blur(6px);
+  background: var(--modal-backdrop-bg);
+  -webkit-backdrop-filter: var(--modal-backdrop-filter);
+  backdrop-filter: var(--modal-backdrop-filter);
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .command-palette__dialog {
@@ -2192,4 +2478,803 @@ div.dt-container button.dt-paging-button:focus-visible {
   }
 
   .toast { border-radius: var(--r-md); text-align: center; width: 100%; }
+}
+
+/* Form dialog shell + nested panels (shared by timetable + drawer forms) */
+.tt-form-shell,
+#modal-body form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.tt-form-shell > .field,
+.tt-form-shell > .field-row,
+.tt-form-shell > .form-switch,
+.tt-form-shell > .tt-panel,
+.tt-form-shell > .tt-toggle-block,
+.tt-form-shell > fieldset,
+.tt-form-shell > details.form-section,
+#modal-body form > .field,
+#modal-body form > .field-row,
+#modal-body form > .form-switch,
+#modal-body form > .tt-panel,
+#modal-body form > .tt-toggle-block,
+#modal-body form > fieldset,
+#modal-body form > details.form-section {
+  margin-bottom: 0;
+}
+
+.tt-panel > .field,
+.tt-panel > .field-row,
+.tt-panel > .form-switch,
+.tt-panel > .tt-switch-stack,
+.tt-panel > .help-text,
+fieldset.tt-panel > .field,
+fieldset.tt-panel > .field-row,
+fieldset.tt-panel > .form-switch,
+fieldset.tt-panel > .tt-switch-stack,
+fieldset.tt-panel > .help-text,
+fieldset.form-section > .field,
+fieldset.form-section > .field-row,
+fieldset.form-section > .form-switch,
+fieldset.form-section > .help-text {
+  margin-bottom: 0;
+}
+
+.tt-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.tt-form > .field,
+.tt-form > .tt-name-row,
+.tt-form > .tt-toggle-block,
+.tt-form > .tt-panel,
+.tt-form > .form-switch,
+.tt-form > .tabs,
+.tt-form > details.form-section,
+.tt-form > [x-show] {
+  margin-bottom: 0;
+}
+
+.tt-name-row .field {
+  margin-bottom: 0;
+}
+
+/* Shift type as full-width tabs */
+.tt-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: 0;
+  box-sizing: border-box;
+	background: var(--bg);
+	border-radius: var(--r-md);
+}
+
+.tt-tabs .tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin: 0;
+  cursor: pointer;
+  user-select: none;
+  text-align: center;
+}
+
+.tt-tabs .tab input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  pointer-events: none;
+}
+
+.tt-name-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.tt-color-field {
+  width: 56px;
+}
+
+.tt-color-field .form-label {
+  text-align: center;
+}
+
+.tt-color-field .tt-color,
+.tt-color-field input[type="color"] {
+  width: 44px;
+  margin-inline: auto;
+}
+
+.tt-segment {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.tt-segment__btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-h);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--motion-interactive);
+}
+
+.tt-segment__btn input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tt-segment__btn.is-active {
+  border-color: var(--accent, #e11d48);
+  color: var(--accent, #e11d48);
+  box-shadow: inset 0 0 0 1px var(--accent, #e11d48);
+}
+
+.tt-color,
+.form-input[type="color"],
+input.tt-color[type="color"] {
+  display: block;
+  width: 44px;
+  max-width: 44px;
+  height: var(--control-h);
+  min-height: var(--control-h);
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-prompt);
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.tt-hours,
+.tt-range {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: var(--space-2);
+  align-items: start;
+  min-width: 0;
+}
+
+.tt-hours {
+  grid-template-columns: 1fr 1fr;
+}
+
+.tt-hours > .field,
+.tt-range > .field {
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+.tt-range__sep {
+  margin-top: calc(var(--control-h) / 2 - 0.5em);
+  color: var(--text-muted);
+}
+
+/* Form switches (replaces checkbox UI).
+   !important beats .field label { display:block } and .form-input width rules. */
+.form-switch,
+.tt-switch,
+.field .form-switch,
+.field .tt-switch,
+.field-row .form-switch,
+.tt-toggle-block .form-switch {
+  position: relative;
+  display: inline-flex !important;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  user-select: none;
+  margin-bottom: var(--space-3);
+  width: auto;
+  max-width: 100%;
+}
+
+.form-switch input,
+.tt-switch input,
+.field .form-switch input,
+.field .tt-switch input,
+.tt-toggle-block .form-switch input {
+  position: absolute !important;
+  inset: 0 auto 0 0;
+  opacity: 0 !important;
+  width: 40px !important;
+  height: 22px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: 40px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  pointer-events: none;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+}
+
+.tt-toggle-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-switch__ui,
+.tt-switch__ui {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--border);
+  transition: background var(--t-fast, 150ms) ease;
+  flex-shrink: 0;
+  flex-grow: 0;
+}
+
+.form-switch__ui::after,
+.tt-switch__ui::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
+  transition: transform var(--t-fast, 150ms) ease;
+}
+
+.form-switch input:checked + .form-switch__ui,
+.tt-switch input:checked + .tt-switch__ui {
+  background: #16a34a;
+}
+
+.form-switch input:checked + .form-switch__ui::after,
+.tt-switch input:checked + .tt-switch__ui::after {
+  transform: translateX(18px);
+}
+
+.form-switch input:focus-visible + .form-switch__ui,
+.tt-switch input:focus-visible + .tt-switch__ui {
+  outline: 2px solid var(--accent, #e11d48);
+  outline-offset: 2px;
+}
+
+.form-switch__label,
+.tt-switch__label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.tt-switch-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Legacy .field.checkbox → toggle switch */
+.field.checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  cursor: pointer;
+  user-select: none;
+}
+
+.field.checkbox label {
+  display: inline;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.field.checkbox input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  width: 40px;
+  height: 22px;
+  min-height: 22px;
+  margin: 0;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--border);
+  box-shadow: none;
+  cursor: pointer;
+  transition: background var(--t-fast, 150ms) ease;
+}
+
+.field.checkbox input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
+  transition: transform var(--t-fast, 150ms) ease;
+}
+
+.field.checkbox input[type="checkbox"]:checked {
+  background: #16a34a;
+}
+
+.field.checkbox input[type="checkbox"]:checked::after {
+  transform: translateX(18px);
+}
+
+.field.checkbox input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--accent, #e11d48);
+  outline-offset: 2px;
+}
+
+/* Keep formset delete boxes compact */
+.formset-table input[type="checkbox"] {
+  appearance: auto;
+  -webkit-appearance: auto;
+  width: auto;
+  height: auto;
+  min-height: auto;
+  border-radius: var(--r-sm, 4px);
+  background: var(--bg-prompt);
+}
+
+.tt-panel,
+fieldset.tt-panel,
+fieldset.form-section {
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-muted);
+}
+
+/* Non-fieldset panels stack with flex gap */
+div.tt-panel {
+  display: flex;
+  flex-direction: column;
+	margin-bottom: var(--space-3);
+  gap: var(--space-3);
+}
+
+/* Fieldsets avoid display:flex (legend bugs in Chromium) */
+fieldset.tt-panel > *:not(legend),
+fieldset.form-section > *:not(legend) {
+  margin-top: var(--space-3);
+}
+
+fieldset.tt-panel > legend + *,
+fieldset.form-section > legend + * {
+  margin-top: var(--space-2);
+}
+
+fieldset.tt-panel > legend,
+fieldset.form-section > legend {
+  float: none;
+  width: auto;
+  max-width: 100%;
+  padding: 0 var(--space-1);
+  margin: 0 0 calc(var(--space-1) * -1);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text);
+  background: transparent;
+}
+
+.tt-indent {
+	margin-bottom: var(--space-3);
+  padding-left: calc(40px + var(--space-2));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.tt-indent .field {
+  margin-bottom: 0;
+}
+
+.tt-switch-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.tt-switch-stack .form-switch,
+.tt-panel > .form-switch,
+.tt-form-shell > .form-switch {
+  margin-bottom: 0;
+}
+
+/* Align switches with labeled inputs only when sharing a row with .field */
+.field-row > .form-switch {
+  margin-top: calc(var(--space-2) + 1.1em);
+  margin-bottom: 0;
+}
+
+.field-row > .form-switch:only-child,
+.field-row > .form-switch:first-child:last-child {
+  margin-top: 0;
+}
+
+/* When a row is only switches, don't offset */
+.field-row:not(:has(.field)) > .form-switch {
+  margin-top: 0;
+}
+
+.tt-link {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--accent, #2563eb);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.tt-identity {
+  min-width: 0;
+  width: 100%;
+}
+
+.tt-identity__name {
+  min-width: 0;
+}
+
+.tt-chip {
+  flex-shrink: 0;
+}
+
+/* Numbered form sections (timetable add/edit) */
+.tt-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tt-step:first-child {
+  margin-top: 0;
+}
+
+.tt-step__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-pill);
+  background: var(--accent-muted);
+  color: var(--accent-pressed);
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Shift-type choice cards */
+.tt-choice {
+  flex: 1;
+  display: flex !important;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: 10px 12px !important;
+  cursor: pointer;
+}
+
+.tt-choice__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.35;
+}
+
+.tt-choice__title {
+  font-weight: 600;
+}
+
+.tt-choice__desc {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+/* Name + color identity row */
+.tt-identity {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-end;
+}
+
+.tt-identity__name {
+  flex: 1;
+  min-width: 0;
+}
+
+.tt-identity__color {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tt-color {
+  width: 44px;
+  height: var(--control-h);
+  padding: 3px;
+  border: 1px solid var(--input);
+  border-radius: var(--r-md);
+  background: var(--bg-prompt);
+  cursor: pointer;
+}
+
+.tt-color__hidden {
+  display: contents;
+}
+
+/* Ends-next-day chip next to check-out time */
+.tt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: center;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--bg-muted);
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--motion-interactive);
+}
+
+.tt-chip:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.tt-chip.is-on {
+  background: var(--accent-muted);
+  border-color: var(--accent);
+  color: var(--accent-pressed);
+}
+
+.tt-chip input {
+  accent-color: var(--accent);
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  cursor: pointer;
+}
+
+/* One-line flow explainer under section tabs */
+.tabs-hint {
+  margin: -4px 0 var(--space-3);
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.tabs-hint strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.tt-swatch {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--tt-color);
+  border: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.tt-list-name {
+  font-weight: 500;
+}
+
+/* ── Responsive layout / spacing ─────────────────────────────── */
+@media (max-width: 768px) {
+  .page-content {
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+  }
+
+  .card__header,
+  .card__body {
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+  }
+
+  .card--table .card__header {
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+  }
+
+  .admin-modal__head,
+  .admin-modal__body,
+  .admin-modal__foot {
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+  }
+
+  .admin-modal__dialog {
+    width: 100%;
+  }
+
+  .admin-modal--wide .admin-modal__dialog {
+    width: 100%;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar__search,
+  .toolbar .search-input {
+    max-width: none;
+    width: 100%;
+    flex: 1 1 auto;
+  }
+
+  .form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .form-actions .btn,
+  .form-actions button,
+  .form-actions a.btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .profile-details__row {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
+
+  .tt-indent {
+    padding-left: var(--space-3);
+  }
+
+  .tt-range {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .tt-range__sep {
+    display: none;
+  }
+
+  .tt-hours {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .tt-identity {
+    flex-wrap: wrap;
+  }
+
+  .tt-chip {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+
+  .field-row > .form-switch {
+    margin-top: 0;
+  }
+
+  .tabs.tt-tabs,
+  .tt-tabs {
+    width: 100%;
+  }
+
+  .dashboard-kpis,
+  .dash-kpi-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-content {
+    padding-left: var(--space-2);
+    padding-right: var(--space-2);
+  }
+
+  .tt-hours {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-kpis,
+  .dash-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-head__title {
+    font-size: clamp(1.25rem, 5vw, var(--text-h1));
+  }
+
+  /* Inset shell: tighten gap so content isn't squeezed */
+  :root[data-sidebar-variant="inset"] {
+    --shell-gap: 8px;
+  }
+}
+
+/* Drawer forms: keep grids from overflowing the panel */
+#modal-body .field-row,
+.admin-modal__body .field-row {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+}
+
+#modal-body .formset-table,
+.admin-modal__body .formset-table,
+.tt-form-shell .formset-table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+#modal-body .formset-table th,
+#modal-body .formset-table td,
+.admin-modal__body .formset-table th,
+.admin-modal__body .formset-table td,
+.tt-form-shell .formset-table th,
+.tt-form-shell .formset-table td {
+  white-space: nowrap;
+}
+
+/* Prefer gap over stacked margins inside panels */
+.form-section__body > .field,
+.form-section__body > .field-row,
+.form-section__body > .form-switch,
+.form-section__body > .tt-switch-stack,
+.form-section__body > .tt-toggle-block {
+  margin-bottom: 0;
+}
+
+[x-cloak] {
+  display: none !important;
 }

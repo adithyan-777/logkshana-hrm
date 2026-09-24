@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
-from common.http import is_htmx_partial
+from common.http import is_htmx_partial, redirect_to_list_drawer, set_hx_trigger
 from common.pagination import list_pagination_context
 from employees.decorators import require_permission
 from employees.permission_catalog import PermissionCodename
@@ -108,7 +108,11 @@ def timetable_add(request: HttpRequest) -> HttpResponse:
                 build_timetable_break_formset(),
                 success_message=f"Timetable “{form.cleaned_data['name']}” created.",
             )
-            response["HX-Trigger"] = "timetableCreated"
+            set_hx_trigger(
+                response,
+                event="timetableCreated",
+                toast=f"Timetable “{form.cleaned_data['name']}” created.",
+            )
             return response
 
         return _render_timetable_form(request, form, formset)
@@ -118,8 +122,10 @@ def timetable_add(request: HttpRequest) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_timetable_form(request, form, formset)
 
-    return render(
-        request, "schedule/timetable_add.html", {"form": form, "formset": formset}
+    return redirect_to_list_drawer(
+        list_url_name="timetable_list",
+        form_url=reverse("timetable_add"),
+        title="Add timetable",
     )
 
 
@@ -141,7 +147,11 @@ def timetable_edit(request: HttpRequest, timetable_id: int) -> HttpResponse:
                 build_timetable_break_formset(instance=timetable),
                 timetable=timetable,
             )
-            response["HX-Trigger"] = "timetableUpdated"
+            set_hx_trigger(
+                response,
+                event="timetableUpdated",
+                toast=f"Timetable “{timetable.name}” updated.",
+            )
             return response
 
         return _render_timetable_edit_form(request, form, formset, timetable=timetable)
@@ -151,10 +161,10 @@ def timetable_edit(request: HttpRequest, timetable_id: int) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_timetable_edit_form(request, form, formset, timetable=timetable)
 
-    return render(
-        request,
-        "schedule/timetable_edit.html",
-        {"form": form, "formset": formset, "timetable": timetable},
+    return redirect_to_list_drawer(
+        list_url_name="timetable_list",
+        form_url=request.path,
+        title="Edit timetable",
     )
 
 
@@ -207,7 +217,11 @@ def schedule_add(request: HttpRequest) -> HttpResponse:
                 ScheduleForm(),
                 success_message=f"Schedule “{form.cleaned_data['name']}” created.",
             )
-            response["HX-Trigger"] = "scheduleCreated"
+            set_hx_trigger(
+                response,
+                event="scheduleCreated",
+                toast=f"Schedule “{form.cleaned_data['name']}” created.",
+            )
             return response
 
         return _render_schedule_form(request, form)
@@ -216,7 +230,12 @@ def schedule_add(request: HttpRequest) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_schedule_form(request, form)
 
-    return render(request, "schedule/schedule_add.html", {"form": form})
+    return redirect_to_list_drawer(
+        list_url_name="schedule_list",
+        form_url=reverse("schedule_add"),
+        title="Add schedule",
+        size="wide",
+    )
 
 
 @login_required
@@ -232,7 +251,11 @@ def schedule_edit(request: HttpRequest, schedule_id: int) -> HttpResponse:
             response = _render_schedule_edit_form(
                 request, ScheduleForm(instance=schedule), schedule=schedule
             )
-            response["HX-Trigger"] = "scheduleUpdated"
+            set_hx_trigger(
+                response,
+                event="scheduleUpdated",
+                toast=f"Schedule “{schedule.name}” updated.",
+            )
             return response
 
         return _render_schedule_edit_form(request, form, schedule=schedule)
@@ -241,10 +264,11 @@ def schedule_edit(request: HttpRequest, schedule_id: int) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_schedule_edit_form(request, form, schedule=schedule)
 
-    return render(
-        request,
-        "schedule/schedule_edit.html",
-        {"form": form, "schedule": schedule},
+    return redirect_to_list_drawer(
+        list_url_name="schedule_list",
+        form_url=request.path,
+        title="Edit schedule",
+        size="wide",
     )
 
 

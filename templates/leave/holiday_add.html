@@ -10,8 +10,8 @@
     <span class="card__title">Add holiday</span>
   </div>
   <div class="card__body">
-    <div id="holiday-form-container">
-      {% partialdef holiday_form inline %}
+    {% partialdef holiday_form inline %}
+<div id="holiday-form-container">
 {% if success_message %}
 <div id="form-messages" class="message success">
     {{ success_message }}
@@ -21,11 +21,11 @@
 <div id="form-messages"></div>
 {% endif %}
 
-<form
+<form class="tt-form-shell"
     id="holiday-form"
     hx-post="{% url 'holiday_add' %}"
     hx-target="#holiday-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -61,15 +61,18 @@
         {{ form.description }}
     </div>
 
-    <div class="field checkbox">
-        {{ form.is_active }}
-        <label for="{{ form.is_active.id_for_label }}">Active</label>
-    </div>
+    <label class="form-switch">
+                {{ form.is_active }}
+                <span class="form-switch__ui" aria-hidden="true"></span>
+                <span class="form-switch__label">Active</span>
+            </label>
 
-    <button type="submit">Add Holiday</button>
-</form>
-{% endpartialdef holiday_form %}
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Add Holiday</button>
     </div>
+</form>
+</div>
+{% endpartialdef holiday_form %}
   </div>
 </div>
 {% endblock %}

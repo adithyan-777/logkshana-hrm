@@ -5,11 +5,33 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ page_heading|default:"Sign In" }}{% endblock %} · ITTISAL HRMS</title>
+  <script>
+    (function () {
+      const modeKey = "logkshana-theme-mode";
+      const prefsKey = "ittisal-ui-prefs";
+      let mode = "system";
+      try {
+        mode = window.localStorage.getItem(modeKey) || "system";
+        const raw = window.localStorage.getItem(prefsKey) || window.localStorage.getItem("logkshana-ui-prefs");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.mode) mode = parsed.mode;
+        }
+      } catch (_) {}
+      if (mode !== "light" && mode !== "dark" && mode !== "system") mode = "system";
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const resolved = mode === "dark" ? "dark" : mode === "light" ? "light" : prefersDark ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", resolved);
+    })();
+  </script>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist@5.2.5/index.min.css" rel="stylesheet">
-  <link href="https://cdn.boxicons.com/3.0.8/fonts/basic/boxicons.min.css" rel="stylesheet">
-  <link href="https://cdn.boxicons.com/3.0.8/fonts/filled/boxicons-filled.min.css" rel="stylesheet">
-  <link href="https://cdn.boxicons.com/3.0.8/fonts/brands/boxicons-brands.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@boxicons/core@1.0.6/fonts/basic/boxicons.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@boxicons/core@1.0.6/fonts/filled/boxicons-filled.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@boxicons/core@1.0.6/fonts/brands/boxicons-brands.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@boxicons/core@1.0.6/fonts/animations.min.css" rel="stylesheet">
+  <link rel="icon" href="{% static 'brand/icon.svg' %}" type="image/svg+xml">
+  <meta name="theme-color" content="#8A1538">
   {% include "partials/stylesheets.html" %}
   {% block extra_head %}{% endblock %}
 </head>

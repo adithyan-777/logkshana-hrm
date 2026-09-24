@@ -25,7 +25,7 @@
       id="position-list"
       class="data-table-wrap"
       hx-get="{% url 'position_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="positionCreated, positionUpdated, positionDeleted from:body"
+      hx-trigger="positionCreated from:body, positionUpdated from:body, positionDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -48,9 +48,8 @@
             <td>{{ position.parent|default:"—" }}</td>
             <td class="table-actions">
                 {% if can_edit %}
-                <a href="{% url 'position_edit' position.pk %}" class="btn-icon" title="Edit position" aria-label="Edit {{ position.title }}">
-                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
-                </a>
+                {% url 'position_edit' position.pk as position_edit_url %}
+                {% include "partials/drawer_link.html" with url=position_edit_url title="Edit position" icon="bx-edit" class="btn-icon" %}
                 {% endif %}
                 {% if can_delete %}
                 <button
@@ -76,7 +75,7 @@
     {% if search %}
     No positions match "{{ search }}".
     {% else %}
-    No positions yet. <a href="{% url 'position_add' %}">Add the first position</a>.
+    No positions yet. {% url 'position_add' as position_add_url %}{% include "partials/drawer_link.html" with url=position_add_url title="Add position" label="Add the first position" %}.
     {% endif %}
 </p>
 {% endif %}

@@ -12,19 +12,19 @@
 
   function chartColors() {
     return {
-      accent: resolveColor("--accent", "#e6987e"),
+      accent: resolveColor("--accent", "#8A1538"),
       text: resolveColor("--text-muted", "#85837D"),
       textStrong: resolveColor("--text", "#3E3E38"),
       grid: resolveColor("--border", "#ebebeb"),
-      bg: resolveColor("--bg-elevated", "#FAF9F1"),
-      popover: resolveColor("--bg-popover", "#FAF9F1"),
+      bg: resolveColor("--bg-elevated", "#FFFBFC"),
+      popover: resolveColor("--bg-popover", "#FFFBFC"),
       border: resolveColor("--border", "#ebebeb"),
       success: resolveColor("--success", "#16a34a"),
       warning: resolveColor("--warning", "#ca8a04"),
       danger: resolveColor("--danger", "#dc2626"),
       info: resolveColor("--info", "#2563eb"),
       muted: resolveColor("--text-dim", "#85837D"),
-      warm: resolveColor("--accent-warm", "#e6987e"),
+      warm: resolveColor("--accent-warm", "#8A1538"),
     };
   }
 
@@ -198,6 +198,16 @@
   } else {
     initCharts();
   }
+
+  let lastTheme = document.documentElement.getAttribute("data-theme") || "system";
+  window.addEventListener("themechange", (e) => {
+    const next = (e.detail && e.detail.theme) || document.documentElement.getAttribute("data-theme") || "system";
+    // CSS vars (via light-dark / data-theme) already flipped — re-read them.
+    requestAnimationFrame(() => {
+      lastTheme = next;
+      initCharts();
+    });
+  });
 
   document.body.addEventListener("htmx:afterSwap", function (evt) {
     if (evt.target && evt.target.id === "attendance-chart-panel") {

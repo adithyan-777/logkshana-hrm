@@ -10,8 +10,8 @@
     <span class="card__title">Add daily record</span>
   </div>
   <div class="card__body">
-    <div id="daily-form-container">
-      {% partialdef daily_form inline %}
+    {% partialdef daily_form inline %}
+<div id="daily-form-container">
 {% if success_message %}
 <div id="form-messages" class="message success">
     {{ success_message }}
@@ -23,9 +23,10 @@
 
 <form
     id="daily-form"
+    class="tt-form-shell"
     hx-post="{% url 'daily_attendance_add' %}"
     hx-target="#daily-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -33,34 +34,38 @@
     <div class="message error">{{ form.non_field_errors }}</div>
     {% endif %}
 
-    <div class="field-row">
-        <div class="field">
-            <label for="{{ form.employee.id_for_label }}">Employee *</label>
-            {{ form.employee }}
-            {% if form.employee.errors %}<span class="error">{{ form.employee.errors }}</span>{% endif %}
+    <fieldset class="tt-panel">
+        <legend>Record</legend>
+        <div class="field-row">
+            <div class="field">
+                <label class="form-label" for="{{ form.employee.id_for_label }}">Employee *</label>
+                {{ form.employee }}
+                {% if form.employee.errors %}<span class="error">{{ form.employee.errors }}</span>{% endif %}
+            </div>
+            <div class="field">
+                <label class="form-label" for="{{ form.day.id_for_label }}">Day *</label>
+                {{ form.day }}
+                {% if form.day.errors %}<span class="error">{{ form.day.errors }}</span>{% endif %}
+            </div>
+            <div class="field">
+                <label class="form-label" for="{{ form.status.id_for_label }}">Status</label>
+                {{ form.status }}
+            </div>
         </div>
-        <div class="field">
-            <label for="{{ form.day.id_for_label }}">Day *</label>
-            {{ form.day }}
-            {% if form.day.errors %}<span class="error">{{ form.day.errors }}</span>{% endif %}
+        <div class="field-row">
+            <div class="field">
+                <label class="form-label" for="{{ form.shift.id_for_label }}">Shift</label>
+                {{ form.shift }}
+            </div>
         </div>
-        <div class="field">
-            <label for="{{ form.status.id_for_label }}">Status</label>
-            {{ form.status }}
-        </div>
-    </div>
+    </fieldset>
 
-    <div class="field-row">
-        <div class="field">
-            <label for="{{ form.shift.id_for_label }}">Shift</label>
-            {{ form.shift }}
-        </div>
+    <div class="form-actions">
+        <button type="submit" class="btn btn--primary">Add Daily Record</button>
     </div>
-
-    <button type="submit">Add Daily Record</button>
 </form>
+</div>
 {% endpartialdef daily_form %}
-    </div>
   </div>
 </div>
 {% endblock %}

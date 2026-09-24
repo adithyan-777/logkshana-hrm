@@ -211,6 +211,10 @@ LIST_ACTIONS: dict[str, tuple[str, str]] = {
     "schedule_list": ("Add schedule", "schedule_add"),
 }
 
+# Create forms that need a wider right drawer.
+WIDE_DRAWER_ADD_URLS = frozenset({"employee_add", "schedule_add"})
+
+
 
 PAGE_HEADINGS: dict[str, str] = {
     "dashboard": "Dashboard",
@@ -541,7 +545,11 @@ def topbar_action_for(request: HttpRequest) -> dict[str, str] | None:
     if not action:
         return None
     label, url_name = action
-    return {"label": label, "url": reverse(url_name)}
+    return {
+        "label": label,
+        "url": reverse(url_name),
+        "drawer_size": "wide" if url_name in WIDE_DRAWER_ADD_URLS else "default",
+    }
 
 
 def active_section(request: HttpRequest) -> str | None:

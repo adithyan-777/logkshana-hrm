@@ -106,27 +106,62 @@
 /* Brand mark */
 .brand-mark {
   position: relative;
-  width: 36px;
+  width: auto;
+  min-width: 0;
   height: 36px;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   border-radius: var(--r-md);
-  color: var(--text-inverse);
-  background: var(--accent);
+  color: var(--accent);
+  background: transparent;
   border: 0;
   cursor: pointer;
   transition: var(--motion-interactive);
-  flex-shrink: 0;
+  flex-shrink: 1;
   text-decoration: none;
+  padding: 0 2px;
 }
 
 .brand-mark:hover {
-  background: var(--accent-hover);
+  background: transparent;
   transform: none;
 }
 
 .brand-mark:active { transform: none; }
+
+.brand-mark__logo {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+	gap: 8px;
+  justify-content: flex-start;
+  height: 100%;
+  max-width: 148px;
+  transition: opacity 160ms var(--sidebar-ease);
+  pointer-events: none;
+}
+
+.brand-mark__wordmark {
+  display: block;
+  height: 28px;
+  width: auto;
+  max-width: 148px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.brand-mark__glyph {
+  display: block;
+  width: 22px;
+  height: 26px;
+  object-fit: contain;
+}
+
+:root[data-theme="dark"] .brand-mark__wordmark,
+:root[data-theme="dark"] .brand-mark__glyph {
+  filter: brightness(0) invert(1);
+}
 
 .brand-mark__icon {
   position: absolute;
@@ -134,15 +169,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition:
-    opacity 160ms var(--sidebar-ease),
-    transform 160ms var(--sidebar-ease);
+  transition: opacity 160ms var(--sidebar-ease);
   pointer-events: none;
 }
 
 .brand-mark__toggle {
   opacity: 0;
-  transform: rotate(-90deg) scale(0.85);
+  color: var(--text);
 }
 
 .brand-mark__expand-hit {
@@ -170,7 +203,7 @@
   max-height: 36px;
   padding: 0 var(--space-2);
   margin-bottom: 4px;
-  border: 0;
+  border: 1px solid color-mix(in srgb, var(--text) 14%, var(--border));
   border-radius: var(--r-md);
   background: var(--bg-prompt);
   color: var(--text-dim);
@@ -405,6 +438,21 @@
 
   .app:has(#sidebar-collapsed:checked) .brand-mark {
     pointer-events: none;
+    width: 36px;
+    min-width: 36px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .app:has(#sidebar-collapsed:checked) .brand-mark__wordmark {
+    display: none;
+  }
+
+  .app:has(#sidebar-collapsed:checked) .brand-mark__logo {
+    position: absolute;
+    inset: 0;
+    justify-content: center;
+    max-width: none;
   }
 
   .app:has(#sidebar-collapsed:checked) .brand-mark__expand-hit {
@@ -413,16 +461,14 @@
 
   .app:has(#sidebar-collapsed:checked) .sidebar__top:hover .brand-mark__logo {
     opacity: 0;
-    transform: rotate(90deg) scale(0.85);
   }
 
   .app:has(#sidebar-collapsed:checked) .sidebar__top:hover .brand-mark__toggle {
     opacity: 1;
-    transform: rotate(0) scale(1);
   }
 
   .app:has(#sidebar-collapsed:checked) .sidebar__top:hover .brand-mark {
-    background: var(--accent-hover);
+    background: var(--hover);
   }
 }
 

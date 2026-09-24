@@ -26,7 +26,7 @@
       id="holiday-list"
       class="data-table-wrap"
       hx-get="{% url 'holiday_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="holidayCreated, holidayUpdated, holidayDeleted from:body"
+      hx-trigger="holidayCreated from:body, holidayUpdated from:body, holidayDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -59,9 +59,8 @@
             </td>
             <td class="table-actions">
                 {% if can_edit %}
-                <a href="{% url 'holiday_edit' holiday.pk %}" class="btn-icon" title="Edit holiday" aria-label="Edit {{ holiday.name }}">
-                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
-                </a>
+                {% url 'holiday_edit' holiday.pk as holiday_edit_url %}
+                {% include "partials/drawer_link.html" with url=holiday_edit_url title="Edit holiday" icon="bx-edit" class="btn-icon" %}
                 {% endif %}
                 {% if can_delete %}
                 <button
@@ -87,7 +86,7 @@
     {% if search %}
     No holidays match "{{ search }}".
     {% else %}
-    No holidays yet. <a href="{% url 'holiday_add' %}">Add the first holiday</a>.
+    No holidays yet. {% url 'holiday_add' as holiday_add_url %}{% include "partials/drawer_link.html" with url=holiday_add_url title="Add holiday" label="Add the first holiday" %}.
     {% endif %}
 </p>
 {% endif %}

@@ -9,7 +9,16 @@
   </div>
   {% if topbar_action %}
     <div class="page-head__actions">
-      <a class="btn btn--primary" href="{{ topbar_action.url }}">
+      <a
+        class="btn btn--primary"
+        href="{{ topbar_action.url }}"
+        hx-get="{{ topbar_action.url }}"
+        hx-target="#modal-body"
+        hx-swap="innerHTML"
+        hx-boost="false"
+        hx-push-url="false"
+        @click="$store.ui.openModal('{{ topbar_action.label|escapejs }}', '{{ topbar_action.drawer_size|default:'default'|escapejs }}')"
+      >
         <i class="bx bx-plus admin-icon admin-icon--18"></i>
         {{ topbar_action.label }}
       </a>

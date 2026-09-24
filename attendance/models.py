@@ -33,6 +33,10 @@ class AttendanceActivity(BaseModel):
         choices=Direction.choices,
         default=Direction.UNKNOWN,
     )
+    is_attendance_processed = models.BooleanField(
+        default=False,
+        help_text="True once this punch is consumed by attendance calculation or entered as a manual correction.",
+    )
     # Idempotency key for the ingest stream (e.g. gateway:<log_id>).
     # Blank for hand-entered punches.
     external_id = models.CharField(max_length=255, blank=True, default="")

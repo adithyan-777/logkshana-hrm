@@ -4,7 +4,7 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
-from common.http import is_htmx_partial
+from common.http import is_htmx_partial, redirect_to_list_drawer, set_hx_trigger
 from common.pagination import list_pagination_context
 from employees.decorators import require_permission
 from employees.forms import (
@@ -97,7 +97,12 @@ def employee_add(request: HttpRequest) -> HttpResponse:
             invite_link = employee_invite_link(employee=employee, request=request)
 
             response = _render_invite(request, employee, invite_link)
-            response["HX-Trigger"] = "employeeCreated"
+            set_hx_trigger(
+                response,
+                event="employeeCreated",
+                toast="Employee added. Share the invite link to set their password.",
+                close_modal=False,
+            )
             return response
 
         return _render_form(request, form)
@@ -106,7 +111,12 @@ def employee_add(request: HttpRequest) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_form(request, form)
 
-    return render(request, "employees/add.html", {"form": form})
+    return redirect_to_list_drawer(
+        list_url_name="employee_list",
+        form_url=reverse("employee_add"),
+        title="Add employee",
+        size="wide",
+    )
 
 
 def _render_edit_form(
@@ -154,10 +164,11 @@ def employee_edit(request: HttpRequest, employee_id: int) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_edit_form(request, form, employee=employee)
 
-    return render(
-        request,
-        "employees/edit.html",
-        {"form": form, "employee": employee},
+    return redirect_to_list_drawer(
+        list_url_name="employee_list",
+        form_url=request.path,
+        title="Edit employee",
+        size="wide",
     )
 
 
@@ -224,7 +235,11 @@ def department_add(request: HttpRequest) -> HttpResponse:
                 DepartmentForm(),
                 success_message=f"Department “{form.cleaned_data['name']}” created.",
             )
-            response["HX-Trigger"] = "departmentCreated"
+            set_hx_trigger(
+                response,
+                event="departmentCreated",
+                toast=f"Department “{form.cleaned_data['name']}” created.",
+            )
             return response
 
         return _render_department_form(request, form)
@@ -233,7 +248,11 @@ def department_add(request: HttpRequest) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_department_form(request, form)
 
-    return render(request, "employees/department_add.html", {"form": form})
+    return redirect_to_list_drawer(
+        list_url_name="department_list",
+        form_url=reverse("department_add"),
+        title="Add department",
+    )
 
 
 def _render_department_edit_form(
@@ -268,10 +287,10 @@ def department_edit(request: HttpRequest, department_id: int) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_department_edit_form(request, form, department=department)
 
-    return render(
-        request,
-        "employees/department_edit.html",
-        {"form": form, "department": department},
+    return redirect_to_list_drawer(
+        list_url_name="department_list",
+        form_url=request.path,
+        title="Edit department",
     )
 
 
@@ -334,7 +353,11 @@ def position_add(request: HttpRequest) -> HttpResponse:
                 PositionForm(),
                 success_message=f"Position “{form.cleaned_data['title']}” created.",
             )
-            response["HX-Trigger"] = "positionCreated"
+            set_hx_trigger(
+                response,
+                event="positionCreated",
+                toast=f"Position “{form.cleaned_data['title']}” created.",
+            )
             return response
 
         return _render_position_form(request, form)
@@ -343,7 +366,11 @@ def position_add(request: HttpRequest) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_position_form(request, form)
 
-    return render(request, "employees/position_add.html", {"form": form})
+    return redirect_to_list_drawer(
+        list_url_name="position_list",
+        form_url=reverse("position_add"),
+        title="Add position",
+    )
 
 
 def _render_position_edit_form(
@@ -378,10 +405,10 @@ def position_edit(request: HttpRequest, position_id: int) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_position_edit_form(request, form, position=position)
 
-    return render(
-        request,
-        "employees/position_edit.html",
-        {"form": form, "position": position},
+    return redirect_to_list_drawer(
+        list_url_name="position_list",
+        form_url=request.path,
+        title="Edit position",
     )
 
 
@@ -443,7 +470,11 @@ def role_add(request: HttpRequest) -> HttpResponse:
                 RoleForm(),
                 success_message=f"Role “{form.cleaned_data['name']}” created.",
             )
-            response["HX-Trigger"] = "roleCreated"
+            set_hx_trigger(
+                response,
+                event="roleCreated",
+                toast=f"Role “{form.cleaned_data['name']}” created.",
+            )
             return response
 
         return _render_role_form(request, form)
@@ -452,7 +483,11 @@ def role_add(request: HttpRequest) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_role_form(request, form)
 
-    return render(request, "employees/role_add.html", {"form": form})
+    return redirect_to_list_drawer(
+        list_url_name="role_list",
+        form_url=reverse("role_add"),
+        title="Add role",
+    )
 
 
 def _render_permission_form(
@@ -500,7 +535,11 @@ def permission_add(request: HttpRequest) -> HttpResponse:
                 PermissionForm(),
                 success_message=f"Permission “{form.cleaned_data['codename']}” created.",
             )
-            response["HX-Trigger"] = "permissionCreated"
+            set_hx_trigger(
+                response,
+                event="permissionCreated",
+                toast=f"Permission “{form.cleaned_data['codename']}” created.",
+            )
             return response
 
         return _render_permission_form(request, form)
@@ -509,4 +548,8 @@ def permission_add(request: HttpRequest) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_permission_form(request, form)
 
-    return render(request, "employees/permission_add.html", {"form": form})
+    return redirect_to_list_drawer(
+        list_url_name="permission_list",
+        form_url=reverse("permission_add"),
+        title="Add permission",
+    )

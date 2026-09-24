@@ -4,6 +4,7 @@
 
 {% block page_content %}
 {% partialdef employee_invite %}
+<div id="employee-form-container">
 <div class="alert alert--success invite-box">
     <p><strong>{{ employee.first_name }} {{ employee.last_name }}</strong> was added.</p>
     <p class="text-muted">Share this link with them to set their password:</p>
@@ -16,9 +17,16 @@
     >
       Copy link
     </button>
-    <a href="{% url 'employee_add' %}" hx-get="{% url 'employee_add' %}" hx-target="#employee-form-container" hx-swap="innerHTML">
+    <a
+      href="{% url 'employee_add' %}"
+      hx-get="{% url 'employee_add' %}"
+      hx-target="#employee-form-container"
+      hx-swap="outerHTML"
+      hx-boost="false"
+    >
       Add another employee
     </a>
+</div>
 </div>
 {% endpartialdef employee_invite %}
 
@@ -27,8 +35,8 @@
     <span class="card__title">Create employee</span>
   </div>
   <div class="card__body">
-    <div id="employee-form-container">
-      {% partialdef employee_form inline %}
+    {% partialdef employee_form inline %}
+<div id="employee-form-container">
 {% if success_message %}
 <div id="form-messages" class="message success">
     {{ success_message }}
@@ -38,11 +46,11 @@
 <div id="form-messages"></div>
 {% endif %}
 
-<form
+<form class="tt-form-shell"
     id="employee-form"
     hx-post="{% url 'employee_add' %}"
     hx-target="#employee-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -107,16 +115,19 @@
         {% if form.hire_date.errors %}<span class="error">{{ form.hire_date.errors }}</span>{% endif %}
     </div>
 
-    <div class="field checkbox">
-        {{ form.is_active }}
-        <label for="{{ form.is_active.id_for_label }}">Active</label>
-        {% if form.is_active.errors %}<span class="error">{{ form.is_active.errors }}</span>{% endif %}
-    </div>
+    <label class="form-switch">
+                {{ form.is_active }}
+                <span class="form-switch__ui" aria-hidden="true"></span>
+                <span class="form-switch__label">Active</span>
+            </label>
+    {% if form.is_active.errors %}<span class="error">{{ form.is_active.errors }}</span>{% endif %}
 
-    <button type="submit">Add Employee</button>
-</form>
-{% endpartialdef employee_form %}
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Add Employee</button>
     </div>
+</form>
+</div>
+{% endpartialdef employee_form %}
   </div>
 </div>
 {% endblock %}

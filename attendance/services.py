@@ -83,6 +83,10 @@ def activity_create(
         method=method,
         external_id=external_id,
         raw_data=raw_data or {},
+        # Hand-entered punches arrive already human-handled.
+        is_attendance_processed=(
+            method == AttendanceActivity.AttendanceActivityMethodType.MANUAL
+        ),
     )
     activity.full_clean()
     activity.save()
@@ -117,6 +121,9 @@ def activity_update(
     activity.direction = direction
     activity.method = method
     activity.raw_data = raw_data or {}
+    if method == AttendanceActivity.AttendanceActivityMethodType.MANUAL:
+        # A manual correction counts as human-handled; never auto-cleared.
+        activity.is_attendance_processed = True
     activity.full_clean()
     activity.save()
     if recalculate:

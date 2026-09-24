@@ -5,7 +5,10 @@
   role="dialog"
   aria-modal="true"
   aria-labelledby="modal-title"
-  :class="{ 'is-open': $store.ui.modalOpen }"
+  :class="{
+    'is-open': $store.ui.modalOpen,
+    'admin-modal--wide': $store.ui.modalSize === 'wide',
+  }"
   x-cloak
 >
   <div class="admin-modal__backdrop" @click="$store.ui.closeModal()"></div>

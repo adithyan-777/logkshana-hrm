@@ -25,7 +25,7 @@
       id="department-list"
       class="data-table-wrap"
       hx-get="{% url 'department_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="departmentCreated, departmentUpdated, departmentDeleted from:body"
+      hx-trigger="departmentCreated from:body, departmentUpdated from:body, departmentDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -48,9 +48,8 @@
             <td>{{ department.parent|default:"—" }}</td>
             <td class="table-actions">
                 {% if can_edit %}
-                <a href="{% url 'department_edit' department.pk %}" class="btn-icon" title="Edit department" aria-label="Edit {{ department.name }}">
-                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
-                </a>
+                {% url 'department_edit' department.pk as department_edit_url %}
+                {% include "partials/drawer_link.html" with url=department_edit_url title="Edit department" icon="bx-edit" class="btn-icon" %}
                 {% endif %}
                 {% if can_delete %}
                 <button
@@ -76,7 +75,7 @@
     {% if search %}
     No departments match "{{ search }}".
     {% else %}
-    No departments yet. <a href="{% url 'department_add' %}">Add the first department</a>.
+    No departments yet. {% url 'department_add' as department_add_url %}{% include "partials/drawer_link.html" with url=department_add_url title="Add department" label="Add the first department" %}.
     {% endif %}
 </p>
 {% endif %}

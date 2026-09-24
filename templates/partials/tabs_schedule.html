@@ -2,9 +2,9 @@
 <div class="tabs" role="tablist" aria-label="Schedule sections">
   <a href="{% url 'timetable_list' %}"
      class="tab {% if request.resolver_match.url_name == 'timetable_list' or request.resolver_match.url_name == 'timetable_add' %}is-active{% endif %}"
-     role="tab">Timetables</a>
+     role="tab" title="Daily work hours, e.g. 9:00–18:00">Timetables</a>
   <a href="{% url 'schedule_list' %}"
      class="tab {% if request.resolver_match.url_name == 'schedule_list' or request.resolver_match.url_name == 'schedule_add' %}is-active{% endif %}"
-     role="tab">Schedules</a>
+     role="tab" title="Assign timetables to people">Schedules</a>
 </div>
 {% endpartialdef tabs_schedule %}

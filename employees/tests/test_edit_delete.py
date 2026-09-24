@@ -51,12 +51,14 @@ class EmployeeDeleteTests(EditDeleteTestMixin, BaseTenantTestCase):
 
 
 class DepartmentEditDeleteTests(EditDeleteTestMixin, BaseTenantTestCase):
-    def test_edit_get_200(self):
+    def test_edit_get_redirects_to_list_drawer(self):
         department = department_factory(name="EditMe", code="EDM")
 
         response = self.client.get(reverse("department_edit", args=[department.pk]))
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("department_list"), response.url)
+        self.assertIn("drawer=", response.url)
 
     def test_edit_post_updates_and_triggers(self):
         department = department_factory(name="Before", code="BEF")
@@ -102,12 +104,14 @@ class DepartmentEditDeleteTests(EditDeleteTestMixin, BaseTenantTestCase):
 
 
 class PositionEditDeleteTests(EditDeleteTestMixin, BaseTenantTestCase):
-    def test_edit_get_200(self):
+    def test_edit_get_redirects_to_list_drawer(self):
         position = position_factory(title="EditMe", code="EDM")
 
         response = self.client.get(reverse("position_edit", args=[position.pk]))
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("position_list"), response.url)
+        self.assertIn("drawer=", response.url)
 
     def test_edit_post_updates_and_triggers(self):
         position = position_factory(title="Before", code="BEF")

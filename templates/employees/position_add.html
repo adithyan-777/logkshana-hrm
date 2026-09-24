@@ -8,8 +8,8 @@
     <span class="card__title">Add position</span>
   </div>
   <div class="card__body">
-    <div id="position-form-container">
-      {% partialdef position_form inline %}
+    {% partialdef position_form inline %}
+<div id="position-form-container">
 {% if success_message %}
 <div id="form-messages" class="message success">
     {{ success_message }}
@@ -19,11 +19,11 @@
 <div id="form-messages"></div>
 {% endif %}
 
-<form
+<form class="tt-form-shell"
     id="position-form"
     hx-post="{% url 'position_add' %}"
     hx-target="#position-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -49,10 +49,12 @@
         {% if form.parent.errors %}<span class="error">{{ form.parent.errors }}</span>{% endif %}
     </div>
 
-    <button type="submit">Add Position</button>
-</form>
-{% endpartialdef position_form %}
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Add Position</button>
     </div>
+</form>
+</div>
+{% endpartialdef position_form %}
   </div>
 </div>
 {% endblock %}

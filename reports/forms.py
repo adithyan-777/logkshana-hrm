@@ -1,5 +1,7 @@
 from django import forms
 
+from common.forms import apply_form_field_ui
+
 from employees.models import Department, Employee
 from reports.utils import current_month_range
 
@@ -30,6 +32,8 @@ class DateRangeFilterForm(forms.Form):
             date_from, date_to = current_month_range()
             self.fields["date_from"].initial = date_from
             self.fields["date_to"].initial = date_to
+        apply_form_field_ui(self)
+
 
     def cleaned_date_range(self) -> tuple:
         date_from = self.cleaned_data.get("date_from")
@@ -40,6 +44,10 @@ class DateRangeFilterForm(forms.Form):
 
 
 class IndividualReportFilterForm(DateRangeFilterForm):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        apply_form_field_ui(self)
     employee = forms.ModelChoiceField(
         queryset=Employee.objects.filter(is_active=True).order_by(
             "first_name", "last_name"
@@ -50,6 +58,10 @@ class IndividualReportFilterForm(DateRangeFilterForm):
 
 
 class ExceptionReportFilterForm(DateRangeFilterForm):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        apply_form_field_ui(self)
     exception_type = forms.ChoiceField(
         required=False,
         choices=[
@@ -99,6 +111,8 @@ class LeaveReportFilterForm(forms.Form):
             self.fields["date_from"].initial = date_from
             self.fields["date_to"].initial = date_to
             self.fields["year"].initial = date_to.year
+        apply_form_field_ui(self)
+
 
     def cleaned_date_range(self) -> tuple:
         date_from = self.cleaned_data.get("date_from")
@@ -115,6 +129,10 @@ class LeaveReportFilterForm(forms.Form):
 
 
 class OvertimeReportFilterForm(DateRangeFilterForm):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        apply_form_field_ui(self)
     status = forms.ChoiceField(
         required=False,
         choices=[

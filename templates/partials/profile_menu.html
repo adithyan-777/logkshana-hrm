@@ -1,3 +1,4 @@
+{% load avatar %}
 {% partialdef profile_menu inline %}
 <div
   class="profile-menu profile-menu--topbar"
@@ -13,7 +14,7 @@
     @click="$store.ui.toggleMenu('profile')"
   >
     <span class="profile__avatar-wrap">
-      <span class="profile__avatar">{{ user.get_username|slice:":2"|upper }}</span>
+      {% avatar user size="md" %}
       <span class="profile__status" aria-hidden="true"></span>
     </span>
   </button>

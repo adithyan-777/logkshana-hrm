@@ -22,7 +22,7 @@ from attendance.services import (
     attendance_record_delete,
     attendance_record_update,
 )
-from common.http import is_htmx_partial
+from common.http import is_htmx_partial, redirect_to_list_drawer
 from common.pagination import list_pagination_context
 from employees.decorators import require_permission
 from employees.permission_catalog import PermissionCodename
@@ -133,7 +133,11 @@ def transaction_add(request: HttpRequest) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_transaction_form(request, form)
 
-    return render(request, "attendance/transaction_add.html", {"form": form})
+    return redirect_to_list_drawer(
+        list_url_name="attendance_transaction_list",
+        form_url=reverse("attendance_transaction_add"),
+        title="Record punch",
+    )
 
 
 def _render_transaction_edit_form(
@@ -172,10 +176,10 @@ def transaction_edit(request: HttpRequest, transaction_id: int) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_transaction_edit_form(request, form, transaction=transaction)
 
-    return render(
-        request,
-        "attendance/transaction_edit.html",
-        {"form": form, "transaction": transaction},
+    return redirect_to_list_drawer(
+        list_url_name="attendance_transaction_list",
+        form_url=request.path,
+        title="Edit punch",
     )
 
 
@@ -249,7 +253,11 @@ def daily_add(request: HttpRequest) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_daily_form(request, form)
 
-    return render(request, "attendance/daily_add.html", {"form": form})
+    return redirect_to_list_drawer(
+        list_url_name="daily_attendance_list",
+        form_url=reverse("daily_attendance_add"),
+        title="Add daily record",
+    )
 
 
 def _render_daily_edit_form(
@@ -288,10 +296,10 @@ def daily_edit(request: HttpRequest, daily_id: int) -> HttpResponse:
     if is_htmx_partial(request):
         return _render_daily_edit_form(request, form, daily_attendance=daily_attendance)
 
-    return render(
-        request,
-        "attendance/daily_edit.html",
-        {"form": form, "daily_attendance": daily_attendance},
+    return redirect_to_list_drawer(
+        list_url_name="daily_attendance_list",
+        form_url=request.path,
+        title="Edit daily record",
     )
 
 

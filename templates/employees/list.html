@@ -25,7 +25,7 @@
       id="employee-list"
       class="data-table-wrap"
       hx-get="{% url 'employee_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="employeeCreated, employeeUpdated, employeeDeleted from:body"
+      hx-trigger="employeeCreated from:body, employeeUpdated from:body, employeeDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -48,7 +48,7 @@
         {% for employee in page_obj %}
         <tr>
             <td>{{ employee.emp_code|default:"—" }}</td>
-            <td>{{ employee.first_name }} {{ employee.last_name }}</td>
+            <td>{% include "partials/emp_cell.html" with employee=employee %}</td>
             <td>{{ employee.department|default:"—" }}</td>
             <td>{{ employee.position|default:"—" }}</td>
             <td>{{ employee.email|default:"—" }}</td>
@@ -62,9 +62,8 @@
             </td>
             <td class="table-actions">
                 {% if can_edit %}
-                <a href="{% url 'employee_edit' employee.pk %}" class="btn-icon" title="Edit employee" aria-label="Edit {{ employee.first_name }} {{ employee.last_name }}">
-                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
-                </a>
+                {% url 'employee_edit' employee.pk as employee_edit_url %}
+                {% include "partials/drawer_link.html" with url=employee_edit_url title="Edit employee" icon="bx-edit" class="btn-icon" size="wide" %}
                 {% endif %}
                 {% if can_delete %}
                 <button
@@ -90,7 +89,7 @@
     {% if search %}
     No employees match "{{ search }}".
     {% else %}
-    No employees yet. <a href="{% url 'employee_add' %}">Add the first employee</a>.
+    No employees yet. {% url 'employee_add' as employee_add_url %}{% include "partials/drawer_link.html" with url=employee_add_url title="Add employee" label="Add the first employee" size="wide" %}.
     {% endif %}
 </p>
 {% endif %}

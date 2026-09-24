@@ -1,9 +1,11 @@
 {% partialdef sidebar inline %}
+{% load static %}
 <aside class="sidebar" id="sidebar" aria-label="Primary">
   <div class="sidebar__top">
     <a href="{% url 'dashboard' %}" class="brand-mark" title="ITTISAL HRMS" aria-label="ITTISAL HRMS">
-      <span class="brand-mark__icon brand-mark__logo">
-        <i class="bx bx-robot admin-icon admin-icon--20"></i>
+      <span class="brand-mark__logo">
+        <img class="brand-mark__glyph" src="{% static 'brand/icon.svg' %}" alt="" width="22" height="26">
+        <img class="brand-mark__wordmark" src="{% static 'brand/hrms-wordmark.svg' %}" alt="ITTISAL HRMS" width="148" height="28">
       </span>
       <span class="brand-mark__icon brand-mark__toggle">
         <i class="bx bx-sidebar admin-icon admin-icon--18"></i>

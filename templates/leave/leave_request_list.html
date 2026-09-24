@@ -26,7 +26,7 @@
       id="leave-request-list"
       class="data-table-wrap"
       hx-get="{% url 'leave_request_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="leaveRequestCreated, leaveRequestUpdated, leaveRequestDeleted from:body"
+      hx-trigger="leaveRequestCreated from:body, leaveRequestUpdated from:body, leaveRequestDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -47,7 +47,7 @@
     <tbody>
         {% for request in page_obj %}
         <tr>
-            <td>{{ request.employee.full_name }}</td>
+            <td>{% include "partials/emp_cell.html" with employee=request.employee %}</td>
             <td>{{ request.leave_type.name }}</td>
             <td>{{ request.start_date }}</td>
             <td>{{ request.end_date }}</td>
@@ -57,9 +57,8 @@
             </td>
             <td class="table-actions">
                 {% if can_edit %}
-                <a href="{% url 'leave_request_edit' request.pk %}" class="btn-icon" title="Edit leave request" aria-label="Edit leave request {{ request.pk }}">
-                    <i class="bx bx-edit admin-icon admin-icon--18"></i>
-                </a>
+                {% url 'leave_request_edit' request.pk as leave_request_edit_url %}
+                {% include "partials/drawer_link.html" with url=leave_request_edit_url title="Edit leave request" icon="bx-edit" class="btn-icon" %}
                 {% endif %}
                 {% if can_delete %}
                 <button
@@ -85,7 +84,7 @@
     {% if search %}
     No leave requests match "{{ search }}".
     {% else %}
-    No leave requests yet. <a href="{% url 'leave_request_add' %}">Add the first request</a>.
+    No leave requests yet. {% url 'leave_request_add' as leave_request_add_url %}{% include "partials/drawer_link.html" with url=leave_request_add_url title="Add leave request" label="Add the first request" %}.
     {% endif %}
 </p>
 {% endif %}

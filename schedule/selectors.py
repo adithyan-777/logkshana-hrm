@@ -12,8 +12,19 @@ from schedule.models import (
 )
 
 
-def timetable_list(*, search: str = "") -> QuerySet[Timetable]:
-    queryset = Timetable.objects.order_by("name")
+def timetable_list(
+    *,
+    search: str = "",
+    is_active: bool | None = None,
+    type: str | None = None,
+) -> QuerySet[Timetable]:
+    queryset = Timetable.objects.prefetch_related("breaks").order_by("name")
+
+    if is_active is not None:
+        queryset = queryset.filter(is_active=is_active)
+
+    if type:
+        queryset = queryset.filter(type=type)
 
     if search:
         queryset = queryset.filter(
@@ -21,6 +32,14 @@ def timetable_list(*, search: str = "") -> QuerySet[Timetable]:
         )
 
     return queryset
+
+
+def timetable_get(*, timetable_id: int) -> Timetable | None:
+    return (
+        Timetable.objects.prefetch_related("breaks")
+        .filter(pk=timetable_id)
+        .first()
+    )
 
 
 def timetable_break_list(
@@ -41,8 +60,19 @@ def timetable_break_list(
     return queryset
 
 
-def schedule_list(*, search: str = "") -> QuerySet[Schedule]:
+def schedule_list(
+    *,
+    search: str = "",
+    timetable: Timetable | None = None,
+    is_active: bool | None = None,
+) -> QuerySet[Schedule]:
     queryset = Schedule.objects.select_related("timetable").order_by("name")
+
+    if timetable is not None:
+        queryset = queryset.filter(timetable=timetable)
+
+    if is_active is not None:
+        queryset = queryset.filter(is_active=is_active)
 
     if search:
         queryset = queryset.filter(
@@ -50,6 +80,110 @@ def schedule_list(*, search: str = "") -> QuerySet[Schedule]:
         )
 
     return queryset
+
+
+def schedule_get(*, schedule_id: int) -> Schedule | None:
+    return (
+        Schedule.objects.select_related("timetable")
+        .filter(pk=schedule_id)
+        .first()
+    )
+
+
+def assignment_list(
+    *,
+    employee=None,
+    schedule: Schedule | None = None,
+    active_only: bool = True,
+    day: date | None = None,
+    search: str = "",
+) -> QuerySet[EmployeeScheduleAssignment]:
+    queryset = EmployeeScheduleAssignment.objects.select_related(
+        "schedule", "schedule__timetable"
+    ).prefetch_related("employees")
+
+    if active_only:
+        queryset = queryset.filter(is_active=True)
+
+    if employee is not None:
+        queryset = queryset.filter(employees=employee)
+
+    if schedule is not None:
+        queryset = queryset.filter(schedule=schedule)
+
+    if day is not None:
+        queryset = queryset.filter(start_date__lte=day).filter(
+            Q(end_date__gte=day) | Q(end_date__isnull=True)
+        )
+
+    if search:
+        queryset = queryset.filter(
+            Q(schedule__name__icontains=search)
+            | Q(employees__emp_code__icontains=search)
+            | Q(employees__first_name__icontains=search)
+            | Q(employees__last_name__icontains=search)
+        ).distinct()
+
+    return queryset
+
+
+def assignment_get(
+    *, assignment_id: int
+) -> EmployeeScheduleAssignment | None:
+    return (
+        EmployeeScheduleAssignment.objects.select_related(
+            "schedule", "schedule__timetable"
+        )
+        .prefetch_related("employees")
+        .filter(pk=assignment_id)
+        .first()
+    )
+
+
+def override_list(
+    *,
+    employee=None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    day_off_only: bool = False,
+    search: str = "",
+) -> QuerySet[EmployeeScheduleOverride]:
+    queryset = EmployeeScheduleOverride.objects.select_related(
+        "employee", "schedule", "schedule__timetable"
+    ).order_by("date")
+
+    if employee is not None:
+        queryset = queryset.filter(employee=employee)
+
+    if date_from is not None:
+        queryset = queryset.filter(date__gte=date_from)
+
+    if date_to is not None:
+        queryset = queryset.filter(date__lte=date_to)
+
+    if day_off_only:
+        queryset = queryset.filter(is_day_off=True)
+
+    if search:
+        queryset = queryset.filter(
+            Q(employee__first_name__icontains=search)
+            | Q(employee__last_name__icontains=search)
+            | Q(employee__emp_code__icontains=search)
+            | Q(reason__icontains=search)
+            | Q(schedule__name__icontains=search)
+        )
+
+    return queryset
+
+
+def override_get(*, employee, day: date) -> EmployeeScheduleOverride | None:
+    return (
+        EmployeeScheduleOverride.objects.select_related(
+            "schedule", "schedule__timetable"
+        )
+        .filter(employee=employee, date=day)
+        .first()
+    )
 
 
 @dataclass(frozen=True)
@@ -105,11 +239,7 @@ def resolve_schedule_for_employee_on_date(
     Precedence: one-day override wins, then the active assignment with the
     highest priority covering the day (most recent start_date breaks ties).
     """
-    override = (
-        EmployeeScheduleOverride.objects.select_related("schedule__timetable")
-        .filter(employee=employee, date=day)
-        .first()
-    )
+    override = override_get(employee=employee, day=day)
     if override is not None:
         if override.is_day_off:
             return ResolvedSchedule(
@@ -123,15 +253,7 @@ def resolve_schedule_for_employee_on_date(
                 )
 
     assignment = (
-        EmployeeScheduleAssignment.objects.select_related(
-            "schedule__timetable"
-        )
-        .filter(
-            employees=employee,
-            is_active=True,
-            start_date__lte=day,
-        )
-        .filter(Q(end_date__gte=day) | Q(end_date__isnull=True))
+        assignment_list(employee=employee, day=day)
         .filter(schedule__is_active=True)
         .order_by("-priority", "-start_date")
         .first()

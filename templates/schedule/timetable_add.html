@@ -5,13 +5,13 @@
 {% block page_content %}
 {% include "partials/tabs_schedule.html#tabs_schedule" %}
 
-<div class="card" style="max-width:720px;">
+<div class="card" style="max-width:560px;">
   <div class="card__header">
     <span class="card__title">Add timetable</span>
   </div>
   <div class="card__body">
-    <div id="timetable-form-container">
-      {% partialdef timetable_form inline %}
+    {% partialdef timetable_form inline %}
+<div id="timetable-form-container">
 {% if success_message %}
 <div id="form-messages" class="message success">
     {{ success_message }}
@@ -23,9 +23,10 @@
 
 <form
     id="timetable-form"
+    class="tt-form-shell"
     hx-post="{% url 'timetable_add' %}"
     hx-target="#timetable-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -35,7 +36,6 @@
 
     <fieldset class="form-section">
         <legend>Basic info</legend>
-
         <div class="field">
             <label for="{{ form.name.id_for_label }}">Name *</label>
             {{ form.name }}
@@ -54,12 +54,8 @@
                 {{ form.type }}
                 {% if form.type.errors %}<span class="error">{{ form.type.errors }}</span>{% endif %}
             </div>
-
-            <div class="field checkbox">
-                {{ form.is_active }}
-                <label for="{{ form.is_active.id_for_label }}">Active</label>
-            </div>
         </div>
+        {{ form.is_active.as_hidden }}
     </fieldset>
 
     <fieldset class="form-section">
@@ -174,20 +170,16 @@
                     {% if break_form.break_time_minutes.errors %}<span class="error">{{ break_form.break_time_minutes.errors }}</span>{% endif %}
                 </div>
             </div>
-            {% if formset.can_delete %}
-            <div class="field checkbox">
-                {{ break_form.DELETE }}
-                <label for="{{ break_form.DELETE.id_for_label }}">Delete</label>
-            </div>
-            {% endif %}
         </div>
         {% endfor %}
     </fieldset>
 
-    <button type="submit">Add Timetable</button>
-</form>
-{% endpartialdef timetable_form %}
+    <div class="form-actions">
+      <button type="submit" class="btn btn--primary">Add Timetable</button>
     </div>
+</form>
+</div>
+{% endpartialdef timetable_form %}
   </div>
 </div>
 {% endblock %}

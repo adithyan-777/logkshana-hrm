@@ -131,8 +131,6 @@ class Employee(BaseModel):
     hire_date = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
 
-    class Meta:
-        ordering = ["-id"]
 
     def __str__(self):
         return f"{self.emp_code} - {self.first_name} {self.last_name}"
@@ -140,3 +138,27 @@ class Employee(BaseModel):
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}".strip()
+
+    @property
+    def initials(self):
+        """Two-letter round-avatar initials: first+last, else first-two, else code/email, else ?."""
+        first = (self.first_name or "").strip()
+        last = (self.last_name or "").strip()
+        if first and last:
+            return f"{first[0]}{last[0]}".upper()
+        if first:
+            return (first[:2] if len(first) > 1 else first[0]).upper()
+        for fallback in (self.emp_code or "", self.email or ""):
+            cleaned = "".join(ch for ch in fallback if ch.isalnum())
+            if cleaned:
+                return cleaned[:2].upper()
+        return "?"
+
+    @property
+    def avatar_variant(self):
+        """Stable 0-7 color variant derived from the display name."""
+        import hashlib
+
+        seed = (self.full_name or self.emp_code or self.email or "?").lower()
+        digest = hashlib.md5(seed.encode("utf-8")).hexdigest()
+        return int(digest[:2], 16) % 8

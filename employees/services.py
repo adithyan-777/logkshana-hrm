@@ -1,27 +1,22 @@
-from django.db import transaction
-
-from employees.models import Department, Employee, Permission, Position, Role
-
 import json
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
-from django.conf import settings
-from django.core.exceptions import ValidationError
-from companies.selectors import device_get_by_serial_number
-
-from django.contrib.auth import get_user_model
-from django.db import transaction, connection
-from django.utils.text import slugify
 
 from allauth.account.forms import default_token_generator
 from allauth.account.utils import user_pk_to_url_str
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.db import connection, transaction
 from django.urls import reverse
-from companies.models import Company, Device
+from django.utils.text import slugify
 from django_tenants.utils import get_public_schema_name, schema_context
-from users.models import User
 
+from companies.models import Company, Device
+from companies.selectors import device_get_by_serial_number
+from employees.models import Department, Employee, Permission, Position, Role
 from employees.tasks import device_user_create_task
-
+from users.models import User
 
 User = get_user_model()
 

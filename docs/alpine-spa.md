@@ -1,16 +1,16 @@
 # Alpine.js SPA shell
 
-What changed when Alpine.js was added so the authenticated UI behaves like a single-page app, without a separate frontend or REST API.
+How the authenticated UI behaves like a single-page app without a separate frontend or REST API.
 
-**Related:** [frontend-features.md](frontend-features.md) (product / IA), [frontend-handoff.md](frontend-handoff.md) (CSS / markup), [ui-shell-plan.md](ui-shell-plan.md) (sidebar layout history).
+**Related:** [frontend-features.md](frontend-features.md) · [frontend-handoff.md](frontend-handoff.md) · [ui-shell-plan.md](ui-shell-plan.md)
 
 ---
 
 ## Why
 
-Pages were full Django HTML responses. HTMX already refreshed **islands** (list search, pagination, add-form posts, the dashboard chart). Clicking a sidebar or tab still reloaded the whole document: sidebar, topbar, scripts, and theme state all came back from scratch.
+Pages are full Django HTML responses. HTMX already refreshed **islands** (list search, pagination, add-form posts, dashboard chart). Sidebar clicks used to reload the whole document.
 
-This change keeps the chrome alive and swaps only the page view, using the same Django templates.
+The shell keeps chrome alive and swaps only the page view, using the same Django templates.
 
 ---
 
@@ -18,10 +18,10 @@ This change keeps the chrome alive and swaps only the page view, using the same 
 
 | Is | Is not |
 |----|--------|
-| Server-rendered HTML, still Django templates | A React/Vue SPA |
+| Server-rendered HTML, Django templates | A React/Vue SPA |
 | HTMX boosted links that swap `#spa-view` | Client-side routing with a JSON API |
-| Alpine for menus, theme, toasts, modal, command palette | A replacement for existing list/form HTMX |
-| Login stays a full page (`standalone.html`) | Alpine on the sign-in screen |
+| Alpine for menus, theme, toasts, modal, command palette | A replacement for list/form HTMX islands |
+| Login stays a full page (`standalone.html`) | Alpine required on the sign-in screen |
 
 ---
 
@@ -34,20 +34,19 @@ This change keeps the chrome alive and swaps only the page view, using the same 
 │  sidebar (stays)     ┌─ #spa-view (swapped) ─────────┐  │
 │  command palette     │  topbar (breadcrumbs, menus)  │  │
 │  toasts / modal      │  page content                 │  │
-│  mobile bottom bar   │  extra_js                     │  │
-│  Chart.js / theme.js └───────────────────────────────┘  │
+│  Chart.js / theme    │  page scripts                 │  │
+│  Flatpickr init      └───────────────────────────────┘  │
 └─────────────────────────────────────────────────────────┘
 ```
 
 1. In-app `<a href>` and GET forms inherit `hx-boost` from `<body>`.
-2. HTMX requests the **full HTML page**, then selects `#spa-view` from the response and replaces the current one (`outerHTML`).
-3. The URL is pushed (`hx-push-url`), so back/forward still work.
-4. Alpine re-inits the new `#spa-view`, updates the document title, and highlights the active sidebar item from `location.pathname`.
-5. A thin progress bar (`.spa-progress`) shows while that swap is in flight.
+2. HTMX requests the **full HTML page**, then selects `#spa-view` and replaces the current one.
+3. The URL is pushed (`hx-push-url`).
+4. Alpine re-inits the new `#spa-view`, updates the title, and highlights the active sidebar item.
+5. `.spa-progress` shows while the swap is in flight.
+6. `initDatePickers()` runs on `htmx:afterSettle` so drawer forms get Flatpickr.
 
-Existing HTMX islands keep their own `hx-target` (for example `#employee-list` or `this`). Those requests are **not** treated as page navigations.
-
-Boost target/select is applied in `static/js/alpine-app.js` **only for boosted link/form navigations**. It is not set on `<body>`, so add-forms, list search, pagination, and post-create table refreshes still receive the fragment HTML as-is. Putting `hx-select="#spa-view"` on `<body>` made those fragments swap to empty (no `#spa-view` in the partial).
+Boost target/select is applied in `static/js/alpine-app.js` **only for boosted navigations**. Islands keep their own `hx-target`.
 
 ### What must not be boosted
 
@@ -55,7 +54,7 @@ Boost target/select is applied in `static/js/alpine-app.js` **only for boosted l
 |--------|-----|
 | Log out | `hx-boost="false"` on the profile menu link |
 | Report CSV / Excel / PDF | `hx-boost="false"` on export links |
-| Login | Separate `standalone.html` layout (no boost, no Alpine shell) |
+| Login | `standalone.html` (no boost shell) |
 
 ---
 
@@ -65,107 +64,96 @@ Defined in `static/js/alpine-app.js` on `alpine:init`.
 
 | Store | Role |
 |-------|------|
-| `$store.spa` | Current path, loading flag, command-palette destinations |
-| `$store.ui` | Open menu (`profile` / `notify` / `theme`), command palette, toasts, modal |
-| `$store.theme` | Layout, scale, sidebar prefs — writes through `window.IttisalTheme` |
+| `$store.spa` | Path, loading flag, command-palette destinations |
+| `$store.ui` | Menus, command palette, toasts, modal (drawer) |
+| `$store.theme` | Mode, layout, scale, sidebar prefs → `window.IttisalTheme` |
 
-Chrome that lives **outside** `#spa-view` (sidebar, command palette, toasts, modal, progress bar) keeps Alpine state across page swaps. Topbar menus live **inside** `#spa-view`, so they re-init after each navigation; prefs still come from `$store.theme`.
+Keyboard: **⌘K / Ctrl+K** palette · **Esc** close · **↑ / ↓ / Enter** in palette
 
-Keyboard:
+---
 
-- **⌘K / Ctrl+K** — command palette
-- **Esc** — close palette, modal, or menus
-- **↑ / ↓ / Enter** — move and open a palette result
+## Theme / shell prefs
+
+Persisted in `ittisal-ui-prefs` (legacy `logkshana-*` keys migrated).
+
+| Pref | Values | Effect |
+|------|--------|--------|
+| `mode` | light / dark / system | `data-theme` |
+| `layout` | compact / full | content width |
+| `scale` | sm / md / lg | control sizing |
+| `sidebarVariant` | **default** / **inset** | Shell gap + **right drawer** shape |
+| `sidebarMode` | default / icon / full | Sidebar width |
+
+Brand SVGs go white in dark mode via CSS filter on `.brand-mark` / login wordmark.
 
 ---
 
 ## Command palette
 
-Sidebar search (⌘K) was previously decorative. It now opens `templates/partials/command_palette.html`.
+`templates/partials/command_palette.html` · destinations from `COMMAND_PALETTE` in `config/navigation.py`.
 
-Destinations are declared in `COMMAND_PALETTE` in `config/navigation.py`. The navigation context processor resolves URLs and injects `command_palette` into every authenticated page. Alpine reads `#command-palette-data` (`json_script`).
+---
 
-To add a jump target, append an entry:
+## Right drawer (modal)
 
-```python
-{
-    "title": "…",
-    "subtitle": "…",
-    "url_name": "my_url_name",
-    "group": "People",
-    "icon": "bx-user",
-}
-```
+`templates/partials/modal.html` · Alpine `$store.ui.modalOpen`.
+
+- **default** sidebar variant → edge-flush sheet  
+- **inset** → padded, `--r-shell` radius (matches shell)
+
+Backdrop uses shared blur tokens (`--modal-backdrop-filter`).
 
 ---
 
 ## Backend: boosted vs fragment
 
-Boosted navigations send `HX-Request: true` **and** `HX-Boosted: true`. List/add views used to treat any `HX-Request` as “return the table/form partial,” which would break SPA swaps (`#spa-view` would be missing).
-
-`common.http.is_htmx_partial()` is now the check:
+Use `common.http.is_htmx_partial(request)`:
 
 | Headers | Meaning | Response |
 |---------|---------|----------|
-| none | Normal browser load | Full page |
-| `HX-Request` + `HX-Boosted` | SPA page navigation | Full page (HTMX selects `#spa-view`) |
-| `HX-Request` only | Search, pagination, form island, chart refresh | Partial template |
-
-Use `is_htmx_partial(request)` in new list/add/report views. Do not go back to a raw `HX-Request` check.
+| none | Normal load | Full page |
+| `HX-Request` + `HX-Boosted` | SPA navigation | Full page (HTMX selects `#spa-view`) |
+| `HX-Request` only | Island | Partial template |
 
 ---
 
 ## File map
 
-| Path | Change |
-|------|--------|
-| `templates/base.html` | Alpine + HTMX boost, `#spa-view`, progress bar, toasts, command palette, Chart.js always loaded |
-| `static/js/alpine-app.js` | Stores, palette, HTMX ↔ Alpine (initTree, title, nav active, loading) |
-| `static/js/theme.js` | `window.IttisalTheme`; storage keys unified to `ittisal-*` |
-| `templates/partials/command_palette.html` | Palette UI |
-| `templates/partials/sidebar.html` | Search opens palette; `data-nav-match` for active section |
-| `templates/partials/profile_menu.html` | Alpine menu; logout not boosted |
-| `templates/partials/notifications_menu.html` | Alpine menu |
-| `templates/partials/theme_customizer.html` | Alpine + `$store.theme` |
-| `templates/partials/modal.html` | Alpine open/close |
-| `templates/partials/topbar.html` | Activity toast via `$store.ui` |
-| List templates | `hx-target="this"` on post-create refresh islands |
-| `templates/dashboard/index.html` | Chart panel `hx-target="this"` |
-| `templates/reports/partials/filter_form.html` | Exports `hx-boost="false"` |
-| `config/navigation.py` | `COMMAND_PALETTE` + `command_palette_for()` |
-| `config/context_processors.py` | Injects `command_palette` |
+| Path | Role |
+|------|------|
+| `templates/base.html` | Shell, boost, `#spa-view`, scripts |
+| `static/js/alpine-app.js` | Stores, palette, HTMX hooks |
+| `static/js/theme.js` | `IttisalTheme` |
+| `static/js/date-picker.js` | Flatpickr init + HTMX re-init |
+| `static/js/vendor/{htmx,alpine,flatpickr,chart}*` | Vendored libs |
+| `static/brand/*` | Logo + favicon |
+| `templates/partials/{sidebar,topbar,modal,command_palette,theme_customizer}.html` | Chrome |
+| `config/navigation.py` | Breadcrumbs + `COMMAND_PALETTE` |
 | `common/http.py` | `is_htmx_partial()` |
-| App `views.py` files | Partial rendering uses `is_htmx_partial` |
-| `static/js/dashboard-charts.js` | Init on SPA swap, not only `DOMContentLoaded` |
-| Removed | `static/js/dropdowns.js`, `static/js/toasts.js` (replaced by Alpine) |
 
-Login (`templates/standalone.html`) still loads `theme.js` only.
+Login (`standalone.html`) loads theme + brand only (no Alpine shell).
 
 ---
 
 ## Adding a new authenticated page
 
-1. Extend `layouts/app_shell.html` as today. It already sits inside `#spa-view`.
+1. Extend `layouts/app_shell.html` (content lands in `#spa-view`).
 2. Add breadcrumbs / heading in `config/navigation.py`.
-3. If it should appear in ⌘K, add a `COMMAND_PALETTE` row.
-4. If the view returns an HTMX fragment for search or a form, gate it with `is_htmx_partial(request)`.
-5. Give fragment roots an explicit `hx-target` (`#some-id` or `this`) so they do not inherit `hx-target="#spa-view"`.
-6. Put `hx-boost="false"` on downloads, external links, and logout.
+3. Optionally add a `COMMAND_PALETTE` row.
+4. Gate fragments with `is_htmx_partial(request)`.
+5. Give fragment roots an explicit `hx-target`.
+6. Put `hx-boost="false"` on downloads / logout.
+7. Date fields are auto-enhanced if they are `input[type=date|datetime-local|time]`.
 
 ---
 
 ## How to verify
 
-- Click sidebar items: sidebar stays, page content and breadcrumbs change, URL updates, back button works.
-- ⌘K (or the sidebar Search row) filters and jumps to a page.
-- Employee list search and pagination still swap only the table.
-- Apply report filters: full results appear in the main view; CSV/Excel/PDF still download.
-- Log out still leaves the app (full navigation).
-- Theme customizer still persists across SPA navigations.
+- Sidebar clicks: chrome stays, content + breadcrumbs change, back works
+- ⌘K filters and jumps
+- List search / pagination still island-scoped
+- Drawer forms: Flatpickr opens with Done; submit refreshes list
+- Theme prefs persist across SPA navigations
+- Log out is a full navigation
 
-Tests covering this:
-
-- `common.tests.test_http` — boosted vs fragment headers
-- `config.tests.test_navigation` — palette in the context processor
-- `dashboard.tests.test_dashboard` — Alpine / `#spa-view` / palette on the dashboard
-- `employees.tests.test_views.test_boosted_list_returns_full_page` — boosted list is a full page, not the table partial
+Tests: `common.tests.test_http`, `config.tests.test_navigation`, `dashboard.tests.test_dashboard`, boosted list view tests in employees.

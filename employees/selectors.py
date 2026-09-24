@@ -8,7 +8,7 @@ from employees.models import Department, Employee, Permission, Position, Role
 def employee_list(*, search: str = "") -> QuerySet[Employee]:
     queryset = Employee.objects.select_related(
         "department", "position", "user"
-    ).order_by("emp_code", "first_name")
+    ).order_by("-id")
 
     if search:
         queryset = queryset.filter(

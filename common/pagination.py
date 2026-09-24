@@ -1,7 +1,7 @@
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.http import HttpRequest
 
-DEFAULT_PAGE_SIZE = 25
+DEFAULT_PAGE_SIZE = 10
 
 
 def paginate_queryset(

@@ -25,14 +25,16 @@ from employees.services import employee_role_ensure
 
 
 class EmployeeListTests(BaseTenantTestCase):
-    def test_returns_employees_ordered_by_code_then_first_name(self):
+    def test_returns_employees_newest_first(self):
         employee_factory(first_name="Charlie", emp_code="C002")
         employee_factory(first_name="Alice", emp_code="A001")
         employee_factory(first_name="Bob", emp_code="B001")
 
         results = list(employee_list())
 
-        self.assertEqual([e.emp_code for e in results], ["A001", "B001", "C002"])
+        self.assertEqual(
+            [e.emp_code for e in results], ["B001", "A001", "C002"]
+        )
 
     def test_filters_by_first_name(self):
         employee_factory(first_name="Alice", emp_code="E100")

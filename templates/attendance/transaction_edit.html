@@ -25,9 +25,7 @@
     {% endif %}
 
     <div class="field">
-        <label for="{{ form.employee.id_for_label }}">Employee *</label>
-        {{ form.employee }}
-        {% if form.employee.errors %}<span class="error">{{ form.employee.errors }}</span>{% endif %}
+        {% include "partials/employee_combobox.html" %}
     </div>
 
     <div class="field-row">

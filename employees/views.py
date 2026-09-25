@@ -15,6 +15,10 @@ from employees.forms import (
     RoleForm,
 )
 from employees.models import Department, Employee, Position
+from django.core.exceptions import PermissionDenied
+from django.db.models import Q
+
+from employees.models import Employee
 from employees.permission_catalog import PermissionCodename
 from employees.selectors import (
     department_list,
@@ -84,6 +88,42 @@ def employee_list_view(request: HttpRequest) -> HttpResponse:
         return render(request, "employees/list.html#employee_table", context)
 
     return render(request, "employees/list.html", context)
+
+
+@login_required
+@require_http_methods(["GET"])
+def employee_options_view(request: HttpRequest) -> HttpResponse:
+    """HTMX fragment: searchable employee options (min 2 chars).
+
+    Used by attendance forms (Add/Edit correction, Record/Edit punch).
+    Accepts ``?q=`` (or ``?employee_q=`` from the combobox input).
+    Returns a small HTML fragment for ``#employee-results``.
+    """
+    allowed = (
+        user_has_permission(user=request.user, codename=PermissionCodename.ATTENDANCE_ADD)
+        or user_has_permission(user=request.user, codename=PermissionCodename.ATTENDANCE_VIEW)
+        or user_has_permission(user=request.user, codename=PermissionCodename.EMPLOYEES_VIEW)
+    )
+    if not allowed:
+        raise PermissionDenied
+    q = request.GET.get("q", request.GET.get("employee_q", "")).strip()
+    if len(q) < 2:
+        return HttpResponse("")
+    employees = list(
+        Employee.objects.filter(is_active=True)
+        .filter(
+            Q(first_name__icontains=q)
+            | Q(last_name__icontains=q)
+            | Q(emp_code__icontains=q)
+            | Q(email__icontains=q)
+        )
+        .order_by("first_name", "last_name")[:20]
+    )
+    return render(
+        request,
+        "partials/employee_options.html",
+        {"query": q, "employees": employees, "too_short": False},
+    )
 
 
 @login_required

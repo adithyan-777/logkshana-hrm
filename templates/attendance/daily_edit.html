@@ -1,13 +1,13 @@
 {% extends "layouts/app_shell.html" %}
 
-{% block title %}Edit Daily Attendance{% endblock %}
+{% block title %}Edit Correction{% endblock %}
 
 {% block page_content %}
 {% include "partials/tabs_attendance.html#tabs_attendance" %}
 
 <div class="card" style="max-width:720px;">
   <div class="card__header">
-    <span class="card__title">Edit daily record</span>
+    <span class="card__title">Edit correction</span>
   </div>
   <div class="card__body">
     <div id="daily-edit-form-container">
@@ -29,10 +29,10 @@
         <legend>Record</legend>
         <div class="field-row">
             <div class="field">
-                <label class="form-label" for="{{ form.employee.id_for_label }}">Employee *</label>
-                {{ form.employee }}
-                {% if form.employee.errors %}<span class="error">{{ form.employee.errors }}</span>{% endif %}
+                {% include "partials/employee_combobox.html" %}
             </div>
+        </div>
+        <div class="field-row">
             <div class="field">
                 <label class="form-label" for="{{ form.day.id_for_label }}">Day *</label>
                 {{ form.day }}

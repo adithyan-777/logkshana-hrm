@@ -472,3 +472,42 @@ class PermissionViewTests(BaseTenantTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("permissionCreated", response.headers.get("HX-Trigger"))
         self.assertTrue(Permission.objects.filter(codename="view_employees").exists())
+
+
+class EmployeeOptionsViewTests(BaseTenantTestCase):
+    def test_short_query_returns_empty(self):
+        response = self.client.get(reverse("employee_options"), {"q": "a"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content.decode().strip(), "")
+
+    def test_two_letter_query_searches(self):
+        employee_factory(first_name="Searchable", last_name="Person", emp_code="SEA123")
+
+        response = self.client.get(reverse("employee_options"), {"q": "se"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Searchable")
+
+    def test_search_returns_matching_employee(self):
+        employee_factory(first_name="Searchable", last_name="Person", emp_code="SEA123")
+
+        response = self.client.get(reverse("employee_options"), {"q": "sea"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Searchable")
+
+    def test_no_match_returns_empty_state(self):
+        response = self.client.get(reverse("employee_options"), {"q": "zzz-no-such"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No employees match")
+
+    def test_requires_login(self):
+        from django_tenants.test.client import TenantClient
+
+        client = TenantClient(self.tenant)
+        response = client.get(reverse("employee_options"), {"q": "sea"})
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/accounts/login/", response.url)

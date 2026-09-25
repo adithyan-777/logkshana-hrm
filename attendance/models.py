@@ -15,6 +15,7 @@ class AttendanceActivity(BaseModel):
         WEB = 'web', 'Web'
         MOBILE = 'mobile', 'Mobile'
         MANUAL = 'manual', 'Manual'
+        CORRECTION = 'correction', 'Correction'
 
     class Direction(models.TextChoices):
         IN = 'in', 'Check In'

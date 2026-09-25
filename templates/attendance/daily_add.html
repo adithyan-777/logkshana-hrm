@@ -1,13 +1,13 @@
 {% extends "layouts/app_shell.html" %}
 
-{% block title %}Add Daily Attendance{% endblock %}
+{% block title %}Add Correction{% endblock %}
 
 {% block page_content %}
 {% include "partials/tabs_attendance.html#tabs_attendance" %}
 
 <div class="card" style="max-width:720px;">
   <div class="card__header">
-    <span class="card__title">Add daily record</span>
+    <span class="card__title">Add correction</span>
   </div>
   <div class="card__body">
     {% partialdef daily_form inline %}
@@ -15,7 +15,7 @@
 {% if success_message %}
 <div id="form-messages" class="message success">
     {{ success_message }}
-    <a href="{% url 'daily_attendance_list' %}">View all daily records</a>
+    <a href="{% url 'daily_attendance_list' %}">View all corrections</a>
 </div>
 {% else %}
 <div id="form-messages"></div>
@@ -38,10 +38,10 @@
         <legend>Record</legend>
         <div class="field-row">
             <div class="field">
-                <label class="form-label" for="{{ form.employee.id_for_label }}">Employee *</label>
-                {{ form.employee }}
-                {% if form.employee.errors %}<span class="error">{{ form.employee.errors }}</span>{% endif %}
+                {% include "partials/employee_combobox.html" %}
             </div>
+        </div>
+        <div class="field-row">
             <div class="field">
                 <label class="form-label" for="{{ form.day.id_for_label }}">Day *</label>
                 {{ form.day }}
@@ -61,7 +61,7 @@
     </fieldset>
 
     <div class="form-actions">
-        <button type="submit" class="btn btn--primary">Add Daily Record</button>
+        <button type="submit" class="btn btn--primary">Add Correction</button>
     </div>
 </form>
 </div>

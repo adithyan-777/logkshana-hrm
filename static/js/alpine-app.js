@@ -414,3 +414,75 @@
     window.Alpine.store("spa").sync();
   }
 })();
+
+// Employee combobox helpers (attendance Add/Edit correction, Record/Edit
+// punch). Defined globally so they work inside HTMX-swapped drawer content.
+(function () {
+  function comboEls() {
+    return {
+      hidden: document.querySelector("#employee-combo input[type=hidden][name=employee]"),
+      search: document.getElementById("employee-search"),
+      box: document.getElementById("employee-selected"),
+      results: document.getElementById("employee-results"),
+    };
+  }
+
+  function renderSelected(box, label) {
+    if (!box) return;
+    if (label) {
+      box.classList.remove("combo-selected--empty");
+      box.innerHTML = "Selected: <strong></strong> ";
+      box.querySelector("strong").textContent = label;
+      const clear = document.createElement("button");
+      clear.type = "button";
+      clear.className = "btn btn--ghost btn--sm";
+      clear.textContent = "Clear";
+      clear.setAttribute("onclick", "clearEmployeeOption()");
+      box.appendChild(clear);
+    } else {
+      box.classList.add("combo-selected--empty");
+      box.innerHTML = '<span class="combo-hint">No employee selected.</span>';
+    }
+  }
+
+  // Pick a result: store the id, show the label, clear the dropdown.
+  window.selectEmployeeOption = function (btn) {
+    const id = btn.getAttribute("data-id");
+    const label = btn.getAttribute("data-label");
+    const els = comboEls();
+    if (els.hidden) els.hidden.value = id;
+    if (els.search) els.search.value = label;
+    renderSelected(els.box, label);
+    if (els.results) els.results.innerHTML = "";
+  };
+
+  window.clearEmployeeOption = function () {
+    const els = comboEls();
+    if (els.hidden) els.hidden.value = "";
+    if (els.search) {
+      els.search.value = "";
+      els.search.focus();
+    }
+    renderSelected(els.box, "");
+    if (els.results) els.results.innerHTML = "";
+  };
+
+  // Typing invalidates any previous pick; short input clears stale results
+  // locally (the hx-trigger filter already blocks the request under 2 chars).
+  window.employeeSearchChanged = function (input) {
+    const els = comboEls();
+    if (els.hidden) els.hidden.value = "";
+    renderSelected(els.box, "");
+    const val = (input.value || "").trim();
+    if (val.length < 2 && els.results) els.results.innerHTML = "";
+  };
+
+  // X-clear on type=search: wipe everything, no request.
+  window.employeeSearchCleared = function (input) {
+    if (input.value) return;
+    const els = comboEls();
+    if (els.hidden) els.hidden.value = "";
+    renderSelected(els.box, "");
+    if (els.results) els.results.innerHTML = "";
+  };
+})();

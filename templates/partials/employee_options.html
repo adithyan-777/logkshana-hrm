@@ -1,0 +1,20 @@
+{% if employees %}
+<div class="combo-list" role="listbox" aria-label="Matching employees">
+  {% for emp in employees %}
+  <button
+    type="button"
+    class="combo-option"
+    role="option"
+    data-id="{{ emp.pk }}"
+    data-label="{{ emp.emp_code }} - {{ emp.full_name }}"
+    onclick="selectEmployeeOption(this)"
+  >
+    <span class="combo-option__name">{{ emp.full_name }}</span>
+    <span class="combo-option__meta">{{ emp.emp_code }}{% if emp.department %} · {{ emp.department.name }}{% endif %}</span>
+  </button>
+  {% endfor %}
+</div>
+<p class="combo-hint">Showing {{ employees|length }} match{{ employees|length|pluralize:"es" }} for “{{ query }}”.</p>
+{% else %}
+<p class="combo-empty">No employees match “{{ query }}”.</p>
+{% endif %}

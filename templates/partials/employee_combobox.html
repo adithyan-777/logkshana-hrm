@@ -1,0 +1,103 @@
+<div class="combo" id="employee-combo">
+  <label class="form-label" for="employee-search">Employee *</label>
+  {{ form.employee }}
+  <input
+    type="search"
+    id="employee-search"
+    name="employee_q"
+    class="form-input"
+    placeholder="Type at least 2 letters to search…"
+    autocomplete="off"
+    value="{{ form.employee_q.value|default:'' }}"
+    hx-get="{% url 'employee_options' %}"
+    hx-target="#employee-results"
+    hx-swap="innerHTML"
+    hx-push-url="false"
+    hx-trigger="keyup[event.target.value.trim().length >= 2] delay:300ms, search[event.target.value.trim().length >= 2]"
+    oninput="employeeSearchChanged(this)"
+    onsearch="employeeSearchCleared(this)"
+  >
+  <div id="employee-selected" class="combo-selected{% if not selected_label %} combo-selected--empty{% endif %}">
+    {% if selected_label %}
+    Selected: <strong>{{ selected_label }}</strong>
+    <button type="button" class="btn btn--ghost btn--sm" onclick="clearEmployeeOption()">Clear</button>
+    {% else %}
+    <span class="combo-hint">No employee selected.</span>
+    {% endif %}
+  </div>
+  <div id="employee-results" class="combo-results" aria-live="polite"></div>
+  {% if form.employee.errors %}<span class="error">{{ form.employee.errors }}</span>{% endif %}
+</div>
+<script>
+(function () {
+  if (window.selectEmployeeOption && window.employeeSearchChanged) return;
+  function comboEls() {
+    return {
+      hidden: document.querySelector("#employee-combo input[type=hidden][name=employee]"),
+      search: document.getElementById("employee-search"),
+      box: document.getElementById("employee-selected"),
+      results: document.getElementById("employee-results")
+    };
+  }
+  function renderSelected(box, label) {
+    if (!box) return;
+    if (label) {
+      box.classList.remove("combo-selected--empty");
+      box.innerHTML = "Selected: <strong></strong> ";
+      box.querySelector("strong").textContent = label;
+      var clear = document.createElement("button");
+      clear.type = "button";
+      clear.className = "btn btn--ghost btn--sm";
+      clear.textContent = "Clear";
+      clear.setAttribute("onclick", "clearEmployeeOption()");
+      box.appendChild(clear);
+    } else {
+      box.classList.add("combo-selected--empty");
+      box.innerHTML = '<span class="combo-hint">No employee selected.</span>';
+    }
+  }
+  window.selectEmployeeOption = function (btn) {
+    var id = btn.getAttribute("data-id");
+    var label = btn.getAttribute("data-label");
+    var els = comboEls();
+    if (els.hidden) els.hidden.value = id;
+    if (els.search) els.search.value = label;
+    renderSelected(els.box, label);
+    if (els.results) els.results.innerHTML = "";
+  };
+  window.clearEmployeeOption = function () {
+    var els = comboEls();
+    if (els.hidden) els.hidden.value = "";
+    if (els.search) { els.search.value = ""; els.search.focus(); }
+    renderSelected(els.box, "");
+    if (els.results) els.results.innerHTML = "";
+  };
+  window.employeeSearchChanged = function (input) {
+    var els = comboEls();
+    if (els.hidden) els.hidden.value = "";
+    renderSelected(els.box, "");
+    var val = (input.value || "").trim();
+    if (val.length < 2 && els.results) els.results.innerHTML = "";
+  };
+  window.employeeSearchCleared = function (input) {
+    if (input.value) return;
+    var els = comboEls();
+    if (els.hidden) els.hidden.value = "";
+    renderSelected(els.box, "");
+    if (els.results) els.results.innerHTML = "";
+  };
+})();
+</script>
+<style>
+.combo { position: relative; }
+.combo-results { margin-top: .5rem; background: #fff; border: 1px solid #e2e2e2; border-radius: .5rem; padding: .5rem; box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+.combo-results:empty { display: none; }
+.combo-list { display: flex; flex-direction: column; gap: .25rem; max-height: 220px; overflow-y: auto; background: #fff; }
+.combo-option { display: flex; justify-content: space-between; align-items: center; gap: .5rem; padding: .5rem .6rem; border: 1px solid #e2e2e2; border-radius: .5rem; background: #fff; color: #1a1a1a; cursor: pointer; text-align: left; width: 100%; }
+.combo-option:hover { border-color: #8A1538; background: #fff5f6; }
+.combo-option__name { font-weight: 600; color: #1a1a1a; }
+.combo-option__meta { font-size: .8rem; color: #555; }
+.combo-hint { font-size: .85rem; color: #555; margin: .25rem 0; }
+.combo-empty { font-size: .9rem; color: #b00; }
+.combo-selected { margin-top: .4rem; font-size: .9rem; }
+</style>

@@ -13,6 +13,14 @@ DATETIME_INPUT = forms.DateTimeInput(
 
 
 class AttendanceActivityForm(forms.ModelForm):
+    employee_q = forms.CharField(
+        required=False,
+        label="Employee",
+        widget=forms.TextInput(
+            attrs={"placeholder": "Type at least 2 letters to search…"}
+        ),
+    )
+
     class Meta:
         model = AttendanceActivity
         fields = [
@@ -22,6 +30,7 @@ class AttendanceActivityForm(forms.ModelForm):
             "method",
         ]
         widgets = {
+            "employee": forms.HiddenInput,
             "punch_time": DATETIME_INPUT,
         }
 
@@ -30,10 +39,21 @@ class AttendanceActivityForm(forms.ModelForm):
         self.fields["employee"].queryset = Employee.objects.filter(
             is_active=True
         ).order_by("first_name", "last_name")
+        if self.instance is not None and getattr(self.instance, "employee_id", None):
+            emp = self.instance.employee
+            self.fields["employee_q"].initial = f"{emp.emp_code} - {emp.full_name}"
         apply_form_field_ui(self)
 
 
 class AttendanceForm(forms.ModelForm):
+    employee_q = forms.CharField(
+        required=False,
+        label="Employee",
+        widget=forms.TextInput(
+            attrs={"placeholder": "Type at least 2 letters to search…"}
+        ),
+    )
+
     class Meta:
         model = Attendance
         fields = [
@@ -43,6 +63,7 @@ class AttendanceForm(forms.ModelForm):
             "shift",
         ]
         widgets = {
+            "employee": forms.HiddenInput,
             "day": DATE_INPUT,
         }
 
@@ -54,4 +75,7 @@ class AttendanceForm(forms.ModelForm):
         self.fields["shift"].queryset = Timetable.objects.filter(
             is_active=True
         ).order_by("name")
+        if self.instance is not None and getattr(self.instance, "employee_id", None):
+            emp = self.instance.employee
+            self.fields["employee_q"].initial = f"{emp.emp_code} - {emp.full_name}"
         apply_form_field_ui(self)

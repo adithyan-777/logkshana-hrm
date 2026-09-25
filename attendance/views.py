@@ -60,13 +60,42 @@ def _configure_datetime_fields(form):
             form.fields[field_name].input_formats = datetime_formats
 
 
+def _selected_employee_label(form) -> str:
+    """Display label for the combobox's current employee value."""
+    employee = None
+    try:
+        if form.is_bound:
+            raw_id = form.data.get("employee")
+            if raw_id:
+                from employees.models import Employee
+
+                employee = Employee.objects.filter(pk=raw_id).first()
+        elif getattr(getattr(form, "instance", None), "employee_id", None):
+            employee = form.instance.employee
+    except Exception:
+        employee = None
+    if employee is None:
+        return ""
+    return f"{employee.emp_code} - {employee.full_name}"
+
+
+def _cleaned_without_search(form):
+    data = dict(form.cleaned_data)
+    data.pop("employee_q", None)
+    return data
+
+
 def _render_transaction_form(
     request: HttpRequest, form: AttendanceActivityForm, *, success_message: str = ""
 ) -> HttpResponse:
     return render(
         request,
         "attendance/transaction_add.html#transaction_form",
-        {"form": form, "success_message": success_message},
+        {
+            "form": form,
+            "success_message": success_message,
+            "selected_label": _selected_employee_label(form),
+        },
     )
 
 
@@ -76,7 +105,11 @@ def _render_daily_form(
     return render(
         request,
         "attendance/daily_add.html#daily_form",
-        {"form": form, "success_message": success_message},
+        {
+            "form": form,
+            "success_message": success_message,
+            "selected_label": _selected_employee_label(form),
+        },
     )
 
 
@@ -115,7 +148,7 @@ def transaction_add(request: HttpRequest) -> HttpResponse:
         form = AttendanceActivityForm(request.POST)
         _configure_datetime_fields(form)
         if form.is_valid():
-            activity_create(**form.cleaned_data)
+            activity_create(**_cleaned_without_search(form))
             form = AttendanceActivityForm()
             _configure_datetime_fields(form)
             response = _render_transaction_form(
@@ -146,7 +179,11 @@ def _render_transaction_edit_form(
     return render(
         request,
         "attendance/transaction_edit.html#transaction_edit_form",
-        {"form": form, "transaction": transaction},
+        {
+            "form": form,
+            "transaction": transaction,
+            "selected_label": _selected_employee_label(form),
+        },
     )
 
 
@@ -160,7 +197,7 @@ def transaction_edit(request: HttpRequest, transaction_id: int) -> HttpResponse:
         form = AttendanceActivityForm(request.POST, instance=transaction)
         _configure_datetime_fields(form)
         if form.is_valid():
-            activity_update(**form.cleaned_data, activity=transaction)
+            activity_update(**_cleaned_without_search(form), activity=transaction)
             response = _render_transaction_edit_form(
                 request,
                 AttendanceActivityForm(instance=transaction),
@@ -238,11 +275,11 @@ def daily_add(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
         form = AttendanceForm(request.POST)
         if form.is_valid():
-            attendance_record_create(**form.cleaned_data)
+            attendance_record_create(**_cleaned_without_search(form))
             response = _render_daily_form(
                 request,
                 AttendanceForm(),
-                success_message="Daily attendance record created.",
+                success_message="Correction created.",
             )
             response["HX-Trigger"] = "dailyAttendanceCreated"
             return response
@@ -256,7 +293,7 @@ def daily_add(request: HttpRequest) -> HttpResponse:
     return redirect_to_list_drawer(
         list_url_name="daily_attendance_list",
         form_url=reverse("daily_attendance_add"),
-        title="Add daily record",
+        title="Add correction",
     )
 
 
@@ -266,7 +303,11 @@ def _render_daily_edit_form(
     return render(
         request,
         "attendance/daily_edit.html#daily_edit_form",
-        {"form": form, "daily_attendance": daily_attendance},
+        {
+            "form": form,
+            "daily_attendance": daily_attendance,
+            "selected_label": _selected_employee_label(form),
+        },
     )
 
 
@@ -280,7 +321,7 @@ def daily_edit(request: HttpRequest, daily_id: int) -> HttpResponse:
         form = AttendanceForm(request.POST, instance=daily_attendance)
         if form.is_valid():
             attendance_record_update(
-                **form.cleaned_data, attendance=daily_attendance
+                **_cleaned_without_search(form), attendance=daily_attendance
             )
             response = _render_daily_edit_form(
                 request,
@@ -299,7 +340,7 @@ def daily_edit(request: HttpRequest, daily_id: int) -> HttpResponse:
     return redirect_to_list_drawer(
         list_url_name="daily_attendance_list",
         form_url=request.path,
-        title="Edit daily record",
+        title="Edit correction",
     )
 
 

@@ -91,6 +91,16 @@ def timetable_list_view(request: HttpRequest) -> HttpResponse:
     return render(request, "schedule/timetable_list.html", context)
 
 
+def _bind_break_window(form, formset) -> None:
+    """Hand the parent work window to the break formset for validation."""
+    if form.is_valid():
+        formset.timetable_times = (
+            form.cleaned_data.get("check_in"),
+            form.cleaned_data.get("check_out"),
+            form.cleaned_data.get("check_out_cross_days") or 0,
+        )
+
+
 @login_required
 @require_permission(PermissionCodename.SCHEDULE_ADD)
 @require_http_methods(["GET", "POST"])
@@ -98,6 +108,7 @@ def timetable_add(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
         form = TimetableForm(request.POST)
         formset = build_timetable_break_formset(request.POST)
+        _bind_break_window(form, formset)
         if form.is_valid() and formset.is_valid():
             timetable = timetable_create(**form.cleaned_data)
             formset.instance = timetable
@@ -138,6 +149,7 @@ def timetable_edit(request: HttpRequest, timetable_id: int) -> HttpResponse:
     if request.method == "POST":
         form = TimetableForm(request.POST, instance=timetable)
         formset = build_timetable_break_formset(request.POST, instance=timetable)
+        _bind_break_window(form, formset)
         if form.is_valid() and formset.is_valid():
             timetable_update(**form.cleaned_data, timetable=timetable)
             formset.save()

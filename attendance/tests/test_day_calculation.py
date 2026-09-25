@@ -9,6 +9,7 @@ from attendance.calculation import (
     day_variances,
     dedupe_punches,
     direction_from_gateway_status,
+    effective_directions,
     pair_punches,
     scheduled_minutes,
     summarize_pairs,
@@ -91,6 +92,62 @@ class PairingTests(SimpleTestCase):
         summary = summarize_pairs(pair_punches(punches))
 
         self.assertEqual(summary.worked_minutes, 540)
+
+
+class BreakAwarePairingTests(SimpleTestCase):
+    windows = [(time(13, 0), time(14, 0))]
+
+    def test_break_punch_counts_as_going_out(self):
+        punches = [
+            punch_at(2026, 3, 9, 9, 0, direction="in"),
+            punch_at(2026, 3, 9, 13, 5),
+            punch_at(2026, 3, 9, 14, 0),
+            punch_at(2026, 3, 9, 18, 0, direction="out"),
+        ]
+
+        self.assertEqual(
+            effective_directions(punches, break_windows=self.windows),
+            ["in", "out", "in", "out"],
+        )
+        summary = summarize_pairs(
+            pair_punches(punches, break_windows=self.windows)
+        )
+
+        self.assertEqual(summary.worked_minutes, 245 + 240)
+        self.assertEqual(summary.break_minutes, 55)
+
+    def test_punch_after_break_counts_as_back_in(self):
+        punches = [
+            punch_at(2026, 3, 9, 9, 0, direction="in"),
+            punch_at(2026, 3, 9, 13, 5),
+            punch_at(2026, 3, 9, 18, 0),
+        ]
+
+        self.assertEqual(
+            effective_directions(punches, break_windows=self.windows),
+            ["in", "out", "in"],
+        )
+        summary = summarize_pairs(
+            pair_punches(punches, break_windows=self.windows)
+        )
+
+        # Morning period closed at the break punch; the 18:00 punch
+        # re-opens as back-in and stays open (no checkout after it).
+        self.assertEqual(summary.worked_minutes, 245)
+        self.assertEqual(summary.pairs[-1][0].punch_time.hour, 18)
+        self.assertIsNone(summary.pairs[-1][1])
+
+    def test_no_windows_keeps_plain_alternation(self):
+        punches = [
+            punch_at(2026, 3, 9, 9, 0),
+            punch_at(2026, 3, 9, 13, 5),
+            punch_at(2026, 3, 9, 14, 0),
+            punch_at(2026, 3, 9, 18, 0),
+        ]
+
+        self.assertEqual(
+            effective_directions(punches), ["in", "out", "in", "out"]
+        )
 
 
 class GatewayStatusTests(SimpleTestCase):

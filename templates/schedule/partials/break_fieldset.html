@@ -1,0 +1,85 @@
+{# Shared breaks editor for timetable add/edit. Expects: formset. #}
+<fieldset class="form-section">
+    <legend>Breaks</legend>
+    {{ formset.management_form }}
+    {% if formset.non_form_errors %}
+    <div class="message error">{{ formset.non_form_errors }}</div>
+    {% endif %}
+    <div id="break-forms">
+        {% for break_form in formset %}
+        <div class="break-form">
+            {{ break_form.id }}
+            {% if break_form.non_field_errors %}
+            <div class="message error">{{ break_form.non_field_errors }}</div>
+            {% endif %}
+            <div class="field">
+                <label for="{{ break_form.name.id_for_label }}">Break name</label>
+                {{ break_form.name }}
+                {% if break_form.name.errors %}<span class="error">{{ break_form.name.errors }}</span>{% endif %}
+            </div>
+            <div class="field-row">
+                <div class="field">
+                    <label for="{{ break_form.start_time.id_for_label }}">Start</label>
+                    {{ break_form.start_time }}
+                    {% if break_form.start_time.errors %}<span class="error">{{ break_form.start_time.errors }}</span>{% endif %}
+                </div>
+                <div class="field">
+                    <label for="{{ break_form.end_time.id_for_label }}">End</label>
+                    {{ break_form.end_time }}
+                    {% if break_form.end_time.errors %}<span class="error">{{ break_form.end_time.errors }}</span>{% endif %}
+                </div>
+            </div>
+            <div class="field-row">
+                <div class="field">
+                    <label for="{{ break_form.break_time_type.id_for_label }}">Break type</label>
+                    {{ break_form.break_time_type }}
+                    {% if break_form.break_time_type.errors %}<span class="error">{{ break_form.break_time_type.errors }}</span>{% endif %}
+                </div>
+                <div class="field">
+                    <label for="{{ break_form.break_time_minutes.id_for_label }}">Break minutes</label>
+                    {{ break_form.break_time_minutes }}
+                    {% if break_form.break_time_minutes.errors %}<span class="error">{{ break_form.break_time_minutes.errors }}</span>{% endif %}
+                </div>
+            </div>
+            {% if break_form.instance.pk %}
+            <div class="field checkbox">
+                {{ break_form.DELETE }}
+                <label for="{{ break_form.DELETE.id_for_label }}">Delete this break</label>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    <template id="break-empty-template">
+        <div class="break-form">
+            {{ formset.empty_form.id }}
+            <div class="field">
+                <label for="{{ formset.empty_form.name.id_for_label }}">Break name</label>
+                {{ formset.empty_form.name }}
+            </div>
+            <div class="field-row">
+                <div class="field">
+                    <label for="{{ formset.empty_form.start_time.id_for_label }}">Start</label>
+                    {{ formset.empty_form.start_time }}
+                </div>
+                <div class="field">
+                    <label for="{{ formset.empty_form.end_time.id_for_label }}">End</label>
+                    {{ formset.empty_form.end_time }}
+                </div>
+            </div>
+            <div class="field-row">
+                <div class="field">
+                    <label for="{{ formset.empty_form.break_time_type.id_for_label }}">Break type</label>
+                    {{ formset.empty_form.break_time_type }}
+                </div>
+                <div class="field">
+                    <label for="{{ formset.empty_form.break_time_minutes.id_for_label }}">Break minutes</label>
+                    {{ formset.empty_form.break_time_minutes }}
+                </div>
+            </div>
+        </div>
+    </template>
+    <div class="form-actions">
+        <button type="button" class="btn btn--ghost" onclick="addBreakRow()">Add another break</button>
+    </div>
+</fieldset>

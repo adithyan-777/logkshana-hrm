@@ -486,3 +486,19 @@
     if (els.results) els.results.innerHTML = "";
   };
 })();
+
+// Timetable breaks: append another blank break row (Django formset).
+(function () {
+  window.addBreakRow = function () {
+    const container = document.getElementById("break-forms");
+    const template = document.getElementById("break-empty-template");
+    const totalInput = document.getElementById("id_breaks-TOTAL_FORMS");
+    if (!container || !template || !totalInput) return;
+    const index = parseInt(totalInput.value, 10) || 0;
+    const html = template.innerHTML.replace(/__prefix__/g, String(index));
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = html;
+    while (wrapper.firstChild) container.appendChild(wrapper.firstChild);
+    totalInput.value = String(index + 1);
+  };
+})();

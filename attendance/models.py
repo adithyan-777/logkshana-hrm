@@ -112,6 +112,10 @@ class Attendance(BaseModel):
         return self._duration_minutes(self.total_work_time)
 
     @property
+    def worked_hours(self) -> str:
+        return f"{round(self.worked_minutes / 60, 2):g}h"
+
+    @property
     def overtime_minutes(self) -> int:
         return self._duration_minutes(self.over_time)
 
@@ -129,21 +133,22 @@ class Attendance(BaseModel):
         )
 
     def _effective_boundaries(self):
-        """First check-in / last check-out mirroring pairing alternation."""
+        """First check-in / last check-out mirroring break-aware pairing."""
+        from attendance.calculation import effective_directions
+
+        punches = self._punches()
+        shift = self.shift
+        if shift is not None and getattr(shift, "pk", None):
+            break_windows = [
+                (b.start_time, b.end_time) for b in shift.breaks.all()
+            ]
+        else:
+            break_windows = []
+        directions = effective_directions(punches, break_windows=break_windows)
         first_in = None
         last_out = None
         open_in = False
-        for punch in self._punches():
-            direction = punch.direction
-            if direction not in (
-                AttendanceActivity.Direction.IN,
-                AttendanceActivity.Direction.OUT,
-            ):
-                direction = (
-                    AttendanceActivity.Direction.OUT
-                    if open_in
-                    else AttendanceActivity.Direction.IN
-                )
+        for punch, direction in zip(punches, directions):
             if direction == AttendanceActivity.Direction.IN:
                 if first_in is None:
                     first_in = punch.punch_time

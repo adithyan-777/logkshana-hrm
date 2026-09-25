@@ -86,11 +86,17 @@ def recalculate_attendance(
         if timetable is not None
         else 1
     )
+    break_windows = (
+        [(b.start_time, b.end_time) for b in timetable.breaks.all()]
+        if timetable is not None
+        else []
+    )
     pairs = pair_punches(
         dedupe_punches(punches, window_minutes=window),
         allow_multiple_in_out=(
             timetable.multiple_in_out if timetable is not None else False
         ),
+        break_windows=break_windows,
     )
     summary = summarize_pairs(pairs)
 
@@ -291,6 +297,11 @@ def calculate_attendance(*, day: date | None = None) -> dict:
                     timetable.multiple_in_out
                     if timetable is not None
                     else False
+                ),
+                break_windows=(
+                    [(b.start_time, b.end_time) for b in timetable.breaks.all()]
+                    if timetable is not None
+                    else []
                 ),
             )
         )

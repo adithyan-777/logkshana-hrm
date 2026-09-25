@@ -62,18 +62,43 @@ def dedupe_punches(punches, *, window_minutes: int = 1) -> list:
     return kept
 
 
-def effective_directions(punches) -> list[str]:
+def effective_directions(punches, *, break_windows=()) -> list[str]:
     """Resolve one direction per punch for pairing.
 
     Explicit IN/OUT punches keep their direction; UNKNOWN punches
-    alternate (IN when no open check-in, OUT otherwise).
+    alternate (IN when no open check-in, OUT otherwise), except an
+    UNKNOWN punch inside a scheduled break window counts as going out
+    for break, and the punch after a break counts as back in.
+
+    ``break_windows`` is an iterable of ``(start_time, end_time)``
+    wall-clock pairs taken from the timetable's breaks.
     """
     directions = []
     open_in = False
+    expect_in_after_break = False
     for punch in punches:
         direction = punch.direction
         if direction not in ("in", "out"):
-            direction = "out" if open_in else "in"
+            punch_time = punch.punch_time
+            if timezone.is_naive(punch_time):
+                punch_time = timezone.make_aware(punch_time)
+            local_time = timezone.localtime(punch_time).time()
+            in_break = any(
+                start <= local_time < end for start, end in break_windows
+            )
+            if in_break:
+                # Going for break: close the open period (or lone
+                # break punch when nothing is open).
+                direction = "out"
+                expect_in_after_break = True
+            elif expect_in_after_break:
+                # Coming back: punch again as in.
+                direction = "in"
+                expect_in_after_break = False
+            else:
+                direction = "out" if open_in else "in"
+        else:
+            expect_in_after_break = False
         directions.append(direction)
         open_in = direction == "in"
     return directions
@@ -83,6 +108,7 @@ def pair_punches(
     punches,
     *,
     allow_multiple_in_out: bool = False,
+    break_windows=(),
 ) -> list[tuple]:
     """Pair sorted punches into (check_in, check_out) tuples.
 
@@ -90,12 +116,16 @@ def pair_punches(
     positional: consecutive IN -> OUT punches form a period. A second
     IN while one is open closes the previous period as open (invalid)
     when ``allow_multiple_in_out`` is set, otherwise the first
-    check-in wins and the repeat is ignored.
+    check-in wins and the repeat is ignored. UNKNOWN punches inside
+    ``break_windows`` count as going out for break (see
+    ``effective_directions``).
     """
     punches = list(punches)
     pairs = []
     pending_in = None
-    for punch, direction in zip(punches, effective_directions(punches)):
+    for punch, direction in zip(
+        punches, effective_directions(punches, break_windows=break_windows)
+    ):
         if direction == "in":
             if pending_in is None:
                 pending_in = punch

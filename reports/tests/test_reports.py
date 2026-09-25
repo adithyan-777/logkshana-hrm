@@ -252,10 +252,12 @@ class ExportTests(BaseTenantTestCase):
 
 
 class ReportViewTests(BaseTenantTestCase):
-    def test_hub_returns_200(self):
+    def test_hub_redirects_to_attendance(self):
         response = self.client.get(reverse("report_hub"))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Reports")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response.url, reverse("report_attendance_summary")
+        )
 
     def test_attendance_summary_html_and_exports(self):
         employee = employee_factory(first_name="View", emp_code="R011")

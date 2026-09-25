@@ -136,7 +136,49 @@ def timetable_delete(*, timetable: Timetable) -> Timetable:
     return timetable
 
 
-def _validate_timetable_break(break_: TimetableBreak) -> None:
+BREAK_OUTSIDE_WORK_ERROR = (
+    "Break must be within working hours (check-in to check-out)."
+)
+
+
+def validate_break_within_timetable(
+    *,
+    start_time,
+    end_time,
+    check_in,
+    check_out,
+    check_out_cross_days: int = 0,
+) -> None:
+    """Break window must sit inside the timetable's work window.
+
+    Overnight-aware: with ``check_out_cross_days >= 1`` the work window
+    spans midnight, and early-morning breaks are read on the next day.
+    Flexible timetables without fixed times are skipped (no window).
+    """
+    if start_time is None or end_time is None:
+        return
+    if check_in is None or check_out is None:
+        return
+    anchor = date(2000, 1, 1)
+    work_start = datetime.combine(anchor, check_in)
+    work_end = datetime.combine(
+        anchor + timedelta(days=check_out_cross_days or 0),
+        check_out,
+    )
+    break_start = datetime.combine(anchor, start_time)
+    break_end = datetime.combine(anchor, end_time)
+    if break_end <= break_start:
+        return  # Reported separately as an ordering error.
+    if (check_out_cross_days or 0) and break_start < work_start:
+        break_start += timedelta(days=1)
+        break_end += timedelta(days=1)
+    if break_start < work_start or break_end > work_end:
+        raise ValidationError({"start_time": BREAK_OUTSIDE_WORK_ERROR})
+
+
+def _validate_timetable_break(
+    break_: TimetableBreak, timetable: Timetable | None = None
+) -> None:
     if (
         break_.start_time is not None
         and break_.end_time is not None
@@ -149,6 +191,17 @@ def _validate_timetable_break(break_: TimetableBreak) -> None:
     ):
         raise ValidationError(
             {"break_time_minutes": "Break minutes are required for flexible breaks."}
+        )
+    timetable = timetable if timetable is not None else getattr(
+        break_, "timetable", None
+    )
+    if timetable is not None:
+        validate_break_within_timetable(
+            start_time=break_.start_time,
+            end_time=break_.end_time,
+            check_in=getattr(timetable, "check_in", None),
+            check_out=getattr(timetable, "check_out", None),
+            check_out_cross_days=getattr(timetable, "check_out_cross_days", 0) or 0,
         )
 
 
@@ -175,7 +228,7 @@ def timetable_break_create(
         grace_period_minutes=grace_period_minutes,
     )
     break_.full_clean()
-    _validate_timetable_break(break_)
+    _validate_timetable_break(break_, timetable)
     break_.save()
     return break_
 

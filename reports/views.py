@@ -135,7 +135,10 @@ def _strip_company_filters(form) -> None:
 @require_permission(PermissionCodename.REPORTS_VIEW)
 @require_http_methods(["GET"])
 def report_hub_view(request: HttpRequest) -> HttpResponse:
-    return render(request, "reports/hub.html")
+    """Reports landing page: Attendance section is the default."""
+    from django.shortcuts import redirect
+
+    return redirect("report_attendance_summary")
 
 
 @login_required

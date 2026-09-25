@@ -5,7 +5,9 @@ from django.forms import inlineformset_factory
 from common.forms import apply_form_field_ui
 from schedule.models import Schedule, Timetable, TimetableBreak
 from schedule.services import (
+    BREAK_OUTSIDE_WORK_ERROR,
     TIMETABLE_TIMES_ORDER_ERROR,
+    validate_break_within_timetable,
     validate_timetable_times,
 )
 
@@ -131,10 +133,69 @@ class TimetableBreakForm(forms.ModelForm):
         return cleaned_data
 
 
+class BaseTimetableBreakFormSet(forms.BaseInlineFormSet):
+    """Cross-row break validation: containment + no overlaps.
+
+    Containment needs the parent timetable's work window. Views set
+    ``formset.timetable_times = (check_in, check_out, cross_days)`` from
+    the parent form; otherwise fall back to ``self.instance`` (edit path).
+    """
+
+    timetable_times = None
+
+    def _work_window(self):
+        if self.timetable_times is not None:
+            return self.timetable_times
+        instance = getattr(self, "instance", None)
+        if instance is not None and getattr(instance, "pk", None):
+            return (
+                instance.check_in,
+                instance.check_out,
+                instance.check_out_cross_days or 0,
+            )
+        return (None, None, 0)
+
+    def clean(self):
+        super().clean()
+        check_in, check_out, cross_days = self._work_window()
+        windows = []
+        for index, form in enumerate(self.forms):
+            if not hasattr(form, "cleaned_data"):
+                continue
+            cleaned = form.cleaned_data
+            if cleaned.get("DELETE"):
+                continue
+            start = cleaned.get("start_time")
+            end = cleaned.get("end_time")
+            if start is None or end is None:
+                continue
+            try:
+                validate_break_within_timetable(
+                    start_time=start,
+                    end_time=end,
+                    check_in=check_in,
+                    check_out=check_out,
+                    check_out_cross_days=cross_days or 0,
+                )
+            except ValidationError:
+                form.add_error("start_time", BREAK_OUTSIDE_WORK_ERROR)
+            windows.append((index, start, end))
+        ordered = sorted(windows, key=lambda item: (item[1], item[2]))
+        for (first_index, _, first_end), (second_index, second_start, _) in zip(
+            ordered, ordered[1:]
+        ):
+            if second_start < first_end:
+                self.forms[second_index].add_error(
+                    "start_time",
+                    "Breaks must not overlap each other.",
+                )
+
+
 TimetableBreakFormSet = inlineformset_factory(
     Timetable,
     TimetableBreak,
     form=TimetableBreakForm,
+    formset=BaseTimetableBreakFormSet,
     fields=[
         "name",
         "break_time_type",

@@ -88,20 +88,21 @@ class CalculateAttendanceGroupsTests(BaseTenantTestCase):
         self.assertIn("Late", printed)
         self.assertIn("Ontime Doe: 8h 00m", printed)
 
-        # Only the >1-punch employee gets an Attendance row.
+        # Every scheduled employee gets an Attendance row:
+        # complete pairs -> PRESENT/LATE/EARLY_OUT, single punch ->
+        # INCOMPLETE, no punches -> ABSENT.
         created = result["created"]
-        self.assertEqual(len(created), 1)
-        self.assertEqual(created[0].employee, on_time)
-        self.assertEqual(created[0].day, day)
+        self.assertEqual(len(created), 3)
+        by_employee = {row.employee_id: row for row in created}
+        self.assertEqual(by_employee[on_time.pk].day, day)
         self.assertTrue(
             Attendance.objects.filter(employee=on_time, day=day).exists()
         )
-        self.assertFalse(
-            Attendance.objects.filter(employee=late, day=day).exists()
-        )
-        self.assertFalse(
-            Attendance.objects.filter(employee=absent, day=day).exists()
-        )
+        late_row = Attendance.objects.get(employee=late, day=day)
+        self.assertEqual(late_row.status, Attendance.Status.INCOMPLETE)
+        absent_row = Attendance.objects.get(employee=absent, day=day)
+        self.assertEqual(absent_row.status, Attendance.Status.ABSENT)
+        self.assertEqual(result["incomplete"], [late])
 
     def test_empty_groups_when_everyone_on_time(self):
         day = date(2026, 9, 24)
@@ -122,10 +123,19 @@ class CalculateAttendanceGroupsTests(BaseTenantTestCase):
             result = calculate_attendance(day=day)
 
         self.assertEqual(
-            {k: v for k, v in result.items() if k != "created"},
+            {
+                k: v
+                for k, v in result.items()
+                if k not in ("created", "incomplete")
+            },
             {"absentees": [], "late_arrivals": [], "work_hours": []},
         )
-        self.assertEqual(result["created"], [])
+        # Single punch -> INCOMPLETE row is still created.
+        self.assertEqual(result["incomplete"], [employee])
+        self.assertEqual(len(result["created"]), 1)
+        self.assertEqual(
+            result["created"][0].status, Attendance.Status.INCOMPLETE
+        )
         self.assertIn("Late arrivals:", buf.getvalue())
         self.assertIn("Work hours:", buf.getvalue())
         self.assertIn("Created attendance:", buf.getvalue())

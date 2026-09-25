@@ -1,10 +1,10 @@
 {% partialdef tabs_attendance inline %}
 <div class="tabs" role="tablist" aria-label="Attendance sections">
+  <a href="{% url 'daily_attendance_list' %}"
+     class="tab {% if request.resolver_match.url_name == 'daily_attendance_list' or request.resolver_match.url_name == 'daily_attendance_add' %}is-active{% endif %}"
+     role="tab">Attendance</a>
   <a href="{% url 'attendance_transaction_list' %}"
      class="tab {% if request.resolver_match.url_name == 'attendance_transaction_list' or request.resolver_match.url_name == 'attendance_transaction_add' %}is-active{% endif %}"
      role="tab">Punches</a>
-  <a href="{% url 'daily_attendance_list' %}"
-     class="tab {% if request.resolver_match.url_name == 'daily_attendance_list' or request.resolver_match.url_name == 'daily_attendance_add' %}is-active{% endif %}"
-     role="tab">Daily</a>
 </div>
 {% endpartialdef tabs_attendance %}

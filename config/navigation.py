@@ -377,6 +377,13 @@ COMMAND_PALETTE: list[dict[str, str]] = [
         "icon": "bx-plus",
     },
     {
+        "title": "Daily attendance",
+        "subtitle": "Calculated day outcomes",
+        "url_name": "daily_attendance_list",
+        "group": "Attendance",
+        "icon": "bx-calendar-check",
+    },
+    {
         "title": "Punches",
         "subtitle": "Raw check-in and check-out",
         "url_name": "attendance_transaction_list",
@@ -396,13 +403,6 @@ COMMAND_PALETTE: list[dict[str, str]] = [
         "url_name": "attendance_transaction_add",
         "group": "Attendance",
         "icon": "bx-plus",
-    },
-    {
-        "title": "Daily attendance",
-        "subtitle": "Calculated day outcomes",
-        "url_name": "daily_attendance_list",
-        "group": "Attendance",
-        "icon": "bx-calendar-check",
     },
     {
         "title": "Leave requests",

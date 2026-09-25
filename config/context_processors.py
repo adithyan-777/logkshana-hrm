@@ -87,7 +87,7 @@ def navigation(request):
             or can(PermissionCodename.ATTENDANCE_OWN_VIEW),
         }
         if can(PermissionCodename.ATTENDANCE_VIEW):
-            context["attendance_nav_url"] = reverse_url("attendance_transaction_list")
+            context["attendance_nav_url"] = reverse_url("daily_attendance_list")
         elif can(PermissionCodename.ATTENDANCE_OWN_VIEW):
             context["attendance_nav_url"] = reverse_url("my_attendance")
 

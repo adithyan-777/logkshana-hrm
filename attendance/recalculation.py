@@ -200,14 +200,18 @@ def calculate_attendance(*, day: date | None = None) -> dict:
     and work hours.
 
     Absentees: covered by an active schedule assignment but with no
-    activity punch on `day`.
+    activity punch on `day`. An ``Attendance`` row with status
+    ``ABSENT`` (or ``DAY_OFF``) is created for each of them via
+    ``recalculate_attendance``.
     Late arrivals: punched, but the first punch is after the expected
     check-in (plus timetable grace).
     Work hours: punched-out employees with a complete in/out pair.
     Created attendance: Attendance rows written via recalculate_attendance
-    for scheduled employees with more than one punch on `day`.
+    for all scheduled employees with punches on `day` (complete pairs
+    become PRESENT/LATE/EARLY_OUT, single/unpaired punches become
+    INCOMPLETE) plus ABSENT/DAY_OFF rows for absentees.
     Returns {"absentees": [...], "late_arrivals": [...], "work_hours": ...,
-    "created": [...]}
+    "created": [...], "incomplete": [...]}
     where work_hours holds (employee, minutes, first_in, last_out) tuples.
     """
     if day is None:
@@ -238,6 +242,7 @@ def calculate_attendance(*, day: date | None = None) -> dict:
 
     late_arrivals = []
     work_hours = []
+    incomplete = []
     eligible_for_creation = []
     for employee in (
         Employee.objects.filter(pk__in=scheduled_ids & punched_ids)
@@ -251,13 +256,10 @@ def calculate_attendance(*, day: date | None = None) -> dict:
         )
         if not punches:
             continue
-        # NOTE: single-punch employees (checked in but never out) are
-        # deliberately skipped for creation here — they need separate
-        # handling (INCOMPLETE / missing-punch follow-up), not a normal
-        # attendance row. Only employees with more than one punch get
-        # an Attendance row below.
-        if len(punches) > 1:
-            eligible_for_creation.append(employee)
+        # Every punched scheduled employee gets an Attendance row:
+        # complete pairs -> PRESENT/LATE/EARLY_OUT, single or unpaired
+        # punches -> INCOMPLETE (handled inside recalculate_attendance).
+        eligible_for_creation.append(employee)
         resolved = resolve_schedule_for_employee_on_date(
             employee=employee, day=day
         )
@@ -301,6 +303,8 @@ def calculate_attendance(*, day: date | None = None) -> dict:
                     summary.last_out,
                 )
             )
+        else:
+            incomplete.append(employee)
 
     for employee in absentees:
         print(employee.full_name)
@@ -327,6 +331,18 @@ def calculate_attendance(*, day: date | None = None) -> dict:
     for employee in eligible_for_creation:
         # recalculate_attendance is atomic per employee and never
         # overwrites hand-made rows (is_calculated=False) without force.
+        # Complete pairs -> PRESENT/LATE/EARLY_OUT; single/unpaired
+        # punches -> INCOMPLETE.
+        row = recalculate_attendance(employee=employee, day=day)
+        if row is not None:
+            created.append(row)
+            print(f"{employee.full_name} -> {row.status}")
+    # Absentees (scheduled but never punched) get ABSENT rows
+    # (or DAY_OFF when the day is a day-off). recalculate_attendance
+    # routes punch-less days to _record_empty_day which already uses
+    # Attendance.Status.ABSENT / DAY_OFF — both exist in
+    # Attendance.Status, so no new status needs to be created.
+    for employee in absentees:
         row = recalculate_attendance(employee=employee, day=day)
         if row is not None:
             created.append(row)
@@ -337,6 +353,7 @@ def calculate_attendance(*, day: date | None = None) -> dict:
         "late_arrivals": late_arrivals,
         "work_hours": work_hours,
         "created": created,
+        "incomplete": incomplete,
     }
 
 

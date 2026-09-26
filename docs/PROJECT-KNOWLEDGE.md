@@ -18,7 +18,7 @@
 
 - Python 3.14+, Django 6.1, PostgreSQL 14+ (per-tenant schemas via `django-tenants`)
 - Auth: `django-tenant-users` (`TenantUser`), `django-allauth` (email+username login, optional verification)
-- Async: Celery 5 + `django-celery-beat` (DB scheduler) + `django-celery-results`, Redis broker
+- Async: django-q2 + Redis broker (device sync, device push, attendance calc)
 - API surface: HTML fragments via HTMX (DRF installed but **unused** — zero serializers; `REST_FRAMEWORK` config in `config/settings.py:242` is JSON-only dead config)
 - Frontend: HTMX (boosted SPA shell), Alpine.js (3 stores), Chart.js, flatpickr, BoxIcons, Geist Variable font
 - Infra: Gunicorn, WhiteNoise (`CompressedStaticFilesStorage`), nginx, Docker Compose, Sentry
@@ -27,10 +27,10 @@
 ## 3. Multi-tenancy architecture
 
 - Tenant model `companies.Company` (`TenantBase`, `auto_create_schema=True`); routing via `companies.Domain` + `TenantMainMiddleware` (first in `MIDDLEWARE`, `config/settings.py:79`), `TenantAccessMiddleware` after auth (`:89`)
-- `SHARED_APPS` (`config/settings.py:41`): tenants, admin/auth, `companies`, `users`, allauth, celery beat/results, waffle, DRF
+- `SHARED_APPS` (`config/settings.py:41`): tenants, admin/auth, `companies`, `users`, allauth, django-q2, waffle, DRF
 - `TENANT_APPS` (`:62`): `employees`, `schedule`, `leave`, `attendance`, `reports`, `dashboard`
 - Tenant models carry **no tenant FK** — isolation is by Postgres schema. Only shared models (`Branch`, `Device`) are cross-schema, referenced via `company__schema_name`
-- Celery tenancy discipline: pass `schema_name`, wrap work in `schema_context(public)` → `schema_context(tenant)` (correct in `attendance/tasks.py:17`; **missing** in `employees/tasks.py:21` — known bug)
+- q2 tenancy discipline: pass `schema_name`, wrap work in `schema_context(public)` → `schema_context(tenant)` (see `attendance/q2_tasks.py`)
 - Public-schema guards: `seed_demo_data` refuses `--schema=public`, `dashboard/views.py:13` + `config/context_processors.py:60` guard public tenant
 - `common` app (abstract models + helpers) is **not** in `INSTALLED_APPS` — works only because all its models are abstract today
 
@@ -52,7 +52,7 @@
 ## 5. Backend conventions (HackSoft-style, enforced by `.cursor/skills/django-styleguide/`)
 
 - **Views** parse input → call service/selector → render. No business logic in views. All HTML views: `login_required` + `require_permission(codename)`
-- **Services** (`services.py` per app): writes only, `entity_action` naming, keyword-only args, `full_clean()` before `save()`, `@transaction.atomic`, `transaction.on_commit(task.delay())` for Celery
+- **Services** (`services.py` per app): writes only, `entity_action` naming, keyword-only args, `full_clean()` before `save()`, `@transaction.atomic`, `transaction.on_commit(async_task(...))` for q2
 - **Selectors** (`selectors.py`): reads only, own `select_related`/`prefetch_related`; reports has a `selectors/` package (`attendance.py`, `punch_log.py`, `leave.py`, `overtime.py`, `exceptions.py`)
 - **Forms**: `form.is_valid()` → `service(**form.cleaned_data)`. Date widgets: `forms.DateInput(attrs={"type": "date"})` (`DATE_INPUT` in attendance/leave/schedule forms), `datetime-local` for punches
 - **HTMX helpers** (`common/http.py`): `is_htmx_partial()` (excludes `HX-Boosted` + history-restore — prevents fragment-on-back-button bug), `set_hx_trigger(response, event, toast, close_modal)` emits JSON `HX-Trigger`. Known drift: most CRUD views still emit bare-string `HX-Trigger` (audit issue; tests assert the old strings)
@@ -105,10 +105,10 @@ Hub + attendance summary, punch log, overtime, leave, exceptions, department, in
 ## 9. DevOps & env
 
 - `Dockerfile`: single-stage `python:3.14-slim`, non-root `app` user, gunicorn 3 workers; `collectstatic` at entrypoint (not bake)
-- `docker-compose.yml` (`name: pattika`): `redis` (healthchecked), `web/worker/beat` (one image, role CMDs; `DB_HOST: ${CONTAINER_DB_HOST:-${DB_HOST:-host.docker.internal}}` RDS-ready fallback), test-only `db` profile (`:5433`), `nginx` + `certbot` (tools profile), `proxy-net` external network. Beat must never scale past 1
-- `entrypoint.sh`: TCP-waits Postgres+Redis, `migrate_schemas` + `collectstatic` only when `RUN_MIGRATIONS=1` (web), `WAIT_FOR_TABLES` gate for worker/beat
+- `docker-compose.yml` (`name: pattika`): `redis` (healthchecked, q2 broker), `web`/`qcluster` (one image, role CMDs; `DB_HOST: ${CONTAINER_DB_HOST:-${DB_HOST:-host.docker.internal}}` RDS-ready fallback), test-only `db` profile (`:5433`), `nginx` + `certbot` (tools profile), `proxy-net` external network. Never scale qcluster past 1 (scale via `Q2_WORKERS`)
+- `entrypoint.sh`: TCP-waits Postgres+Redis, `migrate_schemas` + `collectstatic` only when `RUN_MIGRATIONS=1` (web), `WAIT_FOR_TABLES` gate for qcluster
 - `nginx/conf.d/pattika.conf`: HTTP default, `client_max_body_size 20m`, static 30d immutable; TLS via manual `pattika-ssl.conf.example`
-- Env (`.env.example`, 15 keys): `DB_*`, `CONTAINER_DB_HOST`, `CELERY_BROKER_URL`, `TIMEZONE/TIME_ZONE`, `DEVICE_GATEWAY_BASE_URL`, `GATEWAY_SECRET_KEY`, `TENANT_USERS_DOMAIN`, `DEBUG`, `SECURE_COOKIES`. Missing: `SECRET_KEY`, `SENTRY_DSN` (both hardcoded in settings — known issue)
+- Env (`.env.example`): `DB_*`, `CONTAINER_DB_HOST`, `REDIS_HOST/PORT/DB`, `TIME_ZONE`, `DEVICE_GATEWAY_BASE_URL`, `GATEWAY_SECRET_KEY`, `TENANT_USERS_DOMAIN`, `DEBUG`, `SECURE_COOKIES`. Missing: `SECRET_KEY`, `SENTRY_DSN` (both hardcoded in settings — known issue)
 - Timezone default `Asia/Qatar`
 
 ## 10. Testing
@@ -141,7 +141,7 @@ docker compose up --build redis worker   # phased bring-up; full: up --build
 
 - `emp_code` — employee code; device PIN match key (indexed, not unique)
 - `external_id` — provider punch ID (service-level dedup, no DB unique)
-- `schema_context` — explicit tenant-switch for Celery/shared-model writes
+- `schema_context` — explicit tenant-switch for q2/shared-model writes
 - `nav_can` — per-request permission map gating nav
 - `#spa-view` — HTMX swap target for app-shell navigation
 - `set_hx_trigger` — canonical JSON list-refresh/toast/modal-close signal

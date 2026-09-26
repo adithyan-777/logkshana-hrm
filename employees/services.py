@@ -15,7 +15,6 @@ from django_tenants.utils import get_public_schema_name, schema_context
 from companies.models import Company, Device
 from companies.selectors import device_get_by_serial_number
 from employees.models import Department, Employee, Permission, Position, Role
-from employees.tasks import device_user_create_task
 from users.models import User
 
 User = get_user_model()
@@ -124,7 +123,12 @@ def employee_create(
     employee.save()
 
     if sync_to_device and employee.emp_code:
+        from django_q.tasks import async_task
+
+        from employees.q2_tasks import DEVICE_USER_GROUP, DEVICE_USER_TIMEOUT
+
         employee_id = employee.id
+        schema_name = connection.schema_name
         serials = list(
             Device.objects.filter(
                 company__schema_name=connection.schema_name,
@@ -133,7 +137,15 @@ def employee_create(
         )
         transaction.on_commit(
             lambda: [
-                device_user_create_task.delay(employee_id, serial) for serial in serials
+                async_task(
+                    "employees.q2_tasks.create_device_user",
+                    schema_name,
+                    employee_id,
+                    serial,
+                    group=DEVICE_USER_GROUP,
+                    timeout=DEVICE_USER_TIMEOUT,
+                )
+                for serial in serials
             ]
         )
     return employee
@@ -191,7 +203,12 @@ def employee_update(
                 user.save(update_fields=user_updates)
 
     if sync_to_device and employee.emp_code and employee.emp_code != old_emp_code:
+        from django_q.tasks import async_task
+
+        from employees.q2_tasks import DEVICE_USER_GROUP, DEVICE_USER_TIMEOUT
+
         employee_id = employee.id
+        schema_name = connection.schema_name
         serials = list(
             Device.objects.filter(
                 company__schema_name=connection.schema_name,
@@ -200,7 +217,15 @@ def employee_update(
         )
         transaction.on_commit(
             lambda: [
-                device_user_create_task.delay(employee_id, serial) for serial in serials
+                async_task(
+                    "employees.q2_tasks.create_device_user",
+                    schema_name,
+                    employee_id,
+                    serial,
+                    group=DEVICE_USER_GROUP,
+                    timeout=DEVICE_USER_TIMEOUT,
+                )
+                for serial in serials
             ]
         )
 
@@ -304,7 +329,7 @@ def device_user_create(*, employee: Employee, serial_number: str) -> None:
             response.read()
     except HTTPError as exc:
         if 500 <= exc.code < 600:
-            # Transient 5xx (502 etc.) — let caller retry (Celery autoretry)
+            # Transient 5xx (502 etc.) — let the task layer retry
             try:
                 body = (
                     exc.read().decode(errors="ignore")[:500]
@@ -332,7 +357,7 @@ def device_user_create(*, employee: Employee, serial_number: str) -> None:
             {"device": f"Gateway returned HTTP {exc.code}.{detail} for {url}"}
         ) from exc
     except (URLError, TimeoutError, OSError) as exc:
-        # Transient — re-raise for retry
+        # Transient — re-raise for task-layer retry
         if isinstance(exc, URLError):
             raise URLError(
                 f"Gateway unreachable at {settings.DEVICE_GATEWAY_BASE_URL} ({url}): {exc.reason}"

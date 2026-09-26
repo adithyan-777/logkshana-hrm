@@ -3,7 +3,12 @@ from datetime import date, datetime, timedelta
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from schedule.models import Schedule, Timetable, TimetableBreak
+from schedule.models import (
+    EmployeeScheduleAssignment,
+    Schedule,
+    Timetable,
+    TimetableBreak,
+)
 
 TIMETABLE_TIMES_ORDER_ERROR = (
     "Check-out must be after check-in. For an overnight shift "
@@ -318,3 +323,86 @@ def schedule_delete(*, schedule: Schedule) -> Schedule:
     """Soft-deletes the schedule (recoverable via all_objects)."""
     schedule.delete()
     return schedule
+
+
+# Assignment member resolution modes.
+ASSIGNMENT_MODE_DEPARTMENT = "department"
+ASSIGNMENT_MODE_INDIVIDUAL = "individual"
+ASSIGNMENT_MODE_ALL_EXCEPT = "all_except"
+
+ASSIGNMENT_MODES = (
+    (ASSIGNMENT_MODE_DEPARTMENT, "By department"),
+    (ASSIGNMENT_MODE_INDIVIDUAL, "Person by person"),
+    (ASSIGNMENT_MODE_ALL_EXCEPT, "Everyone except…"),
+)
+
+
+def resolve_assignment_employees(
+    *,
+    mode: str,
+    departments=None,
+    employees=None,
+    excluded=None,
+):
+    """Resolve the employee set for a schedule assignment.
+
+    - ``department``: all active employees in the given departments.
+    - ``individual``: exactly the given employees (active only).
+    - ``all_except``: all active employees minus ``excluded``.
+    Returns a list of active ``Employee`` objects, ordered by name.
+    """
+    from employees.models import Employee
+
+    base = Employee.objects.filter(is_active=True).order_by(
+        "first_name", "last_name"
+    )
+    if mode == ASSIGNMENT_MODE_DEPARTMENT:
+        department_ids = [
+            getattr(department, "pk", department) for department in (departments or [])
+        ]
+        return list(base.filter(department_id__in=department_ids))
+    if mode == ASSIGNMENT_MODE_ALL_EXCEPT:
+        excluded_ids = [
+            getattr(employee, "pk", employee) for employee in (excluded or [])
+        ]
+        return list(base.exclude(pk__in=excluded_ids))
+    employee_ids = [
+        getattr(employee, "pk", employee) for employee in (employees or [])
+    ]
+    return list(base.filter(pk__in=employee_ids))
+
+
+@transaction.atomic
+def assignment_create(
+    *,
+    schedule: Schedule,
+    employees,
+    start_date,
+    end_date=None,
+    priority: int = 0,
+    name: str = "",
+    is_active: bool = True,
+) -> EmployeeScheduleAssignment:
+    """Create an assignment row covering ``employees`` over a date range."""
+    assignment = EmployeeScheduleAssignment(
+        schedule=schedule,
+        start_date=start_date,
+        end_date=end_date,
+        priority=priority,
+        name=name,
+        is_active=is_active,
+    )
+    assignment.full_clean()
+    assignment.save()
+    if employees:
+        assignment.employees.add(*employees)
+    return assignment
+
+
+@transaction.atomic
+def assignment_delete(
+    *, assignment: EmployeeScheduleAssignment
+) -> EmployeeScheduleAssignment:
+    """Soft-deletes the assignment (recoverable via all_objects)."""
+    assignment.delete()
+    return assignment

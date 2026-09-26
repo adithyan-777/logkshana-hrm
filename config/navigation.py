@@ -157,6 +157,17 @@ BREADCRUMBS: dict[str, list[tuple[str, str | None]]] = {
         ("Schedules", "schedule_list"),
         ("Add schedule", None),
     ],
+    "assignment_list": [
+        ("Dashboard", "dashboard"),
+        ("Schedule", None),
+        ("Assignments", None),
+    ],
+    "assignment_add": [
+        ("Dashboard", "dashboard"),
+        ("Schedule", None),
+        ("Assignments", "assignment_list"),
+        ("Assign employees", None),
+    ],
     "report_hub": [("Dashboard", "dashboard"), ("Reports", None)],
     "report_attendance_summary": [
         ("Dashboard", "dashboard"),
@@ -209,6 +220,7 @@ LIST_ACTIONS: dict[str, tuple[str, str]] = {
     "holiday_list": ("Add holiday", "holiday_add"),
     "timetable_list": ("Add timetable", "timetable_add"),
     "schedule_list": ("Add schedule", "schedule_add"),
+    "assignment_list": ("Assign employees", "assignment_add"),
 }
 
 # Create forms that need a wider right drawer.
@@ -247,6 +259,8 @@ PAGE_HEADINGS: dict[str, str] = {
     "timetable_add": "Add Timetable",
     "schedule_list": "Schedule",
     "schedule_add": "Add Schedule",
+    "assignment_list": "Schedule",
+    "assignment_add": "Assign Employees",
     "report_hub": "Reports",
     "report_attendance_summary": "Reports",
     "report_individual_attendance": "Reports",
@@ -287,6 +301,8 @@ PAGE_SUBTITLES: dict[str, str] = {
     "schedule_list": "Timetables, breaks, and schedules.",
     "timetable_add": "Define check-in and check-out times.",
     "schedule_add": "Attach a timetable to a repeat pattern.",
+    "assignment_list": "Who works which schedule.",
+    "assignment_add": "Add people to a schedule by department, person, or bulk with exclusions.",
     "report_hub": "Filtered analytics with CSV, Excel, and PDF export.",
     "report_attendance_summary": "Filtered analytics with CSV, Excel, and PDF export.",
     "report_individual_attendance": "Filtered analytics with CSV, Excel, and PDF export.",
@@ -454,6 +470,13 @@ COMMAND_PALETTE: list[dict[str, str]] = [
         "icon": "bx-repeat",
     },
     {
+        "title": "Assign employees",
+        "subtitle": "Put people on schedules",
+        "url_name": "assignment_add",
+        "group": "Schedule",
+        "icon": "bx-user-plus",
+    },
+    {
         "title": "Reports",
         "subtitle": "Analytics hub",
         "url_name": "report_hub",
@@ -602,6 +625,8 @@ def command_palette_for(request: HttpRequest) -> list[dict[str, str]]:
         "holiday_list": PermissionCodename.LEAVE_HOLIDAYS_MANAGE,
         "timetable_list": PermissionCodename.SCHEDULE_VIEW,
         "schedule_list": PermissionCodename.SCHEDULE_VIEW,
+        "assignment_list": PermissionCodename.SCHEDULE_VIEW,
+        "assignment_add": PermissionCodename.SCHEDULE_ADD,
         "report_hub": PermissionCodename.REPORTS_VIEW,
         "report_attendance_summary": PermissionCodename.REPORTS_VIEW,
         "report_individual_attendance": (

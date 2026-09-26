@@ -213,6 +213,57 @@ class ScheduledMinutesTests(SimpleTestCase):
             480,
         )
 
+    def test_overnight_post_midnight_break_counts_once(self):
+        timetable = office_timetable()
+        expected_in = aware(2026, 3, 9, 22, 0)
+        expected_out = aware(2026, 3, 10, 6, 0)
+        breaks = [fixed_break(time(2, 0), time(2, 30))]
+
+        self.assertEqual(
+            scheduled_minutes(
+                timetable=timetable,
+                expected_in=expected_in,
+                expected_out=expected_out,
+                breaks=breaks,
+            ),
+            480 - 30,
+        )
+
+    def test_overnight_evening_break_counts_once(self):
+        timetable = office_timetable()
+        expected_in = aware(2026, 3, 9, 22, 0)
+        expected_out = aware(2026, 3, 10, 6, 0)
+        breaks = [fixed_break(time(23, 0), time(23, 30))]
+
+        self.assertEqual(
+            scheduled_minutes(
+                timetable=timetable,
+                expected_in=expected_in,
+                expected_out=expected_out,
+                breaks=breaks,
+            ),
+            480 - 30,
+        )
+
+    def test_day_shift_break_not_double_counted(self):
+        timetable = office_timetable()
+        expected_in = aware(2026, 3, 9, 9, 0)
+        expected_out = aware(2026, 3, 9, 18, 0)
+        breaks = [
+            fixed_break(time(13, 0), time(14, 0)),
+            fixed_break(time(16, 0), time(16, 15)),
+        ]
+
+        self.assertEqual(
+            scheduled_minutes(
+                timetable=timetable,
+                expected_in=expected_in,
+                expected_out=expected_out,
+                breaks=breaks,
+            ),
+            540 - 75,
+        )
+
 
 class DayVariancesTests(SimpleTestCase):
     def test_late_after_grace(self):

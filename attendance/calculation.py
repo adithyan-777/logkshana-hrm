@@ -218,17 +218,27 @@ def scheduled_minutes(
         return span
     if breaks is None:
         breaks = timetable.breaks.all()
-    day = expected_in.date()
+    span_days = (expected_out.date() - expected_in.date()).days
     unpaid = 0
     for b in breaks:
-        start = timezone.make_aware(datetime.combine(day, b.start_time))
-        end = timezone.make_aware(datetime.combine(day, b.end_time))
-        overlap = minutes_between(
-            max(expected_in, start), min(expected_out, end)
-        )
+        # A break's wall-clock window can fall on any calendar day the
+        # shift span touches (e.g. a 02:00 break on a 22:00 -> 06:00
+        # night shift). Score every candidate occurrence and keep the
+        # best overlap so each break counts exactly once.
+        best = 0
+        for offset in range(-1, span_days + 2):
+            day = (expected_in + timedelta(days=offset)).date()
+            start = timezone.make_aware(datetime.combine(day, b.start_time))
+            end = timezone.make_aware(datetime.combine(day, b.end_time))
+            if end <= start:
+                continue
+            overlap = minutes_between(
+                max(expected_in, start), min(expected_out, end)
+            )
+            best = max(best, overlap)
         if getattr(b, "break_time_type", "fixed") == "flexible":
-            overlap = min(overlap, b.break_time_minutes or 0)
-        unpaid += overlap
+            best = min(best, b.break_time_minutes or 0)
+        unpaid += best
     return max(0, span - unpaid)
 
 

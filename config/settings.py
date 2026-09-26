@@ -46,8 +46,6 @@ SHARED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "django_celery_beat",
-    "django_celery_results",
     "django_q",
     "waffle",
     "rest_framework",
@@ -182,27 +180,21 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-## Celery settings
-CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
-CELERY_RESULT_BACKEND = "django-db"  # uses django_celery_results
-CELERY_ACCEPT_CONTENT = ["json"]
-CELERY_TASK_SERIALIZER = "json"
-CELERY_RESULT_SERIALIZER = "json"
-CELERY_TIMEZONE = os.getenv("TIMEZONE", "Asia/Qatar")  # match your Django TIME_ZONE
-
-CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
-
-
-## django-q2 settings (attendance calc, one task per employee).
-# ORM broker: no extra infra, tables live in the public schema via SHARED_APPS.
-# Tasks carry their tenant schema_name explicitly and switch schema themselves.
+## django-q2 settings (device sync + attendance calc).
+# Redis broker (service `redis` in docker-compose, localhost locally).
+# Schedules live in the public schema via SHARED_APPS; every task carries
+# its tenant schema_name explicitly and switches schema itself.
 Q_CLUSTER = {
     "name": "pattika",
     "workers": int(os.getenv("Q2_WORKERS", "2")),
     "recycle": int(os.getenv("Q2_RECYCLE", "500")),
-    "timeout": int(os.getenv("Q2_TIMEOUT", "120")),
+    "timeout": int(os.getenv("Q2_TIMEOUT", "300")),
     "retry": int(os.getenv("Q2_RETRY", "300")),
-    "orm": "default",
+    "redis": {
+        "host": os.getenv("REDIS_HOST", "localhost"),
+        "port": int(os.getenv("REDIS_PORT", "6379")),
+        "db": int(os.getenv("REDIS_DB", "0")),
+    },
     "catch_up": False,
 }
 

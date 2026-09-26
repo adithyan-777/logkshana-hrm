@@ -8,7 +8,7 @@ Engineering and product documentation for this repo.
 | [frontend-handoff.md](frontend-handoff.md) | Frontend | Design tokens, CSS architecture, forms, tables, DataTables |
 | [alpine-spa.md](alpine-spa.md) | Frontend / full-stack | HTMX boost + Alpine stores, command palette, partials |
 | [ui-shell-plan.md](ui-shell-plan.md) | Historical | Sidebar shell migration (phases 1–3 complete) |
-| [backend-roadmap.md](backend-roadmap.md) | Backend | Identity, RBAC, waffle, Celery / devices priorities |
+| [backend-roadmap.md](backend-roadmap.md) | Backend | Identity, RBAC, waffle, background-jobs / devices priorities |
 
 Root [README.md](../README.md) covers setup, stack, and common commands.
 

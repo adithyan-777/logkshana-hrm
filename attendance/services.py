@@ -34,14 +34,10 @@ def resolve_punch_day(*, employee, timestamp):
     if timezone.is_naive(ts):
         ts = timezone.make_aware(ts)
     local_date = timezone.localtime(ts).date()
-    resolved = resolve_schedule_for_employee_on_date(
-        employee=employee, day=local_date
-    )
+    resolved = resolve_schedule_for_employee_on_date(employee=employee, day=local_date)
     timetable = resolved.timetable
     day_change = (
-        timetable.day_change_time
-        if timetable is not None
-        else DEFAULT_DAY_CHANGE_TIME
+        timetable.day_change_time if timetable is not None else DEFAULT_DAY_CHANGE_TIME
     )
     day = attendance_day_for_punch(timestamp=ts, day_change_time=day_change)
     if day != local_date:
@@ -71,9 +67,7 @@ def activity_create(
     if not external_id:
         external_id = f"manual:{uuid4().hex}"
     else:
-        existing = AttendanceActivity.objects.filter(
-            external_id=external_id
-        ).first()
+        existing = AttendanceActivity.objects.filter(external_id=external_id).first()
         if existing is not None:
             return existing
     activity = AttendanceActivity(
@@ -270,7 +264,7 @@ def device_attendance_pull(
         raise
     except Exception as exc:
         # Transient gateway errors (HTTPError 5xx, URLError, TimeoutError,
-        # OSError) are raised directly by the gateway to allow Celery retry.
+        # OSError) are raised directly by the gateway to allow task-layer retry.
         from urllib.error import HTTPError, URLError
 
         if isinstance(exc, (HTTPError, URLError, TimeoutError, OSError)):
@@ -313,9 +307,7 @@ def device_attendance_pull(
                 continue
 
             external_id = f"gateway:{log_id}"
-            if AttendanceActivity.objects.filter(
-                external_id=external_id
-            ).exists():
+            if AttendanceActivity.objects.filter(external_id=external_id).exists():
                 skipped += 1
                 continue
 

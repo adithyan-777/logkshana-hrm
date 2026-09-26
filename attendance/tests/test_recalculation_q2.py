@@ -1,7 +1,7 @@
 from datetime import date, datetime, time, timedelta
+from unittest.mock import patch
 
 from django.utils import timezone
-from django_tenants.utils import get_public_schema_name, schema_context
 
 from attendance.models import Attendance, AttendanceActivity
 from attendance.q2_tasks import (
@@ -44,9 +44,7 @@ class RecalculationTests(BaseTenantTestCase):
             start_time=time(13, 0),
             end_time=time(14, 0),
         )
-        self.schedule = schedule_factory(
-            name="Office Week", timetable=self.timetable
-        )
+        self.schedule = schedule_factory(name="Office Week", timetable=self.timetable)
         self.schedule.start_date = date(2026, 1, 1)
         self.schedule.save(update_fields=["start_date"])
         self.day = date(2026, 3, 9)
@@ -112,9 +110,7 @@ class RecalculationTests(BaseTenantTestCase):
 
         self.assertIsNone(row)
         self.assertFalse(
-            Attendance.objects.filter(
-                employee=self.employee, day=self.day
-            ).exists()
+            Attendance.objects.filter(employee=self.employee, day=self.day).exists()
         )
 
     def test_day_off_override_without_punches(self):
@@ -154,9 +150,7 @@ class RecalculationTests(BaseTenantTestCase):
         row = recalculate_attendance(employee=self.employee, day=self.day)
         self.assertEqual(row.status, Attendance.Status.LEAVE)
 
-        row = recalculate_attendance(
-            employee=self.employee, day=self.day, force=True
-        )
+        row = recalculate_attendance(employee=self.employee, day=self.day, force=True)
         self.assertEqual(row.status, Attendance.Status.PRESENT)
 
 
@@ -199,39 +193,30 @@ class CalculateEmployeeDayTaskTests(BaseTenantTestCase):
 
 class EnqueueTests(BaseTenantTestCase):
     def test_enqueue_tenant_day_creates_one_task_per_employee(self):
-        from django_q.models import OrmQ
-        from django_q.signing import SignedPackage
-
         employee_factory(first_name="QOne", emp_code="Q001")
         employee_factory(first_name="QTwo", emp_code="Q002")
         day_iso = date(2026, 3, 9).isoformat()
 
-        with schema_context(get_public_schema_name()):
-            before = OrmQ.objects.count()
+        with patch("django_q.tasks.async_task") as mock_async:
             result = enqueue_tenant_day(self.tenant.schema_name, day_iso)
-            queued = list(OrmQ.objects.all()[before:])
-            funcs = {
-                SignedPackage.loads(entry.payload)["func"] for entry in queued
-            }
 
         active = Employee.objects.filter(is_active=True).count()
         self.assertEqual(result["employees"], active)
-        self.assertEqual(len(queued), active)
-        self.assertEqual(funcs, {"attendance.q2_tasks.calculate_employee_day"})
+        self.assertEqual(mock_async.call_count, active)
+        for call in mock_async.call_args_list:
+            args, kwargs = call
+            self.assertEqual(args[0], "attendance.q2_tasks.calculate_employee_day")
+            self.assertEqual(args[1], self.tenant.schema_name)
+            self.assertEqual(kwargs["group"], "attendance-calc")
 
     def test_fanout_enqueues_one_task_per_tenant(self):
-        from django_q.models import OrmQ
-        from django_q.signing import SignedPackage
-
         day_iso = date(2026, 3, 9).isoformat()
-        with schema_context(get_public_schema_name()):
-            before = OrmQ.objects.count()
+        with patch("django_q.tasks.async_task") as mock_async:
             result = fanout_daily_attendance(day_iso)
-            queued = list(OrmQ.objects.all()[before:])
-            funcs = {
-                SignedPackage.loads(entry.payload)["func"] for entry in queued
-            }
 
         self.assertGreaterEqual(result["tenants"], 1)
-        self.assertEqual(len(queued), result["tenants"])
-        self.assertEqual(funcs, {"attendance.q2_tasks.enqueue_tenant_day"})
+        self.assertEqual(mock_async.call_count, result["tenants"])
+        for call in mock_async.call_args_list:
+            args, kwargs = call
+            self.assertEqual(args[0], "attendance.q2_tasks.enqueue_tenant_day")
+            self.assertEqual(kwargs["group"], "attendance-calc")

@@ -1,0 +1,124 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block title %}Assign Employees{% endblock %}
+
+{% block page_content %}
+{% include "partials/tabs_schedule.html#tabs_schedule" %}
+
+<div class="card" style="max-width:720px;">
+  <div class="card__header">
+    <span class="card__title">Assign employees</span>
+  </div>
+  <div class="card__body">
+    {% partialdef assignment_form inline %}
+<div id="assignment-form-container">
+{% if success_message %}
+<div id="form-messages" class="message success">
+    {{ success_message }}
+    <a href="{% url 'assignment_list' %}">View all assignments</a>
+</div>
+{% else %}
+<div id="form-messages"></div>
+{% endif %}
+
+<form
+    id="assignment-form"
+    class="tt-form-shell"
+    hx-post="{% url 'assignment_add' %}"
+    hx-target="#assignment-form-container"
+    hx-swap="outerHTML"
+>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="message error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <fieldset class="tt-panel">
+        <legend>Schedule &amp; dates</legend>
+        <div class="field">
+            <label class="form-label" for="{{ form.schedule.id_for_label }}">Schedule *</label>
+            {{ form.schedule }}
+            {% if form.schedule.errors %}<span class="error">{{ form.schedule.errors }}</span>{% endif %}
+        </div>
+        <div class="field-row">
+            <div class="field">
+                <label class="form-label" for="{{ form.start_date.id_for_label }}">Start date *</label>
+                {{ form.start_date }}
+                {% if form.start_date.errors %}<span class="error">{{ form.start_date.errors }}</span>{% endif %}
+            </div>
+            <div class="field">
+                <label class="form-label" for="{{ form.end_date.id_for_label }}">End date</label>
+                {{ form.end_date }}
+                {% if form.end_date.errors %}<span class="error">{{ form.end_date.errors }}</span>{% endif %}
+            </div>
+        </div>
+        <div class="field-row">
+            <div class="field">
+                <label class="form-label" for="{{ form.priority.id_for_label }}">Priority</label>
+                {{ form.priority }}
+                {% if form.priority.errors %}<span class="error">{{ form.priority.errors }}</span>{% endif %}
+            </div>
+            <div class="field">
+                <label class="form-label" for="{{ form.name.id_for_label }}">Label</label>
+                {{ form.name }}
+                {% if form.name.errors %}<span class="error">{{ form.name.errors }}</span>{% endif %}
+            </div>
+        </div>
+    </fieldset>
+
+    <fieldset class="tt-panel">
+        <legend>Who to add</legend>
+        <div class="field">
+            {{ form.mode }}
+            {% if form.mode.errors %}<span class="error">{{ form.mode.errors }}</span>{% endif %}
+        </div>
+        <div class="field" data-assign-section="department">
+            <label class="form-label">Departments</label>
+            {{ form.departments }}
+            {% if form.departments.errors %}<span class="error">{{ form.departments.errors }}</span>{% endif %}
+        </div>
+        <div class="field" data-assign-section="individual">
+            <label class="form-label">People</label>
+            <div class="check-list">
+                {{ form.employees }}
+            </div>
+            {% if form.employees.errors %}<span class="error">{{ form.employees.errors }}</span>{% endif %}
+        </div>
+        <div class="field" data-assign-section="all_except">
+            <label class="form-label">Exclude</label>
+            <div class="check-list">
+                {{ form.excluded_employees }}
+            </div>
+            {% if form.excluded_employees.errors %}<span class="error">{{ form.excluded_employees.errors }}</span>{% endif %}
+        </div>
+    </fieldset>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn--primary">Assign</button>
+    </div>
+</form>
+</div>
+<script>
+(function () {
+  function toggleAssignSections(scope) {
+    var checked = (scope || document).querySelector('input[name="mode"]:checked');
+    var mode = checked ? checked.value : "department";
+    (scope || document).querySelectorAll("[data-assign-section]").forEach(function (section) {
+      section.style.display = section.getAttribute("data-assign-section") === mode ? "" : "none";
+    });
+  }
+  document.addEventListener("change", function (event) {
+    if (event.target && event.target.name === "mode") {
+      var form = event.target.closest("form");
+      toggleAssignSections(form || document);
+    }
+  });
+  window.toggleAssignSections = toggleAssignSections;
+  toggleAssignSections(document);
+})();
+</script>
+{% endpartialdef assignment_form %}
+  </div>
+</div>
+{% endblock %}

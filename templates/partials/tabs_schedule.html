@@ -6,5 +6,8 @@
   <a href="{% url 'schedule_list' %}"
      class="tab {% if request.resolver_match.url_name == 'schedule_list' or request.resolver_match.url_name == 'schedule_add' %}is-active{% endif %}"
      role="tab" title="Assign timetables to people">Schedules</a>
+  <a href="{% url 'assignment_list' %}"
+     class="tab {% if request.resolver_match.url_name == 'assignment_list' or request.resolver_match.url_name == 'assignment_add' %}is-active{% endif %}"
+     role="tab" title="Put people on schedules">Assignments</a>
 </div>
 {% endpartialdef tabs_schedule %}

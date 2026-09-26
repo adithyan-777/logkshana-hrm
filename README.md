@@ -13,7 +13,7 @@ Multi-tenant HR and attendance system built with Django. Each company gets its o
 | API | Django REST Framework (gateway / integrations) |
 | Database | PostgreSQL 14+ (`django-tenants` schemas) |
 | Auth | django-allauth + `django-tenant-users` |
-| Jobs | Celery + Redis + django-celery-beat/results |
+| Jobs | django-q2 + Redis |
 | Feature flags | django-waffle |
 | Frontend | Django templates, HTMX, Alpine.js, Chart.js, Flatpickr, DataTables |
 | Deploy | Docker, Gunicorn, WhiteNoise, nginx |
@@ -23,7 +23,7 @@ Multi-tenant HR and attendance system built with Django. Each company gets its o
 
 ```
 logkshana-hrm/
-├── config/          # Settings, URLs, navigation, Celery
+├── config/          # Settings, URLs, navigation
 ├── companies/       # Public schema — Company tenant + Domain
 ├── users/           # Public schema — TenantUser model
 ├── employees/       # Tenant — people, roles, permissions
@@ -59,7 +59,7 @@ More detail: [docs/README.md](docs/README.md).
 
 - Python 3.14+
 - PostgreSQL 14+
-- Redis (Celery)
+- Redis (django-q2 broker)
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
 ## Setup
@@ -82,7 +82,7 @@ DB_USER=your_db_user
 DB_PASSWORD=your_db_password
 DB_HOST=localhost
 DB_PORT=5432
-CELERY_BROKER_URL=redis://localhost:6379/0
+REDIS_HOST=localhost
 ```
 
 ### 3. Create the database
@@ -117,14 +117,21 @@ Creates a `Company`, PostgreSQL schema, and routing `Domain`.
 uv run manage.py runserver
 ```
 
-For background jobs (optional locally):
+For background jobs (optional locally — needs Redis running):
 
 ```bash
-uv run celery -A config worker -l info
-uv run celery -A config beat -l info
+uv run manage.py qcluster
 ```
 
-Or use Docker Compose (web + worker + beat + redis):
+Register the q2 schedules once per deploy (device sync every 5 min +
+nightly attendance fanout):
+
+```bash
+uv run manage.py ensure_device_sync_schedule
+uv run manage.py ensure_q2_schedules
+```
+
+Or use Docker Compose (web + qcluster + redis):
 
 ```bash
 docker compose up --build
@@ -144,7 +151,7 @@ docker compose up --build
 
 ## Multi-tenancy
 
-- **Public schema:** companies, domains, users, auth/admin, shared Celery/waffle tables
+- **Public schema:** companies, domains, users, auth/admin, shared django-q2/waffle tables
 - **Tenant schemas:** created when a `Company` is saved (`auto_create_schema = True`)
 - **Routing:** `Domain` + `TenantMainMiddleware`
 - **Access:** `TenantAccessMiddleware` (django-tenant-users)

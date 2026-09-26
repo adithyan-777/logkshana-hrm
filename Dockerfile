@@ -20,8 +20,9 @@ RUN pip install --no-cache-dir uv \
 
 COPY . .
 
-# Install the project itself (metadata only) and collect nothing yet.
-RUN uv sync --frozen --no-dev
+# Entrypoint must stay executable (COPY can lose the bit via some contexts).
+RUN chmod +x /app/entrypoint.sh \
+    && uv sync --frozen --no-dev
 
 # Run as non-root; entrypoint needs write access for collectstatic output.
 RUN useradd --create-home --shell /bin/bash app \

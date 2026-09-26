@@ -22,7 +22,7 @@ Converge attendance and schedule toward the leave naming pattern.
 
 ## What’s good
 
-- **Tenant split is coherent:** `SHARED_APPS` (tenancy, auth, `companies`, `users`, Celery, waffle) vs `TENANT_APPS` (domain HR apps). `INSTALLED_APPS` correctly unions without double-listing shared apps.
+- **Tenant split is coherent:** `SHARED_APPS` (tenancy, auth, `companies`, `users`, django-q2, waffle) vs `TENANT_APPS` (domain HR apps). `INSTALLED_APPS` correctly unions without double-listing shared apps.
 - **Core CRUD apps** (`employees`, `attendance`, `leave`, `schedule`) have models + services + selectors + views + urls + forms; mutations generally go through services.
 - **Leave URL/view/service/template naming is the cleanest:** `leave_type_*`, `leave_policy_*`, `leave_request_*`, `holiday_*` align end-to-end.
 - **Schedule domain model ↔ service naming** is mostly consistent (`timetable_*`, `shift_*`, `schedule_assignment_*`, `temporary_schedule_*`).
@@ -36,7 +36,7 @@ Converge attendance and schedule toward the leave naming pattern.
 | Location | Apps |
 |---|---|
 | Project packages | `attendance`, `companies`, `common`, `config`, `dashboard`, `employees`, `leave`, `reports`, `schedule`, `users` (+ `nginx`, `docs`, `static`, `templates`) |
-| `SHARED_APPS` | django_tenants, contrib, tenant_users, DRF, **companies**, **users**, allauth, celery beat/results, waffle |
+| `SHARED_APPS` | django_tenants, contrib, tenant_users, DRF, **companies**, **users**, allauth, django-q2, waffle |
 | `TENANT_APPS` | contrib auth/contenttypes, tenant_users.permissions, **employees, schedule, leave, attendance, reports, dashboard** |
 | `INSTALLED_APPS` | `SHARED_APPS` + non-overlapping `TENANT_APPS` |
 

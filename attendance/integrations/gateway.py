@@ -20,6 +20,47 @@ def gateway_auth_headers() -> dict:
     return {"Authorization": f"Bearer {secret}", "X-Gateway-Token": secret}
 
 
+#: Substrings marking a gateway failure as transient (safe to retry).
+#: Permanent failures (unknown device, 4xx, missing emp_code) carry no
+#: marker and must fail fast so bad tasks don't loop forever.
+TRANSIENT_GATEWAY_MARKERS = (
+    "502",
+    "503",
+    "504",
+    "500",
+    "Gateway unreachable",
+    "unreachable",
+    "timeout",
+    "timed out",
+)
+
+
+def is_transient_gateway_error(
+    exc: BaseException, *, field_keys=("device_gateway",)
+) -> bool:
+    """Whether a device-gateway failure is transient (worth retrying).
+
+    Raw network errors (HTTPError 5xx, URLError, TimeoutError, OSError)
+    are always transient. ValidationErrors wrapping gateway responses are
+    transient only when they carry one of ``field_keys`` *and* a transient
+    marker — e.g. a wrapped 502. Everything else (unknown device, 4xx,
+    missing emp_code) is permanent and must not be retried.
+    """
+    if isinstance(exc, (HTTPError, URLError, TimeoutError, OSError)):
+        return True
+    if isinstance(exc, ValidationError):
+        msg_dict = getattr(exc, "message_dict", {}) or {}
+        if not any(key in msg_dict for key in field_keys):
+            return False
+        parts: list[str] = []
+        for key in field_keys:
+            msgs = msg_dict.get(key, [])
+            parts.extend(msgs if isinstance(msgs, list) else [msgs])
+        check_str = " ".join(str(m) for m in parts) or str(exc)
+        return any(marker in check_str for marker in TRANSIENT_GATEWAY_MARKERS)
+    return False
+
+
 def gateway_request_is_authorized(request) -> bool:
     """Check a request arriving from the device gateway.
 
@@ -69,7 +110,7 @@ def device_gateway_attendance_fetch(
             payload = json.loads(raw)
     except HTTPError as exc:
         # 5xx are transient (e.g. 502 Bad Gateway) — re-raise as HTTPError
-        # so Celery autoretry_for can retry. 4xx are permanent validation errors.
+        # so the task layer can retry. 4xx are permanent validation errors.
         if 500 <= exc.code < 600:
             # Include gateway URL in the HTTPError message for debugging
             # while preserving original code/reason for retry logic.
@@ -105,7 +146,8 @@ def device_gateway_attendance_fetch(
             }
         ) from exc
     except (URLError, TimeoutError, OSError) as exc:
-        # Transient network errors — re-raise directly so Celery can retry
+        # Transient network errors — re-raise directly so the task layer
+        # can retry (q2 bounded retry on transient failures).
         # Add context about the base URL for debugging
         if isinstance(exc, URLError):
             raise URLError(

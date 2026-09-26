@@ -3,10 +3,16 @@ from django.core.exceptions import ValidationError
 from django.forms import inlineformset_factory
 
 from common.forms import apply_form_field_ui
+from employees.models import Department, Employee
 from schedule.models import Schedule, Timetable, TimetableBreak
 from schedule.services import (
+    ASSIGNMENT_MODE_ALL_EXCEPT,
+    ASSIGNMENT_MODE_DEPARTMENT,
+    ASSIGNMENT_MODE_INDIVIDUAL,
+    ASSIGNMENT_MODES,
     BREAK_OUTSIDE_WORK_ERROR,
     TIMETABLE_TIMES_ORDER_ERROR,
+    resolve_assignment_employees,
     validate_break_within_timetable,
     validate_timetable_times,
 )
@@ -212,6 +218,114 @@ TimetableBreakFormSet = inlineformset_factory(
 
 def build_timetable_break_formset(*args, **kwargs) -> TimetableBreakFormSet:
     return TimetableBreakFormSet(*args, **kwargs)
+
+
+class ScheduleAssignmentForm(forms.Form):
+    """Add employees to a schedule: by department, person by person,
+    or everyone except selected people."""
+
+    schedule = forms.ModelChoiceField(
+        queryset=Schedule.objects.filter(is_active=True).order_by("name"),
+        label="Schedule",
+    )
+    mode = forms.ChoiceField(
+        choices=ASSIGNMENT_MODES,
+        initial=ASSIGNMENT_MODE_DEPARTMENT,
+        widget=forms.RadioSelect,
+        label="Who to add",
+    )
+    departments = forms.ModelMultipleChoiceField(
+        queryset=Department.objects.order_by("name"),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label="Departments",
+    )
+    employees = forms.ModelMultipleChoiceField(
+        queryset=Employee.objects.filter(is_active=True).order_by(
+            "first_name", "last_name"
+        ),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label="People",
+    )
+    excluded_employees = forms.ModelMultipleChoiceField(
+        queryset=Employee.objects.filter(is_active=True).order_by(
+            "first_name", "last_name"
+        ),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label="Exclude",
+    )
+    start_date = forms.DateField(
+        widget=forms.DateInput(attrs={"type": "date"}),
+        label="Start date",
+    )
+    end_date = forms.DateField(
+        widget=forms.DateInput(attrs={"type": "date"}),
+        required=False,
+        label="End date (blank = open-ended)",
+    )
+    priority = forms.IntegerField(
+        initial=0,
+        required=False,
+        label="Priority (higher wins overlaps)",
+    )
+    name = forms.CharField(
+        max_length=100,
+        required=False,
+        label="Label (optional)",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["priority"].initial = self.fields["priority"].initial or 0
+        apply_form_field_ui(self)
+        self.resolved_employees = []
+
+    def clean_priority(self):
+        return self.cleaned_data.get("priority") or 0
+
+    def clean(self):
+        cleaned_data = super().clean()
+        mode = cleaned_data.get("mode")
+        departments = cleaned_data.get("departments") or []
+        employees = cleaned_data.get("employees") or []
+        excluded = cleaned_data.get("excluded_employees") or []
+
+        if mode == ASSIGNMENT_MODE_DEPARTMENT and not departments:
+            self.add_error(
+                "departments", "Select at least one department."
+            )
+        elif mode == ASSIGNMENT_MODE_INDIVIDUAL and not employees:
+            self.add_error("employees", "Select at least one person.")
+        elif mode not in (
+            ASSIGNMENT_MODE_DEPARTMENT,
+            ASSIGNMENT_MODE_INDIVIDUAL,
+            ASSIGNMENT_MODE_ALL_EXCEPT,
+        ):
+            self.add_error("mode", "Choose how to add people.")
+
+        if self.errors:
+            return cleaned_data
+
+        resolved = resolve_assignment_employees(
+            mode=mode,
+            departments=departments,
+            employees=employees,
+            excluded=excluded,
+        )
+        if not resolved:
+            self.add_error(
+                "mode",
+                "No active employees match this selection.",
+            )
+            return cleaned_data
+        start_date = cleaned_data.get("start_date")
+        end_date = cleaned_data.get("end_date")
+        if start_date and end_date and end_date < start_date:
+            self.add_error("end_date", "End date must not be before start date.")
+        self.resolved_employees = resolved
+        return cleaned_data
 
 
 class ScheduleForm(forms.ModelForm):

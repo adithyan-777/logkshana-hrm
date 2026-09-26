@@ -55,6 +55,9 @@
             </td>
             <td class="table-actions">
                 {% if can_edit %}
+                <a href="{% url 'assignment_add' %}?schedule={{ schedule.pk }}" class="btn-icon" title="Assign employees" aria-label="Assign employees to {{ schedule.name }}">
+                    <i class="bx bx-user-plus admin-icon admin-icon--18"></i>
+                </a>
                 <a href="{% url 'schedule_edit' schedule.pk %}" class="btn-icon" title="Edit schedule" aria-label="Edit {{ schedule.name }}">
                     <i class="bx bx-edit admin-icon admin-icon--18"></i>
                 </a>

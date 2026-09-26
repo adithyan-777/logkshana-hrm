@@ -10,13 +10,16 @@ from employees.decorators import require_permission
 from employees.permission_catalog import PermissionCodename
 from employees.selectors import user_has_permission
 from schedule.forms import (
+    ScheduleAssignmentForm,
     ScheduleForm,
     TimetableForm,
     build_timetable_break_formset,
 )
 from schedule.models import Schedule, Timetable
-from schedule.selectors import schedule_list, timetable_list
+from schedule.selectors import assignment_get, assignment_list, schedule_list, timetable_list
 from schedule.services import (
+    assignment_create,
+    assignment_delete,
     schedule_create,
     schedule_delete,
     schedule_update,
@@ -292,4 +295,106 @@ def schedule_delete_view(request: HttpRequest, schedule_id: int) -> HttpResponse
     schedule_delete(schedule=schedule)
     response = HttpResponse("")
     response["HX-Trigger"] = "scheduleDeleted"
+    return response
+
+
+def _render_assignment_form(
+    request: HttpRequest, form: ScheduleAssignmentForm, *, success_message: str = ""
+) -> HttpResponse:
+    return render(
+        request,
+        "schedule/assignment_add.html#assignment_form",
+        {"form": form, "success_message": success_message},
+    )
+
+
+@login_required
+@require_permission(PermissionCodename.SCHEDULE_VIEW)
+@require_http_methods(["GET"])
+def assignment_list_view(request: HttpRequest) -> HttpResponse:
+    search = request.GET.get("q", "").strip()
+    context = list_pagination_context(
+        request,
+        assignment_list(search=search),
+        search=search,
+        base_url=reverse("assignment_list"),
+        hx_target="#assignment-list",
+    )
+    context["can_edit"] = user_has_permission(
+        user=request.user, codename=PermissionCodename.SCHEDULE_ADD
+    )
+    context["can_delete"] = user_has_permission(
+        user=request.user, codename=PermissionCodename.SCHEDULE_DELETE
+    )
+
+    if is_htmx_partial(request):
+        return render(request, "schedule/assignment_list.html#assignment_table", context)
+
+    return render(request, "schedule/assignment_list.html", context)
+
+
+@login_required
+@require_permission(PermissionCodename.SCHEDULE_ADD)
+@require_http_methods(["GET", "POST"])
+def assignment_add(request: HttpRequest) -> HttpResponse:
+    initial = {}
+    schedule_id = request.GET.get("schedule")
+    if schedule_id:
+        initial["schedule"] = schedule_id
+    if request.method == "POST":
+        form = ScheduleAssignmentForm(request.POST)
+        if form.is_valid():
+            people = form.resolved_employees
+            assignment_create(
+                schedule=form.cleaned_data["schedule"],
+                employees=people,
+                start_date=form.cleaned_data["start_date"],
+                end_date=form.cleaned_data.get("end_date"),
+                priority=form.cleaned_data.get("priority") or 0,
+                name=form.cleaned_data.get("name") or "",
+            )
+            response = _render_assignment_form(
+                request,
+                ScheduleAssignmentForm(),
+                success_message=(
+                    f"Assigned {len(people)} "
+                    f"{'person' if len(people) == 1 else 'people'} to "
+                    f"“{form.cleaned_data['schedule'].name}”."
+                ),
+            )
+            set_hx_trigger(
+                response,
+                event="assignmentCreated",
+                toast=f"Assigned {len(people)} people.",
+            )
+            return response
+
+        return _render_assignment_form(request, form)
+
+    form = ScheduleAssignmentForm(initial=initial)
+    if is_htmx_partial(request):
+        return _render_assignment_form(request, form)
+
+    return redirect_to_list_drawer(
+        list_url_name="assignment_list",
+        form_url=(
+            f"{reverse('assignment_add')}"
+            f"{f'?schedule={schedule_id}' if schedule_id else ''}"
+        ),
+        title="Assign employees",
+    )
+
+
+@login_required
+@require_permission(PermissionCodename.SCHEDULE_DELETE)
+@require_http_methods(["DELETE"])
+def assignment_delete_view(request: HttpRequest, assignment_id: int) -> HttpResponse:
+    assignment = assignment_get(assignment_id=assignment_id)
+    if assignment is None:
+        from django.http import Http404
+
+        raise Http404
+    assignment_delete(assignment=assignment)
+    response = HttpResponse("")
+    response["HX-Trigger"] = "assignmentDeleted"
     return response

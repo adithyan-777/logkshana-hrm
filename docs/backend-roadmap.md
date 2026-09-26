@@ -25,7 +25,7 @@ flowchart TD
 | RBAC | `Role` / `Permission` models and catalog seeding exist; **view/nav enforcement incomplete** — treat as next priority. |
 | Attendance | Provider-agnostic `AttendanceTransaction` + gateway endpoints. Device sync schedule command exists; harden uniqueness / Device model still needed. |
 | Flags | **django-waffle** installed + middleware. Wire switches into nav/modules next. |
-| Jobs | **Celery** + Redis + beat/results + `tenant-schemas-celery` in deps/Docker. Expand device pull tasks. |
+| Jobs | **django-q2** + Redis broker + DB schedules in deps/Docker. Expand device pull tasks. |
 | Frontend shell | Alpine + HTMX SPA ([alpine-spa.md](alpine-spa.md)) — not Datastar. |
 | `emp_code` | Indexed; confirm uniqueness rules per tenant. |
 
@@ -33,11 +33,11 @@ flowchart TD
 
 ## Priority order
 
-1. ~~Compatibility spike~~ — **done** (tenant-users, waffle, Celery on Django 6.0 + Python 3.14)
+1. ~~Compatibility spike~~ — **done** (tenant-users, waffle, background jobs on Django 6.0 + Python 3.14)
 2. ~~Tenant identity / membership foundation~~ — **largely done**; finish employee invite ↔ membership edge cases
 3. **RBAC enforcement** (decorators, selectors, filter sidebar/palette)
 4. **Waffle** — gate Leave / Schedule / Reports / Devices in UI
-5. **Celery device pull** + `Device` model + unique punch keys
+5. **q2 device pull** + `Device` model + unique punch keys
 6. **Real pyzk** or on-site collector (network-dependent)
 
 ---
@@ -49,15 +49,15 @@ Already in tree:
 - `users.TenantUser`, `tenant_users` in `SHARED_APPS` / `TENANT_APPS`
 - `TenantAccessMiddleware`, `UserBackend`
 - `waffle` + `WaffleMiddleware`
-- Celery app, beat, results, Docker worker/beat services
+- django-q2 + Redis broker, Docker qcluster service
 
 ### Devices / network (still blocks real pyzk)
 
-ZKTeco talk is TCP **4370** on the LAN. A cloud WSGI/Celery process generally cannot reach `192.168.x.x`.
+ZKTeco talk is TCP **4370** on the LAN. A cloud WSGI/qcluster process generally cannot reach `192.168.x.x`.
 
 | Option | When |
 |--------|------|
-| **A. App on-prem** (same network as devices) | Celery worker + pyzk |
+| **A. App on-prem** (same network as devices) | qcluster + pyzk |
 | **B. On-site collector** | Cloud SaaS; agent POSTs punches to gateway |
 | **C. ADMS / BioTime push** | Newer firmware; `pyzk` often does **not** work |
 
@@ -137,11 +137,21 @@ Caveats:
 
 - Waffle cache keys must be tenant-prefixed or flags leak across schemas.
 - Prefer **Switches** (on/off). Flags (percentage, groups) are extra complexity you do not need yet.
-- Gate **nav + URLs + Celery tasks**. A hidden sidebar link with a live poller is not “off”.
+- Gate **nav + URLs + background tasks**. A hidden sidebar link with a live poller is not “off”.
 
 ---
 
-## 5. Celery + periodic device pull
+## 5. Background jobs + periodic device pull (django-q2 — supersedes the Celery plan below)
+
+> Historical note: this section was written for Celery + Beat and is kept
+> for the tenancy reasoning. Implementation moved to **django-q2 on Redis**:
+> `attendance/q2_tasks.py` (`fanout_device_sync` every 5 min via the
+> `device-attendance-sync` q2 Schedule, `sync_device_attendance` per device),
+> `employees/q2_tasks.py` (`create_device_user`, enqueued from
+> `employees/services.py` via `transaction.on_commit` + `async_task`).
+> Run `runserver` + `manage.py qcluster` in dev; `web` + `qcluster` + `redis`
+> in Docker. The pitfalls table still applies (with `async_task` in place
+> of `.delay()`).
 
 Celery is a **second process** next to WSGI. Beat fires on a timer; the worker must set the tenant schema itself because there is no HTTP middleware on background jobs.
 
@@ -307,15 +317,15 @@ def device_attendance_pull(*, device) -> int:
     return created
 ```
 
-### Multi-tenant Celery pitfalls
+### Multi-tenant background-job pitfalls
 
 | Pitfall | What to do |
 |---------|------------|
 | Worker has no tenant | Always `schema_context(schema_name)` |
-| Schema leak between tasks | Pass `schema_name` in every `.delay()`; never a global “current tenant” |
-| Overlapping 5‑min runs | Lock per device (`cache.lock(f"device-sync:{schema}:{id}")`) or `expires` on the task |
-| `django-celery-beat` in tenant apps | Periodic tables would be per schema; keep beat config in settings or public schema |
-| Tests hitting Redis | `CELERY_TASK_ALWAYS_EAGER = True` in test settings |
+| Schema leak between tasks | Pass `schema_name` in every `async_task()`; never a global “current tenant” |
+| Overlapping 5‑min runs | Lock per device (`cache.lock(f"device-sync:{schema}:{id}")`) or short task timeout |
+| q2 schedules in tenant apps | Schedule tables would be per schema; keep `django_q` in `SHARED_APPS` (public schema) |
+| Tests hitting Redis | Patch `django_q.tasks.async_task` / call task functions directly |
 
 ### Local run
 
@@ -323,24 +333,26 @@ def device_attendance_pull(*, device) -> int:
 # terminal 1
 uv run manage.py runserver
 
-# terminal 2
-uv run celery -A config worker -l info
-
-# terminal 3
-uv run celery -A config beat -l info
+# terminal 2 (needs Redis running)
+uv run manage.py qcluster
 ```
 
-One-off: `uv run celery -A config call attendance.tasks.device_sync_all_tenants`.
+Register schedules once per deploy:
 
-### Celery / devices build order
+```bash
+uv run manage.py ensure_device_sync_schedule   # every 5 min device pull
+uv run manage.py ensure_q2_schedules           # nightly attendance fanout
+```
 
-1. Redis + `config/celery.py` + worker starts (hello-world task is enough).
+### q2 / devices build order
+
+1. Redis + `Q_CLUSTER` in settings + qcluster starts.
 2. `Device` model + unique `emp_code` + unique punch `external_id`.
 3. `device_attendance_pull` with a mocked ZK client in tests.
-4. The three tasks + beat every 5 minutes, gated by waffle `devices`.
+4. The fanout/per-device tasks + q2 Schedule every 5 minutes, gated by waffle `devices`.
 5. Wire real pyzk — only if the worker can reach the clocks (LAN / VPN).
 
-Celery does not replace the network constraint. If the app is SaaS, the worker has to run on-prem (or you need a collector that pushes punches in).
+q2 does not replace the network constraint. If the app is SaaS, the cluster has to run on-prem (or you need a collector that pushes punches in).
 
 ---
 

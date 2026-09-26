@@ -1,15 +1,31 @@
 #!/bin/sh
-# Shared entrypoint for web / celery worker / celery beat.
+# Shared entrypoint for web / qcluster.
 # Waits for Postgres + Redis, optionally runs tenant migrations + collectstatic
 # (only when RUN_MIGRATIONS=1, i.e. the web service), then execs the CMD.
 set -e
+
+# Inside containers, plain "localhost" means the container itself, not the
+# host or a sibling service. Host-side .env files commonly use
+# DB_HOST=localhost / REDIS_HOST=localhost for local processes, which would
+# break inside Docker. Translate those to the container-reachable
+# equivalents and export so Django sees them.
+if [ "${DB_HOST:-}" = "localhost" ] || [ "${DB_HOST:-}" = "127.0.0.1" ]; then
+    export DB_HOST="host.docker.internal"
+    echo "entrypoint: DB_HOST was localhost, using host.docker.internal" >&2
+fi
+if [ "${REDIS_HOST:-}" = "localhost" ] || [ "${REDIS_HOST:-}" = "127.0.0.1" ]; then
+    # "localhost" is only wrong when this process runs in a container *with*
+    # a sibling redis service; local processes never run this script.
+    # Compose already sets REDIS_HOST=redis, so this is just a safety net.
+    export REDIS_HOST="redis"
+    echo "entrypoint: REDIS_HOST was localhost, using redis" >&2
+fi
 
 python - <<'EOF'
 import os
 import socket
 import sys
 import time
-from urllib.parse import urlparse
 
 
 def wait_for(host, port, name, timeout=90):
@@ -31,8 +47,11 @@ wait_for(
     "Postgres",
 )
 
-broker = urlparse(os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0"))
-wait_for(broker.hostname or "redis", broker.port or 6379, "Redis")
+wait_for(
+    os.environ.get("REDIS_HOST", "redis"),
+    os.environ.get("REDIS_PORT", "6379"),
+    "Redis",
+)
 EOF
 
 if [ "${RUN_MIGRATIONS:-}" = "1" ]; then
@@ -43,8 +62,7 @@ if [ "${RUN_MIGRATIONS:-}" = "1" ]; then
 fi
 
 # Optional: block until the given public-schema tables exist.
-# Used by worker/beat so they never start before web has migrated
-# (otherwise beat crash-loops on a fresh deploy).
+# Used by qcluster so it never starts before web has migrated.
 python - <<'EOF'
 import os
 import sys

@@ -429,31 +429,31 @@
 }
 
 .login-card__logo {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  width: auto;
-  height: auto;
-  border-radius: 0;
-  background: transparent;
-  color: var(--accent);
-  margin-bottom: var(--space-3);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--space-2);
+	width: fit-content;
+	height: auto;
+	margin: 0 auto;
+	border-radius: 0;
+	background: transparent;
+	color: var(--accent);
+	margin-bottom: var(--space-3);
 }
 
 .login-card__logo img,
 .login-card__wordmark {
   display: block;
-  height: 56px;
+  height: 46px;
   width: auto;
-  max-width: 260px;
+  /* max-width: 260px; */
   object-fit: contain;
 }
 
 .login-card__glyph {
   display: block;
-  height: 64px;
+  height: 48px;
   width: auto;
   object-fit: contain;
 }

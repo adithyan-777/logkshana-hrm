@@ -143,6 +143,10 @@ services:
       # with its own server_name + proxy_pass to add an app.
       # NOTE: pattika-ssl.conf.example is ignored by nginx (*.conf only).
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      # TLS cert files (Let's Encrypt volumes, or paste Cloudflare Origin
+      # Certificate + key as nginx/certs/origin.pem + origin.key).
+      # nginx/certs/ is git-ignored — secrets never get committed.
+      - ./nginx/certs:/etc/nginx/certs:ro
       - certs:/etc/letsencrypt:ro
       - certbot-www:/var/www/certbot:ro
     networks:
@@ -152,7 +156,12 @@ services:
       web:
         condition: service_started
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost/admin/login/ || exit 1"]
+      # Any HTTP response (even 301/404) means nginx is answering; only
+      # connection failure is unhealthy. Tries plain HTTP first (local
+      # dev), then HTTPS with cert check off (prod origin cert isn't
+      # publicly trusted). wget exits 8 on HTTP error statuses — that
+      # still proves nginx responded.
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost/admin/login/ 2>/dev/null; code=$$?; if [ $$code -eq 0 ] || [ $$code -eq 8 ]; then exit 0; fi; wget -q --no-check-certificate -O /dev/null https://localhost/admin/login/ 2>/dev/null; code=$$?; [ $$code -eq 0 ] || [ $$code -eq 8 ]"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -182,6 +191,8 @@ volumes:
 
 # Shared edge network: attach any other app's web service here and add
 # an nginx/conf.d/<app>.conf server block to route it by domain.
+# Create it once per host before first `up`:
+#   docker network create proxy-net
 networks:
   proxy:
     name: proxy-net

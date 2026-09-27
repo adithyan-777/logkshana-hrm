@@ -430,8 +430,10 @@
 
 .login-card__logo {
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: var(--space-2);
   width: auto;
   height: auto;
   border-radius: 0;
@@ -443,14 +445,22 @@
 .login-card__logo img,
 .login-card__wordmark {
   display: block;
-  height: 40px;
+  height: 56px;
   width: auto;
-  max-width: 220px;
+  max-width: 260px;
+  object-fit: contain;
+}
+
+.login-card__glyph {
+  display: block;
+  height: 64px;
+  width: auto;
   object-fit: contain;
 }
 
 :root[data-theme="dark"] .login-card__logo img,
-:root[data-theme="dark"] .login-card__wordmark {
+:root[data-theme="dark"] .login-card__wordmark,
+:root[data-theme="dark"] .login-card__glyph {
   filter: brightness(0) invert(1);
 }
 

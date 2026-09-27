@@ -1,6 +1,7 @@
 # HTTPS for pattika. Activate ONLY after certs exist
 # (nginx fails to start if ssl_certificate files are missing).
 #
+# Option A — Let's Encrypt (certbot):
 # 1. Issue certs (port 80 publicly reachable, DNS pointed at this host):
 #      docker compose run --rm certbot certonly --webroot \
 #        -w /var/www/certbot -d pattika.example.com \
@@ -8,10 +9,23 @@
 #    (First try with --staging to avoid rate limits, then re-run without it.)
 # 2. Copy this file to pattika-ssl.conf:
 #      cp nginx/conf.d/pattika-ssl.conf.example nginx/conf.d/pattika-ssl.conf
-#    and set server_name to your real domain(s) in BOTH files.
+#    and set server_name + ssl_certificate paths to your real domain(s).
 # 3. In pattika.conf, switch `location /` to the redirect below
 #    (keep the /.well-known/ location as-is for renewals).
 # 4. Reload: docker compose exec nginx nginx -s reload
+#
+# Option B — Cloudflare Origin Certificate (recommended if DNS is on
+# Cloudflare; gives you a *.domain wildcard for tenant subdomains):
+# 1. Cloudflare dashboard -> SSL/TLS -> Origin Server -> Create Certificate.
+#    Hostnames: yourdomain.com, *.yourdomain.com. Let Cloudflare generate
+#    the key. Copy "Origin Certificate" to nginx/certs/origin.pem and
+#    "Private Key" to nginx/certs/origin.key on the server
+#    (that dir is git-ignored; never commit the key).
+# 2. Copy this file to pattika-ssl.conf and use the "Cloudflare" block
+#    below instead of the Let's Encrypt paths.
+# 3. Orange-cloud the DNS records and set SSL/TLS mode to Full (strict).
+# 4. Same pattika.conf redirect + reload as Option A.
+#    No renewal cron needed (origin cert lasts 15 years).
 #
 # HTTP -> HTTPS redirect for pattika.conf (replaces `proxy_pass` in location /):
 #    location / {
@@ -23,8 +37,13 @@ server {
     # TODO: your real domain(s), e.g. pattika.example.com *.pattika.example.com
     server_name pattika.example.com;
 
+    # Option A (Let's Encrypt):
     ssl_certificate /etc/letsencrypt/live/pattika.example.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/pattika.example.com/privkey.pem;
+    # Option B (Cloudflare Origin Certificate) — comment out the two lines
+    # above and use these instead:
+    # ssl_certificate /etc/nginx/certs/origin.pem;
+    # ssl_certificate_key /etc/nginx/certs/origin.key;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers off;
 

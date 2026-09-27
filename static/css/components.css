@@ -2146,8 +2146,6 @@ div.dt-container button.dt-paging-button:focus-visible {
   border: 1px solid var(--border);
   font-size: 14px;
   margin-bottom: var(--space-3);
-  transition: none;
-  animation: none;
 }
 
 .alert:hover { transform: none; }

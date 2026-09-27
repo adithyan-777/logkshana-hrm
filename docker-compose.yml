@@ -1,6 +1,11 @@
-# Pattika stack (local-Postgres dev): Redis + Django/Gunicorn + django-q2 cluster.
+# Pattika stack: Redis + Django/Gunicorn + django-q2 cluster.
 #
-# Postgres runs on the HOST (local install), not in Docker.
+# Local Docker Postgres (avoids a host install; published on :5433):
+#   docker compose --profile local-db up -d postgres
+# Point .env at it (see .env.example docker-local block), then:
+#   uv run manage.py migrate
+#
+# Or use host/RDS Postgres on :5432 and skip the postgres service.
 # Usage:
 #   cp .env.example .env   # then fill in secrets
 #   docker compose up --build redis          # phase 1: broker only, Django runs locally
@@ -21,6 +26,29 @@
 name: pattika
 
 services:
+  # Local-dev Postgres. Never auto-starts with the default stack (RDS/host
+  # Postgres stays the server default). Bring up explicitly:
+  #   docker compose --profile local-db up -d postgres
+  # Host port 5433 so a local Postgres install on 5432 is left alone.
+  # Containers on the compose network still reach it as postgres:5432.
+  postgres:
+    image: postgres:18-alpine
+    profiles: ["local-db"]
+    environment:
+      POSTGRES_DB: ${DB_NAME:-pattika}
+      POSTGRES_USER: ${DB_USER:-pattika}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-pattika}
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
   # TEST-ONLY Postgres for seed/demo experiments (host Postgres on 5432 untouched).
   # Never auto-starts; bring up explicitly:
   #   docker compose --profile test up -d db
@@ -70,11 +98,11 @@ services:
     env_file:
       - .env
     environment:
-      # Container DB: CONTAINER_DB_HOST wins if set, else DB_HOST, else host-gateway.
-      # Laptop .env: DB_HOST=localhost (host-side) + CONTAINER_DB_HOST=host.docker.internal.
+      # Container DB: CONTAINER_DB_* wins if set, else host DB_*, else host-gateway:5432.
+      # Laptop docker-local: DB_HOST=localhost DB_PORT=5433 + CONTAINER_DB_HOST=postgres.
       # Server .env: DB_HOST=<rds-endpoint> alone is enough.
       DB_HOST: ${CONTAINER_DB_HOST:-${DB_HOST:-host.docker.internal}}
-      DB_PORT: ${DB_PORT:-5432}
+      DB_PORT: ${CONTAINER_DB_PORT:-${DB_PORT:-5432}}
       # q2 Redis broker (web enqueues from the request path).
       REDIS_HOST: redis
       REDIS_PORT: ${REDIS_PORT:-6379}
@@ -107,11 +135,11 @@ services:
     env_file:
       - .env
     environment:
-      # Container DB: CONTAINER_DB_HOST wins if set, else DB_HOST, else host-gateway.
-      # Laptop .env: DB_HOST=localhost (host-side) + CONTAINER_DB_HOST=host.docker.internal.
+      # Container DB: CONTAINER_DB_* wins if set, else host DB_*, else host-gateway:5432.
+      # Laptop docker-local: DB_HOST=localhost DB_PORT=5433 + CONTAINER_DB_HOST=postgres.
       # Server .env: DB_HOST=<rds-endpoint> alone is enough.
       DB_HOST: ${CONTAINER_DB_HOST:-${DB_HOST:-host.docker.internal}}
-      DB_PORT: ${DB_PORT:-5432}
+      DB_PORT: ${CONTAINER_DB_PORT:-${DB_PORT:-5432}}
       # q2 Redis broker.
       REDIS_HOST: redis
       REDIS_PORT: ${REDIS_PORT:-6379}
@@ -187,6 +215,7 @@ volumes:
   staticfiles:
   certs:
   certbot-www:
+  pgdata:
   pgdata-test:
 
 # Shared edge network: attach any other app's web service here and add

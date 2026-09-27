@@ -3,7 +3,14 @@
 {% block content %}
 {% if messages %}
   {% for message in messages %}
-    <div class="alert {% if 'error' in message.tags %}alert--error{% elif 'success' in message.tags %}alert--success{% else %}alert--info{% endif %}">
+    <div
+      class="alert {% if 'error' in message.tags %}alert--error{% elif 'success' in message.tags %}alert--success{% else %}alert--info{% endif %}"
+      role="status"
+      x-data="{ show: true }"
+      x-show="show"
+      x-init="setTimeout(() => show = false, {% if 'error' in message.tags %}8000{% else %}4000{% endif %})"
+      x-transition.opacity.duration.280ms
+    >
       {{ message }}
     </div>
   {% endfor %}

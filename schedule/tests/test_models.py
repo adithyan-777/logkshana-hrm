@@ -22,6 +22,16 @@ class TimetableDayChangeTests(BaseTenantTestCase):
         timetable = timetable_create(
             name="Default DC", code="DC-1", check_in=time(9, 0), check_out=time(18, 0)
         )
+        self.assertEqual(timetable.day_change_time, time(0, 0))
+
+    def test_default_day_change_for_overnight_shift(self):
+        timetable = timetable_create(
+            name="Night Watch",
+            code="DC-5",
+            check_in=time(22, 0),
+            check_out=time(6, 0),
+            check_out_cross_days=1,
+        )
         self.assertEqual(timetable.day_change_time, time(8, 0))
 
     def test_early_shift_with_early_day_change_accepted(self):

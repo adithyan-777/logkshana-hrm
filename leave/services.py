@@ -1,4 +1,3 @@
-from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from leave.models import Holiday, LeavePolicy, LeaveRequest, LeaveType
@@ -93,7 +92,6 @@ def leave_request_create(
         created_by=created_by,
     )
     leave_request.full_clean()
-    _validate_leave_request(leave_request)
     leave_request.save()
     return leave_request
 
@@ -117,19 +115,8 @@ def holiday_create(
         is_active=is_active,
     )
     holiday.full_clean()
-    _validate_holiday(holiday)
     holiday.save()
     return holiday
-
-
-def _validate_leave_request(leave_request: LeaveRequest) -> None:
-    if leave_request.end_date < leave_request.start_date:
-        raise ValidationError("End date must be on or after start date.")
-
-
-def _validate_holiday(holiday: Holiday) -> None:
-    if holiday.end_date and holiday.end_date < holiday.date:
-        raise ValidationError("Holiday end date must be on or after start date.")
 
 
 @transaction.atomic
@@ -229,7 +216,6 @@ def leave_request_update(
     leave_request.reason = reason
     leave_request.status = status
     leave_request.full_clean()
-    _validate_leave_request(leave_request)
     leave_request.save()
     return leave_request
 
@@ -258,7 +244,6 @@ def holiday_update(
     holiday.description = description
     holiday.is_active = is_active
     holiday.full_clean()
-    _validate_holiday(holiday)
     holiday.save()
     return holiday
 

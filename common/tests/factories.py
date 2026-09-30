@@ -1,6 +1,6 @@
 from datetime import date, time
 
-from employees.models import Department, Position
+from employees.models import Department, Employee, Position
 from employees.services import employee_create
 from schedule.models import Schedule, Timetable
 from schedule.services import schedule_create, timetable_create
@@ -186,6 +186,13 @@ def holiday_factory(*, name="New Year", **kwargs):
     return holiday_create(name=name, **defaults)
 
 
+def _default_factory_employee(*, first_name: str, emp_code: str) -> Employee:
+    employee = Employee.objects.filter(emp_code=emp_code).first()
+    if employee is not None:
+        return employee
+    return employee_factory(first_name=first_name, emp_code=emp_code)
+
+
 def activity_factory(*, employee=None, external_id=None, **kwargs):
     from uuid import uuid4
 
@@ -195,7 +202,7 @@ def activity_factory(*, employee=None, external_id=None, **kwargs):
     from attendance.services import activity_create
 
     if employee is None:
-        employee = employee_factory(first_name="Punch", emp_code="AT001")
+        employee = _default_factory_employee(first_name="Punch", emp_code="AT001")
 
     defaults = {
         "external_id": external_id or f"EXT-{uuid4().hex[:8]}",
@@ -212,7 +219,7 @@ def attendance_record_factory(*, employee=None, **kwargs):
     from attendance.services import attendance_record_create
 
     if employee is None:
-        employee = employee_factory(first_name="Daily", emp_code="DA001")
+        employee = _default_factory_employee(first_name="Daily", emp_code="DA001")
 
     defaults = {
         "day": date(2026, 2, 1),

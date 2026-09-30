@@ -1,18 +1,21 @@
-from datetime import time as dt_time
-
 from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import inlineformset_factory
 
 from common.forms import apply_form_field_ui
 from employees.models import Department, Employee
-from schedule.models import Schedule, Timetable, TimetableBreak
+from schedule.models import (
+    BREAK_OUTSIDE_WORK_ERROR,
+    Schedule,
+    Timetable,
+    TimetableBreak,
+    default_day_change_time,
+)
 from schedule.services import (
     ASSIGNMENT_MODE_ALL_EXCEPT,
     ASSIGNMENT_MODE_DEPARTMENT,
     ASSIGNMENT_MODE_INDIVIDUAL,
     ASSIGNMENT_MODES,
-    BREAK_OUTSIDE_WORK_ERROR,
     resolve_assignment_employees,
     validate_break_within_timetable,
 )
@@ -61,22 +64,12 @@ class TimetableForm(forms.ModelForm):
         return self.cleaned_data.get("grace_period_minutes") or 0
 
     def clean_day_change_time(self):
-        return self.cleaned_data.get("day_change_time") or dt_time(8, 0)
-
-    def clean(self):
-        cleaned_data = super().clean()
-        # Check-in/check-out ordering is enforced by Timetable.clean().
-        timetable_type = cleaned_data.get("type")
-        work_minutes = cleaned_data.get("work_minutes")
-        if (
-            timetable_type == Timetable.Type.FLEXIBLE
-            and work_minutes in (None, "")
-        ):
-            self.add_error(
-                "work_minutes",
-                "Required working minutes must be set for flexible timetables.",
-            )
-        return cleaned_data
+        value = self.cleaned_data.get("day_change_time")
+        if value is not None:
+            return value
+        return default_day_change_time(
+            check_out_cross_days=self.cleaned_data.get("check_out_cross_days") or 0
+        )
 
 
 class TimetableBreakForm(forms.ModelForm):

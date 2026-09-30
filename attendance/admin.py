@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.core.exceptions import PermissionDenied
 
 from attendance.models import Attendance, AttendanceActivity
 
@@ -44,3 +45,15 @@ class AttendanceAdmin(admin.ModelAdmin):
     autocomplete_fields = ("employee", "shift")
     list_select_related = ("employee", "shift")
     date_hierarchy = "day"
+
+    def has_delete_permission(self, request, obj=None):
+        if obj is not None and obj.is_calculated:
+            return False
+        return super().has_delete_permission(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        if queryset.filter(is_calculated=True).exists():
+            raise PermissionDenied(
+                "Calculated attendance rows cannot be deleted in bulk."
+            )
+        super().delete_queryset(request, queryset)

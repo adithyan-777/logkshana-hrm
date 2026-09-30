@@ -18,6 +18,18 @@ BREAK_OUTSIDE_WORK_ERROR = (
 )
 
 
+def default_day_change_time(*, check_out_cross_days: int = 0) -> dt_time:
+    """Boundary below which a punch belongs to the previous attendance day.
+
+    A same-day shift starts and ends on one date, so midnight is the only
+    sensible boundary: any earlier check-in simply stays on its own day.
+    An overnight shift (check-out past midnight) instead needs a morning
+    boundary, otherwise the early-morning checkout would be attributed to
+    the day the shift ended rather than the one it started on.
+    """
+    return dt_time(8, 0) if check_out_cross_days else dt_time(0, 0)
+
+
 def validate_timetable_times(
     *,
     check_in,
@@ -118,7 +130,7 @@ class Timetable(BaseModel):
     # Punches before this time belong to the previous attendance day
     # (overnight checkout attribution).
     day_change_time = models.TimeField(
-        default=dt_time(8, 0),
+        default=dt_time(0, 0),
         help_text="Punches before this time may belong to the previous attendance day.",
     )
 
@@ -149,6 +161,14 @@ class Timetable(BaseModel):
             check_out=self.check_out,
             check_out_cross_days=self.check_out_cross_days,
         )
+        if self.type == self.Type.FLEXIBLE and self.work_minutes in (None, ""):
+            raise ValidationError(
+                {
+                    "work_minutes": (
+                        "Required working minutes must be set for flexible timetables."
+                    )
+                }
+            )
         # Punches before day_change_time attribute to the previous day,
         # so a check-in punch earlier than it would land on the wrong day.
         if (

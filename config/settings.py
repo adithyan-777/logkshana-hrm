@@ -116,6 +116,10 @@ AUTHENTICATION_BACKENDS = [
 
 BASE_DOMAIN = os.getenv("BASE_DOMAIN")
 
+# Rows shown per page on every paginated list view. Override in .env to change
+# table density without touching code; tests read this back from settings.
+DEFAULT_PAGE_SIZE = int(os.getenv("DEFAULT_PAGE_SIZE", "25"))
+
 # Custom user model (shared table in the public schema).
 AUTH_USER_MODEL = "users.User"
 

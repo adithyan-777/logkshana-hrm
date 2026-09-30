@@ -7,6 +7,7 @@ from schedule.models import (
     Schedule,
     Timetable,
     TimetableBreak,
+    default_day_change_time,
     validate_break_within_timetable,
     validate_timetable_times,
 )
@@ -49,9 +50,14 @@ def timetable_create(
         count_break_time_as_work_time=count_break_time_as_work_time,
         multiple_in_out=multiple_in_out,
         is_active=is_active,
+        day_change_time=(
+            day_change_time
+            if day_change_time is not None
+            else default_day_change_time(
+                check_out_cross_days=check_out_cross_days
+            )
+        ),
     )
-    if day_change_time is not None:
-        timetable.day_change_time = day_change_time
     timetable.full_clean()
     timetable.save()
     return timetable
@@ -81,8 +87,11 @@ def timetable_update(
     timetable.check_in = check_in
     timetable.check_out = check_out
     timetable.check_out_cross_days = check_out_cross_days
-    if day_change_time is not None:
-        timetable.day_change_time = day_change_time
+    timetable.day_change_time = (
+        day_change_time
+        if day_change_time is not None
+        else default_day_change_time(check_out_cross_days=check_out_cross_days)
+    )
     timetable.work_minutes = work_minutes
     timetable.grace_period_check_out = grace_period_check_out
     timetable.grace_period_minutes = grace_period_minutes

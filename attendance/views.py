@@ -22,7 +22,11 @@ from attendance.services import (
     attendance_record_delete,
     attendance_record_update,
 )
-from common.http import is_htmx_partial, redirect_to_list_drawer
+from common.http import (
+    delete_blocked_response,
+    is_htmx_partial,
+    redirect_to_list_drawer,
+)
 from common.pagination import list_pagination_context
 from employees.decorators import require_permission
 from employees.permission_catalog import PermissionCodename
@@ -355,7 +359,10 @@ def daily_attendance_edit(
 @require_http_methods(["DELETE"])
 def daily_delete_view(request: HttpRequest, daily_id: int) -> HttpResponse:
     daily_attendance = get_object_or_404(Attendance, pk=daily_id)
-    attendance_record_delete(attendance=daily_attendance)
+    try:
+        attendance_record_delete(attendance=daily_attendance)
+    except DjangoValidationError as exc:
+        return delete_blocked_response("; ".join(exc.messages))
     response = HttpResponse("")
     response["HX-Trigger"] = "dailyDeleted"
     return response

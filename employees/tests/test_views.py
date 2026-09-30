@@ -3,7 +3,11 @@ from uuid import uuid4
 from django.urls import reverse
 from django_tenants.test.client import TenantClient
 
-from common.tests.base import BaseTenantTestCase
+from common.tests.base import (
+    BaseTenantTestCase,
+    pagination_bounds,
+    pagination_last_page,
+)
 from common.tests.factories import (
     department_factory,
     employee_factory,
@@ -176,11 +180,19 @@ class EmployeeViewTests(BaseTenantTestCase):
             HTTP_HX_REQUEST="true",
         )
 
-        self.assertContains(page_one, "Showing 1–25 of 26")
-        self.assertContains(page_two, "Showing 26–26 of 26")
+        one_start, one_end = pagination_bounds(26, 1)
+        two_start, two_end = pagination_bounds(26, 2)
+        thead = 1
+
+        self.assertContains(page_one, f"Showing {one_start}–{one_end} of 26")
+        self.assertContains(page_two, f"Showing {two_start}–{two_end} of 26")
         self.assertContains(htmx_page_one, 'class="pagination"')
-        self.assertEqual(page_one.content.count(b"<tr>"), 26)
-        self.assertEqual(page_two.content.count(b"<tr>"), 2)
+        self.assertEqual(
+            page_one.content.count(b"<tr>"), (one_end - one_start + 1) + thead
+        )
+        self.assertEqual(
+            page_two.content.count(b"<tr>"), (two_end - two_start + 1) + thead
+        )
 
     def test_list_shows_edit_link(self):
         employee = employee_factory(first_name="Editable", emp_code="E-EDT")
@@ -259,8 +271,11 @@ class DepartmentViewTests(BaseTenantTestCase):
         page_one = self.client.get(reverse("department_list"))
         page_two = self.client.get(reverse("department_list"), {"page": 2})
 
-        self.assertContains(page_one, "Showing 1–25 of 26")
-        self.assertContains(page_two, "Showing 26–26 of 26")
+        one_start, one_end = pagination_bounds(26, 1)
+        two_start, two_end = pagination_bounds(26, 2)
+
+        self.assertContains(page_one, f"Showing {one_start}–{one_end} of 26")
+        self.assertContains(page_two, f"Showing {two_start}–{two_end} of 26")
 
     def test_add_creates_department(self):
         response = self.client.post(
@@ -317,8 +332,11 @@ class PositionViewTests(BaseTenantTestCase):
         page_one = self.client.get(reverse("position_list"))
         page_two = self.client.get(reverse("position_list"), {"page": 2})
 
-        self.assertContains(page_one, "Showing 1–25 of 26")
-        self.assertContains(page_two, "Showing 26–26 of 26")
+        one_start, one_end = pagination_bounds(26, 1)
+        two_start, two_end = pagination_bounds(26, 2)
+
+        self.assertContains(page_one, f"Showing {one_start}–{one_end} of 26")
+        self.assertContains(page_two, f"Showing {two_start}–{two_end} of 26")
 
     def test_add_creates_position(self):
         response = self.client.post(
@@ -368,8 +386,11 @@ class RoleViewTests(BaseTenantTestCase):
         page_one = self.client.get(reverse("role_list"))
         page_two = self.client.get(reverse("role_list"), {"page": 2})
 
-        self.assertContains(page_one, "Showing 1–25 of 27")
-        self.assertContains(page_two, "Showing 26–27 of 27")
+        one_start, one_end = pagination_bounds(27, 1)
+        two_start, two_end = pagination_bounds(27, 2)
+
+        self.assertContains(page_one, f"Showing {one_start}–{one_end} of 27")
+        self.assertContains(page_two, f"Showing {two_start}–{two_end} of 27")
 
     def test_add_creates_role(self):
         response = self.client.post(
@@ -450,14 +471,15 @@ class PermissionViewTests(BaseTenantTestCase):
                 codename=f"perm_{index:02d}", name=f"Permission {index:02d}"
             )
         total = existing + 26
-        last_page = (total // 25) + (1 if total % 25 else 0)
-        last_start = (last_page - 1) * 25 + 1
+        last_page = pagination_last_page(total)
+        one_start, one_end = pagination_bounds(total, 1)
+        last_start, last_end = pagination_bounds(total, last_page)
 
         page_one = self.client.get(reverse("permission_list"))
         last = self.client.get(reverse("permission_list"), {"page": last_page})
 
-        self.assertContains(page_one, f"Showing 1–25 of {total}")
-        self.assertContains(last, f"Showing {last_start}–{total} of {total}")
+        self.assertContains(page_one, f"Showing {one_start}–{one_end} of {total}")
+        self.assertContains(last, f"Showing {last_start}–{last_end} of {total}")
 
     def test_add_creates_permission(self):
         response = self.client.post(

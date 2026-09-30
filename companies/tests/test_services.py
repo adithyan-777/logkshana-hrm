@@ -13,6 +13,7 @@ from companies.services import (
     companies_ensure_primary_branches,
     company_primary_branch_get_or_create,
 )
+from employees.models import Employee
 
 
 class BranchCreateTests(BaseTenantTestCase):
@@ -178,19 +179,17 @@ class AttendanceLogCreateTests(BaseTenantTestCase):
         self.assertIn("employee_id", ctx.exception.message_dict)
         self.assertEqual(AttendanceActivity.objects.count(), 0)
 
-    def test_rejects_duplicate_emp_code(self):
+    def test_duplicate_emp_code_cannot_exist(self):
         device_factory(serial_number="ZK-001", company=self.tenant)
         employee_factory(first_name="One", last_name="Dup", emp_code="DUP")
-        employee_factory(first_name="Two", last_name="Dup", emp_code="DUP")
 
         with self.assertRaises(ValidationError) as ctx:
-            attendance_log_create(
-                serial_number="ZK-001",
-                employee_id="DUP",
-                timestamp=timezone.now(),
-            )
+            employee_factory(first_name="Two", last_name="Dup", emp_code="DUP")
 
-        self.assertIn("employee_id", ctx.exception.message_dict)
+        # Uniqueness is a DB constraint now, so the push path can only
+        # ever resolve a single employee for a code.
+        self.assertIn("emp_code", ctx.exception.message_dict)
+        self.assertEqual(Employee.objects.filter(emp_code="DUP").count(), 1)
         self.assertEqual(AttendanceActivity.objects.count(), 0)
 
     def test_replay_returns_existing_punch(self):

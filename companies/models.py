@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django_tenants.models import DomainMixin, TenantMixin
 
@@ -43,7 +44,7 @@ class Company(TenantMixin):
     def remove_user(self, user) -> None:
         """Detach a user from this company (owner cannot be removed)."""
         if self.owner_id is not None and user.pk == self.owner_id:
-            raise ValueError("Cannot remove the company owner.")
+            raise ValidationError({"owner": "Cannot remove the company owner."})
         self.members.remove(user)
 
 
@@ -87,7 +88,7 @@ class DeviceType(BaseModel):
         ordering = ["-id"]
 
     def __str__(self):
-        return f"{self.brand_name} - {self.model_name}"
+        return f"{self.brand.name} - {self.model_name}"
 
 
 class Device(BaseModel):

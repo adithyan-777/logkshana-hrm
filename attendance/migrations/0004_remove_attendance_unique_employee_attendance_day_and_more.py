@@ -60,17 +60,22 @@ def _backfill(apps, schema_editor):
                 break_windows=breaks_for(row.shift_id) if shift else [],
             )
         )
-        Attendance.objects.filter(pk=row.pk).update(
-            check_in=summary.first_in,
-            check_out=summary.last_out,
-        )
-
-    # Durations become NOT NULL; coerce what was NULL before the
-    # AlterField operations (don't rely on backend-specific backfill).
-    for field in ("total_work_time", "over_time", "late_time", "early_leave_time"):
-        Attendance.objects.filter(**{f"{field}__isnull": True}).update(
-            **{field: datetime.timedelta(0)}
-        )
+        # Durations become NOT NULL; coerce what was NULL before the
+        # AlterField operations (don't rely on backend-specific backfill).
+        #
+        # Everything must go through this single statement: PostgreSQL
+        # leaves a pending trigger event when a row is updated twice in
+        # one transaction, which makes the AlterField ALTERs below fail
+        # with "cannot ALTER TABLE ... because it has pending trigger
+        # events".
+        payload = {
+            "check_in": summary.first_in,
+            "check_out": summary.last_out,
+        }
+        for field in ("total_work_time", "over_time", "late_time", "early_leave_time"):
+            if getattr(row, field) is None:
+                payload[field] = datetime.timedelta(0)
+        Attendance.objects.filter(pk=row.pk).update(**payload)
 
 
 class Migration(migrations.Migration):

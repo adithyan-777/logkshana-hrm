@@ -1,5 +1,6 @@
 from datetime import date
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django_tenants.test.cases import FastTenantTestCase
 from django_tenants.test.client import TenantClient
@@ -10,6 +11,27 @@ from companies.models import Company
 User = get_user_model()
 
 TEST_PASSWORD = "password"
+
+
+def pagination_last_page(total: int) -> int:
+    """1-based index of the final page for a ``total``-row list."""
+    size = settings.DEFAULT_PAGE_SIZE
+    return max((total - 1) // size + 1, 1)
+
+
+def pagination_bounds(total: int, page: int = 1) -> tuple[int, int]:
+    """First and last row index shown on ``page`` of a ``total``-row list.
+
+    Mirrors ``common.pagination.paginate_queryset`` -- including the clamp of
+    an out-of-range page onto the last page -- so list tests derive their
+    expectations from ``DEFAULT_PAGE_SIZE`` (settings/.env) instead of
+    hardcoding a page size.
+    """
+    size = settings.DEFAULT_PAGE_SIZE
+    last_page = max((total - 1) // size + 1, 1)
+    page = min(max(page, 1), last_page)
+    start = (page - 1) * size + 1
+    return start, min(page * size, total)
 
 
 def _ensure_public_tenant():

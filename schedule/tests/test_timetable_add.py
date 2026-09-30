@@ -52,8 +52,8 @@ class TimetableAddBrowserPostTests(BaseTenantTestCase):
         self.assertEqual(timetable.grace_period_minutes, 0)
         self.assertEqual(timetable.check_out_cross_days, 0)
         # day_change_time was omitted from the POST entirely: blank falls
-        # back to the model default rather than failing required.
-        self.assertEqual(timetable.day_change_time, time(8, 0))
+        # back to the boundary derived for a same-day shift (midnight).
+        self.assertEqual(timetable.day_change_time, time(0, 0))
         self.assertEqual(timetable.breaks.count(), 0)
 
     def test_day_change_saved_when_provided(self):

@@ -89,14 +89,17 @@ class EmployeeGetByEmpCodeTests(BaseTenantTestCase):
 
         self.assertIsNone(employee_get_by_emp_code(emp_code="E002"))
 
-    def test_raises_when_duplicate_active_codes(self):
+    def test_duplicate_active_codes_cannot_exist(self):
         employee_factory(first_name="One", last_name="Dup", emp_code="DUP")
-        employee_factory(first_name="Two", last_name="Dup", emp_code="DUP")
 
         with self.assertRaises(ValidationError) as ctx:
-            employee_get_by_emp_code(emp_code="DUP")
+            employee_factory(first_name="Two", last_name="Dup", emp_code="DUP")
 
-        self.assertIn("employee_id", ctx.exception.message_dict)
+        self.assertIn("emp_code", ctx.exception.message_dict)
+        # Uniqueness is now a DB constraint, so the selector can never
+        # see two active rows for one code.
+        self.assertEqual(Employee.objects.filter(emp_code="DUP").count(), 1)
+        self.assertIsNotNone(employee_get_by_emp_code(emp_code="DUP"))
 
 
 class DepartmentListTests(BaseTenantTestCase):

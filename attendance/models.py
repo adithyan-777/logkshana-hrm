@@ -201,7 +201,8 @@ class Attendance(BaseModel):
 
     @property
     def worked_hours(self) -> str:
-        return f"{round(self.worked_minutes / 60, 2):g}h"
+        hours, minutes = divmod(self.worked_minutes, 60)
+        return f"{hours}h {minutes:02d}m"
 
     @property
     def overtime_minutes(self) -> int:

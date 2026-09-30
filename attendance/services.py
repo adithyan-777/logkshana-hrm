@@ -190,7 +190,17 @@ def attendance_record_update(
 
 @transaction.atomic
 def attendance_record_delete(*, attendance: Attendance) -> Attendance:
-    """Deletes the attendance record."""
+    """Deletes a hand-made attendance record.
+
+    Calculated rows belong to the recalculation job: they are removed by
+    dropping the punches or the schedule, never by hand, otherwise the
+    next calculation silently recreates them.
+    """
+    if attendance.is_calculated:
+        raise ValidationError(
+            "Calculated attendance cannot be deleted; remove the punch or "
+            "the schedule entry instead."
+        )
     attendance.delete()
     return attendance
 
@@ -285,6 +295,13 @@ def device_attendance_pull(
             if log_id is None:
                 skipped += 1
                 continue
+            # Gateway payloads may stringify the id; the cursor handed back
+            # to the next fetch is an integer.
+            try:
+                log_id = int(log_id)
+            except (TypeError, ValueError):
+                skipped += 1
+                continue
 
             max_log_id = max(max_log_id, log_id)
             # Gateway sends ``user_id`` (device PIN); tolerate ``employee_id``.
@@ -311,6 +328,12 @@ def device_attendance_pull(
                 continue
 
             if employee is None:
+                # ``employee_get_by_emp_code`` only sees active records, so an
+                # existing-but-deactivated code would otherwise be treated as
+                # unknown and auto-created a second time.
+                if Employee.objects.filter(emp_code=emp_code).exists():
+                    skipped += 1
+                    continue
                 if not auto_create_employee:
                     skipped += 1
                     continue

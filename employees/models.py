@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from common.models import BaseModel
@@ -58,7 +59,7 @@ class Role(BaseModel):
     name = models.CharField(max_length=50)
     is_system = models.BooleanField(
         default=False
-    )  # protects built-in roles from deletion via admin
+    )  # protects built-in roles from deletion
     permissions = models.ManyToManyField(Permission, related_name="roles", blank=True)
 
     class Meta:
@@ -71,6 +72,13 @@ class Role(BaseModel):
 
     def __str__(self):
         return self.name
+
+    def delete(self, *args, **kwargs):
+        if self.is_system:
+            raise ValidationError(
+                {"is_system": "Built-in roles cannot be deleted."}
+            )
+        return super().delete(*args, **kwargs)
 
 
 class Area(BaseModel):
@@ -106,7 +114,7 @@ class Employee(BaseModel):
         blank=True,
         related_name="employee_profile",
     )
-    emp_code = models.CharField(max_length=50, db_index=True, blank=True, null=True)
+    emp_code = models.CharField(max_length=50, blank=True, null=True, unique=True)
 
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100, blank=True)
@@ -148,8 +156,15 @@ class Employee(BaseModel):
     is_active = models.BooleanField(default=True)
 
 
+    def clean(self):
+        super().clean()
+        # Blank/whitespace-only codes mean "no code" and must not create
+        # distinct rows that only differ by padding.
+        self.emp_code = (self.emp_code or "").strip() or None
+
     def __str__(self):
-        return f"{self.emp_code} - {self.first_name} {self.last_name}"
+        parts = [part for part in (self.emp_code, self.full_name) if part]
+        return " - ".join(parts) or "Employee"
 
     @property
     def full_name(self):
@@ -162,8 +177,9 @@ class Employee(BaseModel):
         last = (self.last_name or "").strip()
         if first and last:
             return f"{first[0]}{last[0]}".upper()
-        if first:
-            return (first[:2] if len(first) > 1 else first[0]).upper()
+        if first or last:
+            word = first or last
+            return (word[:2] if len(word) > 1 else word[0]).upper()
         for fallback in (self.emp_code or "", self.email or ""):
             cleaned = "".join(ch for ch in fallback if ch.isalnum())
             if cleaned:

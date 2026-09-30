@@ -5,7 +5,7 @@ from django.utils import timezone
 from django_tenants.test.client import TenantClient
 
 from attendance.models import Attendance, AttendanceActivity
-from common.tests.base import TEST_PASSWORD, BaseTenantTestCase
+from common.tests.base import TEST_PASSWORD, BaseTenantTestCase, pagination_bounds
 from common.tests.factories import (
     activity_factory,
     attendance_record_factory,
@@ -64,11 +64,19 @@ class AttendanceActivityViewTests(BaseTenantTestCase):
             HTTP_HX_REQUEST="true",
         )
 
-        self.assertContains(page_one, "Showing 1–25 of 26")
-        self.assertContains(page_two, "Showing 26–26 of 26")
+        one_start, one_end = pagination_bounds(26, 1)
+        two_start, two_end = pagination_bounds(26, 2)
+        thead = 1
+
+        self.assertContains(page_one, f"Showing {one_start}–{one_end} of 26")
+        self.assertContains(page_two, f"Showing {two_start}–{two_end} of 26")
         self.assertContains(htmx_page_one, 'class="pagination"')
-        self.assertEqual(page_one.content.count(b"<tr>"), 26)
-        self.assertEqual(page_two.content.count(b"<tr>"), 2)
+        self.assertEqual(
+            page_one.content.count(b"<tr>"), (one_end - one_start + 1) + thead
+        )
+        self.assertEqual(
+            page_two.content.count(b"<tr>"), (two_end - two_start + 1) + thead
+        )
 
     def test_add_creates_activity(self):
         employee = employee_factory(first_name="View", emp_code="AT300")

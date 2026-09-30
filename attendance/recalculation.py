@@ -309,18 +309,13 @@ def _persist(*, result: DayResult) -> Attendance:
 
 
 def _set_row_punches(*, row: Attendance, punches) -> None:
-    """Make ``row``'s linked punches exactly ``punches``.
-
-    Uses ``all_objects`` so soft-deleted punches are unlinked too —
-    the default manager hides them, which would leave a stale
-    ``attendance_id`` behind on a deleted row.
-    """
+    """Make ``row``'s linked punches exactly ``punches``."""
     punch_ids = [punch.pk for punch in punches]
-    AttendanceActivity.all_objects.filter(attendance=row).exclude(
+    AttendanceActivity.objects.filter(attendance=row).exclude(
         pk__in=punch_ids
     ).update(attendance=None)
     if punch_ids:
-        AttendanceActivity.all_objects.filter(pk__in=punch_ids).update(
+        AttendanceActivity.objects.filter(pk__in=punch_ids).update(
             attendance=row
         )
 

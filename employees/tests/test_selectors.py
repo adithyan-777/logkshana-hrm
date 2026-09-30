@@ -65,12 +65,12 @@ class EmployeeListTests(BaseTenantTestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].email, "unique@example.com")
 
-    def test_excludes_soft_deleted_employees(self):
+    def test_excludes_deleted_employees(self):
         employee = employee_factory(first_name="Deleted", emp_code="E120")
         employee.delete()
 
         self.assertEqual(employee_list().count(), 0)
-        self.assertEqual(Employee.all_objects.count(), 1)
+        self.assertEqual(Employee.objects.count(), 0)
 
 
 class EmployeeGetByEmpCodeTests(BaseTenantTestCase):
@@ -126,12 +126,12 @@ class DepartmentListTests(BaseTenantTestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].name, "Sales")
 
-    def test_excludes_soft_deleted_departments(self):
+    def test_excludes_deleted_departments(self):
         department = department_factory(name="Deleted", code="DEL")
         department.delete()
 
         self.assertEqual(department_list().count(), 0)
-        self.assertEqual(Department.all_objects.count(), 1)
+        self.assertEqual(Department.objects.count(), 0)
 
 
 class PositionListTests(BaseTenantTestCase):
@@ -161,12 +161,12 @@ class PositionListTests(BaseTenantTestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].title, "Analyst")
 
-    def test_excludes_soft_deleted_positions(self):
+    def test_excludes_deleted_positions(self):
         position = position_factory(title="Deleted", code="DEL")
         position.delete()
 
         self.assertEqual(position_list().count(), 0)
-        self.assertEqual(Position.all_objects.count(), 1)
+        self.assertEqual(Position.objects.count(), 0)
 
 
 class RoleListTests(BaseTenantTestCase):
@@ -188,12 +188,12 @@ class RoleListTests(BaseTenantTestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].name, "Manager")
 
-    def test_excludes_soft_deleted_roles(self):
+    def test_excludes_deleted_roles(self):
         role = role_factory(name="Deleted")
         role.delete()
 
         self.assertFalse(role_list().filter(pk=role.pk).exists())
-        self.assertTrue(Role.all_objects.filter(pk=role.pk).exists())
+        self.assertFalse(Role.objects.filter(pk=role.pk).exists())
 
 
 class PermissionListTests(BaseTenantTestCase):
@@ -243,12 +243,12 @@ class PermissionListTests(BaseTenantTestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].codename, "view_reports")
 
-    def test_excludes_soft_deleted_permissions(self):
+    def test_excludes_deleted_permissions(self):
         permission = permission_factory(codename="deleted_perm", name="Deleted")
         permission.delete()
 
         self.assertEqual(permission_list().filter(pk=permission.pk).exists(), False)
-        self.assertTrue(Permission.all_objects.filter(pk=permission.pk).exists())
+        self.assertFalse(Permission.objects.filter(pk=permission.pk).exists())
 
 
 class UserHasPermissionTests(BaseTenantTestCase):

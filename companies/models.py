@@ -1,6 +1,5 @@
 from django.conf import settings
 from django.db import models
-
 from django_tenants.models import DomainMixin, TenantMixin
 
 from common.models import BaseModel
@@ -92,7 +91,7 @@ class DeviceType(BaseModel):
 
 
 class Device(BaseModel):
-    serial_number = models.CharField(max_length=100, unique=True)
+    serial_number = models.CharField(max_length=100)
     name = models.CharField(max_length=100, blank=True, null=True)
     company = models.ForeignKey(
         Company, on_delete=models.CASCADE, related_name="devices"
@@ -112,6 +111,12 @@ class Device(BaseModel):
 
     class Meta:
         ordering = ["-id"]
+        constraints = [
+            models.UniqueConstraint(
+                "serial_number",
+                name="uniq_device_serial_number_alive",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.serial_number} - {self.company.name} - {self.branch.name}"

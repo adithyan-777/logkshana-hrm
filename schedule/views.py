@@ -4,8 +4,14 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
-from common.http import is_htmx_partial, redirect_to_list_drawer, set_hx_trigger
+from common.http import (
+    delete_blocked_response,
+    is_htmx_partial,
+    redirect_to_list_drawer,
+    set_hx_trigger,
+)
 from common.pagination import list_pagination_context
+from django.db.models import ProtectedError
 from employees.decorators import require_permission
 from employees.permission_catalog import PermissionCodename
 from employees.selectors import user_has_permission
@@ -188,7 +194,12 @@ def timetable_edit(request: HttpRequest, timetable_id: int) -> HttpResponse:
 @require_http_methods(["DELETE"])
 def timetable_delete_view(request: HttpRequest, timetable_id: int) -> HttpResponse:
     timetable = get_object_or_404(Timetable, pk=timetable_id)
-    timetable_delete(timetable=timetable)
+    try:
+        timetable_delete(timetable=timetable)
+    except ProtectedError:
+        return delete_blocked_response(
+            "Cannot delete timetable: its schedules still have assignments."
+        )
     response = HttpResponse("")
     response["HX-Trigger"] = "timetableDeleted"
     return response
@@ -292,7 +303,12 @@ def schedule_edit(request: HttpRequest, schedule_id: int) -> HttpResponse:
 @require_http_methods(["DELETE"])
 def schedule_delete_view(request: HttpRequest, schedule_id: int) -> HttpResponse:
     schedule = get_object_or_404(Schedule, pk=schedule_id)
-    schedule_delete(schedule=schedule)
+    try:
+        schedule_delete(schedule=schedule)
+    except ProtectedError:
+        return delete_blocked_response(
+            "Cannot delete schedule: remove its assignments and overrides first."
+        )
     response = HttpResponse("")
     response["HX-Trigger"] = "scheduleDeleted"
     return response

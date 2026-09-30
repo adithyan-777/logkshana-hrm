@@ -234,7 +234,7 @@ def employee_update(
 
 @transaction.atomic
 def employee_delete(*, employee: Employee) -> Employee:
-    """Soft-deletes the employee and deactivates their login account."""
+    """Deletes the employee and deactivates their login account."""
     user = employee.user
     employee.delete()
     if user is not None and user.is_active:
@@ -262,7 +262,7 @@ def department_update(
 
 @transaction.atomic
 def department_delete(*, department: Department) -> Department:
-    """Soft-deletes the department (recoverable via all_objects)."""
+    """Deletes the department."""
     department.delete()
     return department
 
@@ -285,7 +285,7 @@ def position_update(
 
 @transaction.atomic
 def position_delete(*, position: Position) -> Position:
-    """Soft-deletes the position (recoverable via all_objects)."""
+    """Deletes the position."""
     position.delete()
     return position
 
@@ -397,12 +397,11 @@ def permission_catalog_ensure() -> list[Permission]:
 
     permissions: list[Permission] = []
     for entry in permission_catalog_entries():
-        permission, _created = Permission.all_objects.update_or_create(
+        permission, _created = Permission.objects.update_or_create(
             codename=entry["codename"],
             defaults={
                 "name": entry["name"],
                 "description": entry["description"],
-                "deleted_at": None,
             },
         )
         permissions.append(permission)
@@ -418,9 +417,9 @@ def employee_role_ensure() -> Role:
 
     permission_catalog_ensure()
     permission = Permission.objects.get(codename=PermissionCodename.ATTENDANCE_OWN_VIEW)
-    role, _created = Role.all_objects.update_or_create(
+    role, _created = Role.objects.update_or_create(
         name=EMPLOYEE_ROLE_NAME,
-        defaults={"is_system": True, "deleted_at": None},
+        defaults={"is_system": True},
     )
     role.permissions.set([permission])
     return role

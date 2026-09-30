@@ -1,3 +1,5 @@
+from datetime import time as dt_time
+
 from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import inlineformset_factory
@@ -11,10 +13,8 @@ from schedule.services import (
     ASSIGNMENT_MODE_INDIVIDUAL,
     ASSIGNMENT_MODES,
     BREAK_OUTSIDE_WORK_ERROR,
-    TIMETABLE_TIMES_ORDER_ERROR,
     resolve_assignment_employees,
     validate_break_within_timetable,
-    validate_timetable_times,
 )
 
 TIME_INPUT = forms.TimeInput(attrs={"type": "time"})
@@ -30,9 +30,8 @@ class TimetableForm(forms.ModelForm):
             "check_in",
             "check_out",
             "check_out_cross_days",
+            "day_change_time",
             "work_minutes",
-            "check_in_start",
-            "check_in_end",
             "grace_period_check_out",
             "grace_period_minutes",
             "count_break_time_as_work_time",
@@ -42,8 +41,7 @@ class TimetableForm(forms.ModelForm):
         widgets = {
             "check_in": TIME_INPUT,
             "check_out": TIME_INPUT,
-            "check_in_start": TIME_INPUT,
-            "check_in_end": TIME_INPUT,
+            "day_change_time": TIME_INPUT,
         }
 
     def __init__(self, *args, **kwargs):
@@ -52,6 +50,8 @@ class TimetableForm(forms.ModelForm):
         # defaults (0) apply instead of failing required validation.
         self.fields["check_out_cross_days"].required = False
         self.fields["grace_period_minutes"].required = False
+        # Same for day change: blank falls back to the model default.
+        self.fields["day_change_time"].required = False
         apply_form_field_ui(self)
 
     def clean_check_out_cross_days(self):
@@ -60,17 +60,12 @@ class TimetableForm(forms.ModelForm):
     def clean_grace_period_minutes(self):
         return self.cleaned_data.get("grace_period_minutes") or 0
 
+    def clean_day_change_time(self):
+        return self.cleaned_data.get("day_change_time") or dt_time(8, 0)
+
     def clean(self):
         cleaned_data = super().clean()
-        try:
-            validate_timetable_times(
-                check_in=cleaned_data.get("check_in"),
-                check_out=cleaned_data.get("check_out"),
-                check_out_cross_days=cleaned_data.get("check_out_cross_days"),
-            )
-        except ValidationError:
-            self.add_error("check_out_cross_days", TIMETABLE_TIMES_ORDER_ERROR)
-
+        # Check-in/check-out ordering is enforced by Timetable.clean().
         timetable_type = cleaned_data.get("type")
         work_minutes = cleaned_data.get("work_minutes")
         if (
@@ -93,8 +88,6 @@ class TimetableBreakForm(forms.ModelForm):
             "break_time_minutes",
             "start_time",
             "end_time",
-            "grace_period_check_out",
-            "grace_period_minutes",
         ]
         widgets = {
             "start_time": TIME_INPUT,
@@ -103,7 +96,6 @@ class TimetableBreakForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["grace_period_minutes"].required = False
         apply_form_field_ui(self)
 
     def has_changed(self) -> bool:
@@ -115,28 +107,6 @@ class TimetableBreakForm(forms.ModelForm):
         if not any(data.get(self.add_prefix(name)) for name in meaningful):
             return False
         return super().has_changed()
-
-    def clean_grace_period_minutes(self):
-        return self.cleaned_data.get("grace_period_minutes") or 0
-
-    def clean(self):
-        cleaned_data = super().clean()
-        start_time = cleaned_data.get("start_time")
-        end_time = cleaned_data.get("end_time")
-        if start_time and end_time and end_time <= start_time:
-            self.add_error("end_time", "End time must be after start time.")
-
-        break_time_type = cleaned_data.get("break_time_type")
-        break_time_minutes = cleaned_data.get("break_time_minutes")
-        if (
-            break_time_type == TimetableBreak.BreakType.FLEXIBLE
-            and break_time_minutes in (None, "")
-        ):
-            self.add_error(
-                "break_time_minutes",
-                "Break minutes are required for flexible breaks.",
-            )
-        return cleaned_data
 
 
 class BaseTimetableBreakFormSet(forms.BaseInlineFormSet):
@@ -208,8 +178,6 @@ TimetableBreakFormSet = inlineformset_factory(
         "break_time_minutes",
         "start_time",
         "end_time",
-        "grace_period_check_out",
-        "grace_period_minutes",
     ],
     extra=1,
     can_delete=True,
@@ -334,24 +302,21 @@ class ScheduleForm(forms.ModelForm):
         fields = [
             "name",
             "timetable",
+            "start_date",
+            "end_date",
             "repeat",
             "repeat_every",
             "repeat_unit",
         ]
+        widgets = {
+            "start_date": forms.DateInput(attrs={"type": "date"}),
+            "end_date": forms.DateInput(attrs={"type": "date"}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["timetable"].queryset = Timetable.objects.filter(
             is_active=True
         ).order_by("name")
+        self.fields["end_date"].label = "End date (blank = open-ended)"
         apply_form_field_ui(self)
-
-    def clean(self):
-        cleaned_data = super().clean()
-        repeat = cleaned_data.get("repeat")
-        repeat_every = cleaned_data.get("repeat_every")
-        if repeat and repeat_every in (None, ""):
-            self.add_error("repeat_every", "Repeat interval is required.")
-        elif repeat and repeat_every is not None and repeat_every < 1:
-            self.add_error("repeat_every", "Repeat interval must be at least 1.")
-        return cleaned_data

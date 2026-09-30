@@ -35,6 +35,19 @@ def set_hx_trigger(
     return response
 
 
+def delete_blocked_response(message: str) -> HttpResponse:
+    """Refused delete (a protected FK still references the row).
+
+    Returns 200 so htmx processes the HX-Trigger and shows the error
+    toast; no list-refresh event is emitted because nothing changed.
+    """
+    response = HttpResponse("")
+    response["HX-Trigger"] = json.dumps(
+        {"showToast": {"message": message, "type": "error"}}
+    )
+    return response
+
+
 def redirect_to_list_drawer(
     *,
     list_url_name: str,

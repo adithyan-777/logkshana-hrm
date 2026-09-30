@@ -133,7 +133,7 @@ def activity_update(
 def activity_delete(
     *, activity: AttendanceActivity, recalculate: bool = True
 ) -> AttendanceActivity:
-    """Soft-deletes the punch (recoverable via all_objects)."""
+    """Deletes the punch and recalculates the affected day."""
     employee = activity.employee
     punch_time = activity.punch_time
     activity.delete()
@@ -190,7 +190,7 @@ def attendance_record_update(
 
 @transaction.atomic
 def attendance_record_delete(*, attendance: Attendance) -> Attendance:
-    """Soft-deletes the record (recoverable via all_objects)."""
+    """Deletes the attendance record."""
     attendance.delete()
     return attendance
 

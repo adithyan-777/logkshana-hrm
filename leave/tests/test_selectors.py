@@ -33,12 +33,12 @@ class LeaveTypeListTests(BaseTenantTestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].code, "SICK")
 
-    def test_excludes_soft_deleted_leave_types(self):
+    def test_excludes_deleted_leave_types(self):
         leave_type = leave_type_factory(name="Deleted", code="DEL")
         leave_type.delete()
 
         self.assertEqual(leave_type_list().count(), 0)
-        self.assertEqual(LeaveType.all_objects.count(), 1)
+        self.assertEqual(LeaveType.objects.count(), 0)
 
 
 class LeavePolicyListTests(BaseTenantTestCase):
@@ -89,9 +89,9 @@ class HolidayListTests(BaseTenantTestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].name, "Eid Al Fitr")
 
-    def test_excludes_soft_deleted_holidays(self):
+    def test_excludes_deleted_holidays(self):
         holiday = holiday_factory(name="Removed", date="2026-2-1")
         holiday.delete()
 
         self.assertEqual(holiday_list().count(), 0)
-        self.assertEqual(Holiday.all_objects.count(), 1)
+        self.assertEqual(Holiday.objects.count(), 0)

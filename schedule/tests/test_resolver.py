@@ -162,6 +162,27 @@ class ResolveScheduleTests(BaseTenantTestCase):
         self.assertFalse(resolved.is_day_off)
         self.assertIsNone(resolved.timetable)
 
+    def test_deleted_day_off_override_is_ignored(self):
+        schedule = schedule_factory(name="Weekly Mornings", timetable=self.morning)
+        _assign(
+            schedule=schedule,
+            employee=self.employee,
+            start=date(2026, 1, 1),
+            end=date(2026, 12, 31),
+        )
+        override = EmployeeScheduleOverride.objects.create(
+            employee=self.employee, date=self.monday, is_day_off=True
+        )
+
+        override.delete()
+
+        resolved = resolve_schedule_for_employee_on_date(
+            employee=self.employee, day=self.monday
+        )
+
+        self.assertFalse(resolved.is_day_off)
+        self.assertEqual(resolved.timetable, self.morning)
+
     def test_biweekly_repeat_skips_alternate_week(self):
         schedule = schedule_factory(
             name="Biweekly",
@@ -187,6 +208,64 @@ class ResolveScheduleTests(BaseTenantTestCase):
 
         self.assertEqual(on_week.timetable, self.morning)
         self.assertIsNone(off_week.timetable)
+
+    def test_falls_back_past_assignment_with_dead_timetable(self):
+        dead = timetable_factory(
+            name="Doomed", code="DMD-RS", check_in=time(9, 0), check_out=time(18, 0)
+        )
+        top = schedule_factory(name="Top Priority", timetable=dead)
+        _assign(
+            schedule=top,
+            employee=self.employee,
+            start=date(2026, 1, 1),
+            end=date(2026, 12, 31),
+            priority=10,
+        )
+        fallback = schedule_factory(name="Fallback", timetable=self.morning)
+        _assign(
+            schedule=fallback,
+            employee=self.employee,
+            start=date(2026, 1, 1),
+            end=date(2026, 12, 31),
+            priority=0,
+        )
+
+        dead.is_active = False
+        dead.save(update_fields=["is_active"])
+
+        resolved = resolve_schedule_for_employee_on_date(
+            employee=self.employee, day=self.monday
+        )
+
+        self.assertEqual(resolved.schedule, fallback)
+        self.assertEqual(resolved.timetable, self.morning)
+
+    def test_falls_back_past_assignment_outside_its_schedule_window(self):
+        out_of_window = schedule_factory(name="Summer Only", timetable=self.night)
+        out_of_window.start_date = date(2026, 6, 1)
+        out_of_window.save(update_fields=["start_date"])
+        _assign(
+            schedule=out_of_window,
+            employee=self.employee,
+            start=date(2026, 1, 1),
+            end=date(2026, 12, 31),
+            priority=10,
+        )
+        fallback = schedule_factory(name="Year Round", timetable=self.morning)
+        _assign(
+            schedule=fallback,
+            employee=self.employee,
+            start=date(2026, 1, 1),
+            end=date(2026, 12, 31),
+            priority=0,
+        )
+
+        resolved = resolve_schedule_for_employee_on_date(
+            employee=self.employee, day=self.monday
+        )
+
+        self.assertEqual(resolved.schedule, fallback)
+        self.assertEqual(resolved.timetable, self.morning)
 
     def test_no_assignment_resolves_to_none(self):
         resolved = resolve_schedule_for_employee_on_date(

@@ -37,12 +37,12 @@ class AttendanceActivityListTests(BaseTenantTestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].external_id, "MINE-1")
 
-    def test_excludes_soft_deleted_activities(self):
+    def test_excludes_deleted_activities(self):
         activity = activity_factory(external_id="DEL-1")
         activity.delete()
 
         self.assertEqual(attendance_activity_list().count(), 0)
-        self.assertEqual(AttendanceActivity.all_objects.count(), 1)
+        self.assertEqual(AttendanceActivity.objects.count(), 0)
 
 
 class AttendanceListTests(BaseTenantTestCase):

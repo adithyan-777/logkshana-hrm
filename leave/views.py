@@ -1,10 +1,16 @@
 from django.contrib.auth.decorators import login_required
+from django.db.models import ProtectedError
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
-from common.http import is_htmx_partial, redirect_to_list_drawer, set_hx_trigger
+from common.http import (
+    delete_blocked_response,
+    is_htmx_partial,
+    redirect_to_list_drawer,
+    set_hx_trigger,
+)
 from common.pagination import list_pagination_context
 from employees.decorators import require_permission
 from employees.permission_catalog import PermissionCodename
@@ -210,7 +216,12 @@ def leave_type_edit(request: HttpRequest, leave_type_id: int) -> HttpResponse:
 @require_http_methods(["DELETE"])
 def leave_type_delete_view(request: HttpRequest, leave_type_id: int) -> HttpResponse:
     leave_type = get_object_or_404(LeaveType, pk=leave_type_id)
-    leave_type_delete(leave_type=leave_type)
+    try:
+        leave_type_delete(leave_type=leave_type)
+    except ProtectedError:
+        return delete_blocked_response(
+            "Cannot delete leave type: balances or requests use it."
+        )
     response = HttpResponse("")
     response["HX-Trigger"] = "leaveTypeDeleted"
     return response

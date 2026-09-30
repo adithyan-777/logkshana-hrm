@@ -249,12 +249,11 @@ class EmployeeCreateTests(BaseTenantTestCase):
 
 
 class EmployeeModelTests(BaseTenantTestCase):
-    def test_soft_delete_excludes_from_default_manager(self):
+    def test_delete_removes_employee(self):
         employee = employee_factory(first_name="Deleted", emp_code="E030")
         employee.delete()
 
         self.assertEqual(Employee.objects.count(), 0)
-        self.assertEqual(Employee.all_objects.count(), 1)
 
 
 class DepartmentCreateTests(BaseTenantTestCase):

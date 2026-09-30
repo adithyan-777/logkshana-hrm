@@ -57,7 +57,7 @@ class AttendanceActivityEditDeleteTests(
         self.assertEqual(punch.direction, AttendanceActivity.Direction.OUT)
         self.assertEqual(punch.external_id, "TX-ED-POST")
 
-    def test_delete_soft_deletes_and_triggers(self):
+    def test_delete_removes_and_triggers(self):
         punch = activity_factory(external_id="TX-ED-DEL")
 
         response = self.client.delete(reverse("transaction_delete", args=[punch.pk]))
@@ -65,7 +65,6 @@ class AttendanceActivityEditDeleteTests(
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get("HX-Trigger"), "transactionDeleted")
         self.assertFalse(AttendanceActivity.objects.filter(pk=punch.pk).exists())
-        self.assertTrue(AttendanceActivity.all_objects.filter(pk=punch.pk).exists())
 
     def test_delete_without_perm_forbidden(self):
         punch = activity_factory(external_id="TX-ED-403")
@@ -112,7 +111,7 @@ class AttendanceRecordEditDeleteTests(AttendanceEditDeleteTestMixin, BaseTenantT
         record.refresh_from_db()
         self.assertEqual(record.status, Attendance.Status.LATE)
 
-    def test_delete_soft_deletes_and_triggers(self):
+    def test_delete_removes_and_triggers(self):
         record = attendance_record_factory(day=date(2026, 7, 22))
 
         response = self.client.delete(reverse("daily_delete", args=[record.pk]))
@@ -120,7 +119,6 @@ class AttendanceRecordEditDeleteTests(AttendanceEditDeleteTestMixin, BaseTenantT
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get("HX-Trigger"), "dailyDeleted")
         self.assertFalse(Attendance.objects.filter(pk=record.pk).exists())
-        self.assertTrue(Attendance.all_objects.filter(pk=record.pk).exists())
 
     def test_delete_without_perm_forbidden(self):
         record = attendance_record_factory(day=date(2026, 7, 23))

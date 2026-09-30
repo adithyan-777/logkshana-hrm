@@ -18,8 +18,6 @@ class TimetableBreakInline(admin.TabularInline):
         "break_time_minutes",
         "start_time",
         "end_time",
-        "grace_period_check_out",
-        "grace_period_minutes",
     )
 
 

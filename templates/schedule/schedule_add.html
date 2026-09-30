@@ -46,6 +46,19 @@
     </div>
 
     <div class="field-row">
+        <div class="field">
+            <label for="{{ form.start_date.id_for_label }}">Start date (repeat anchor)</label>
+            {{ form.start_date }}
+            {% if form.start_date.errors %}<span class="error">{{ form.start_date.errors }}</span>{% endif %}
+        </div>
+        <div class="field">
+            <label for="{{ form.end_date.id_for_label }}">End date (blank = open-ended)</label>
+            {{ form.end_date }}
+            {% if form.end_date.errors %}<span class="error">{{ form.end_date.errors }}</span>{% endif %}
+        </div>
+    </div>
+
+    <div class="field-row">
         <div class="field checkbox">
             {{ form.repeat }}
             <label for="{{ form.repeat.id_for_label }}">Repeat</label>

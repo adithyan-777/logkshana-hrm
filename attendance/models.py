@@ -161,11 +161,8 @@ class Attendance(BaseModel):
 
     class Meta:
         constraints = [
-            # Partial so a soft-deleted row doesn't block re-creating
-            # the same (employee, day).
             models.UniqueConstraint(
                 fields=("employee", "day"),
-                condition=Q(deleted_at__isnull=True),
                 name="unique_employee_attendance_day",
             ),
         ]

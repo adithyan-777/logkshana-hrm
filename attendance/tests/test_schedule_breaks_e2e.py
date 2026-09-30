@@ -124,8 +124,6 @@ class BreakValidationTests(ScheduleBreaksE2EFixture):
             "check_out": "18:00",
             "check_out_cross_days": "",
             "work_minutes": "",
-            "check_in_start": "",
-            "check_in_end": "",
             "grace_period_minutes": "",
             "breaks-TOTAL_FORMS": "2",
             "breaks-INITIAL_FORMS": "0",

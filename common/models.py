@@ -1,6 +1,7 @@
 import uuid
-from django.db import models
+
 from django.conf import settings
+from django.db import models
 
 
 class TimeStampedModel(models.Model):
@@ -30,49 +31,6 @@ class UUIDModel(models.Model):
         abstract = True
 
 
-class SoftDeleteQuerySet(models.QuerySet):
-    def alive(self):
-        return self.filter(deleted_at__isnull=True)
-
-    def dead(self):
-        return self.filter(deleted_at__isnull=False)
-
-
-class SoftDeleteManager(models.Manager):
-    def get_queryset(self):
-        return SoftDeleteQuerySet(self.model, using=self._db).alive()
-
-    def all_with_deleted(self):
-        return SoftDeleteQuerySet(self.model, using=self._db)
-
-
-class SoftDeleteModel(models.Model):
-    """
-    Instead of hard-deleting rows (bad for attendance/audit history),
-    mark them deleted and filter them out by default.
-    Employees, schedules etc. should almost never be hard-deleted.
-    """
-
-    deleted_at = models.DateTimeField(null=True, blank=True)
-
-    objects = SoftDeleteManager()  # default manager — excludes deleted
-    all_objects = models.Manager()  # explicit access to everything
-
-    class Meta:
-        abstract = True
-
-    def hard_delete(self, using=None, keep_parents=False):
-        super().delete(using=using, keep_parents=keep_parents)
-
-    def restore(self):
-        self.deleted_at = None
-        self.save(update_fields=["deleted_at"])
-
-    @property
-    def is_deleted(self):
-        return self.deleted_at is not None
-
-
 class AuditModel(TimeStampedModel):
     """
     Tracks who created/modified a record — useful for attendance
@@ -98,11 +56,11 @@ class AuditModel(TimeStampedModel):
         abstract = True
 
 
-class BaseModel(TimeStampedModel, SoftDeleteModel):
+class BaseModel(TimeStampedModel):
     """
-    The default combo most models should inherit from:
-    timestamps + soft delete. Use AuditModel instead (or in addition)
-    for models where you need to know WHO made a change.
+    The default base most models should inherit from: timestamps.
+    Use AuditModel instead (or in addition) for models where you need
+    to know WHO made a change.
     """
 
     class Meta:

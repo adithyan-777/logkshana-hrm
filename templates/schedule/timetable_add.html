@@ -87,17 +87,11 @@
             {% if form.work_minutes.errors %}<span class="error">{{ form.work_minutes.errors }}</span>{% endif %}
         </div>
 
-        <div class="field-row">
-            <div class="field">
-                <label for="{{ form.check_in_start.id_for_label }}">Check-in window start</label>
-                {{ form.check_in_start }}
-                {% if form.check_in_start.errors %}<span class="error">{{ form.check_in_start.errors }}</span>{% endif %}
-            </div>
-            <div class="field">
-                <label for="{{ form.check_in_end.id_for_label }}">Check-in window end</label>
-                {{ form.check_in_end }}
-                {% if form.check_in_end.errors %}<span class="error">{{ form.check_in_end.errors }}</span>{% endif %}
-            </div>
+        <div class="field">
+            <label for="{{ form.day_change_time.id_for_label }}">Day change time</label>
+            {{ form.day_change_time }}
+            {% if form.day_change_time.errors %}<span class="error">{{ form.day_change_time.errors }}</span>{% endif %}
+            <span class="form-hint">{{ form.day_change_time.help_text }}</span>
         </div>
     </fieldset>
 

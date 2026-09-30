@@ -1,3 +1,4 @@
+import json
 from datetime import date
 from uuid import uuid4
 
@@ -100,13 +101,24 @@ class LeaveTypeEditDeleteTests(BaseTenantTestCase):
         lt.refresh_from_db()
         self.assertEqual(lt.name, "After")
 
-    def test_delete_soft_deletes_and_trigger(self):
+    def test_delete_removes_and_trigger(self):
         lt = _leave_type()
         response = self.client.delete(reverse("leave_type_delete", args=[lt.pk]))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get("HX-Trigger"), "leaveTypeDeleted")
         self.assertFalse(LeaveType.objects.filter(pk=lt.pk).exists())
-        self.assertTrue(LeaveType.all_objects.filter(pk=lt.pk).exists())
+
+    def test_delete_blocked_when_requests_exist(self):
+        lt = _leave_type()
+        _leave_request(leave_type=lt)
+
+        response = self.client.delete(reverse("leave_type_delete", args=[lt.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        trigger = json.loads(response.headers["HX-Trigger"])
+        self.assertEqual(trigger["showToast"]["type"], "error")
+        self.assertNotIn("leaveTypeDeleted", trigger)
+        self.assertTrue(LeaveType.objects.filter(pk=lt.pk).exists())
 
     def test_delete_without_perm_403(self):
         lt = _leave_type()
@@ -147,13 +159,12 @@ class LeavePolicyEditDeleteTests(BaseTenantTestCase):
         policy.refresh_from_db()
         self.assertEqual(policy.name, "PolAfter")
 
-    def test_delete_soft_deletes_and_trigger(self):
+    def test_delete_removes_and_trigger(self):
         policy = _leave_policy()
         response = self.client.delete(reverse("leave_policy_delete", args=[policy.pk]))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get("HX-Trigger"), "leavePolicyDeleted")
         self.assertFalse(LeavePolicy.objects.filter(pk=policy.pk).exists())
-        self.assertTrue(LeavePolicy.all_objects.filter(pk=policy.pk).exists())
 
     def test_delete_without_perm_403(self):
         policy = _leave_policy()
@@ -195,13 +206,12 @@ class LeaveRequestEditDeleteTests(BaseTenantTestCase):
         lr.refresh_from_db()
         self.assertEqual(lr.reason, "Updated reason")
 
-    def test_delete_soft_deletes_and_trigger(self):
+    def test_delete_removes_and_trigger(self):
         lr = _leave_request()
         response = self.client.delete(reverse("leave_request_delete", args=[lr.pk]))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get("HX-Trigger"), "leaveRequestDeleted")
         self.assertFalse(LeaveRequest.objects.filter(pk=lr.pk).exists())
-        self.assertTrue(LeaveRequest.all_objects.filter(pk=lr.pk).exists())
 
     def test_delete_without_perm_403(self):
         lr = _leave_request()
@@ -240,13 +250,12 @@ class HolidayEditDeleteTests(BaseTenantTestCase):
         h.refresh_from_db()
         self.assertEqual(h.name, "HolAfter")
 
-    def test_delete_soft_deletes_and_trigger(self):
+    def test_delete_removes_and_trigger(self):
         h = _holiday()
         response = self.client.delete(reverse("holiday_delete", args=[h.pk]))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get("HX-Trigger"), "holidayDeleted")
         self.assertFalse(Holiday.objects.filter(pk=h.pk).exists())
-        self.assertTrue(Holiday.all_objects.filter(pk=h.pk).exists())
 
     def test_delete_without_perm_403(self):
         h = _holiday()

@@ -37,21 +37,37 @@ class Position(BaseModel):
 
 class Permission(BaseModel):
     codename = models.CharField(
-        max_length=100, unique=True
+        max_length=100
     )  # "view_department_employees"
     name = models.CharField(max_length=150)
     description = models.TextField(blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                "codename",
+                name="uniq_permission_codename_alive",
+            ),
+        ]
 
     def __str__(self):
         return self.codename
 
 
 class Role(BaseModel):
-    name = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=50)
     is_system = models.BooleanField(
         default=False
     )  # protects built-in roles from deletion via admin
     permissions = models.ManyToManyField(Permission, related_name="roles", blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                "name",
+                name="uniq_role_name_alive",
+            ),
+        ]
 
     def __str__(self):
         return self.name

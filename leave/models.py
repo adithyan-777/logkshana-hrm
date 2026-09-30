@@ -1,10 +1,9 @@
-from django.db import models
-from common.models import BaseModel
 # Create your models here.
-
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+
+from common.models import BaseModel
 
 
 class LeaveType(BaseModel):
@@ -34,6 +33,12 @@ class LeaveType(BaseModel):
 
     class Meta:
         ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                "code",
+                name="uniq_leavetype_code_alive",
+            ),
+        ]
 
     def __str__(self):
         return self.name

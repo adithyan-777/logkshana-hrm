@@ -114,12 +114,11 @@ class HolidayCreateTests(BaseTenantTestCase):
 
 
 class LeaveModelTests(BaseTenantTestCase):
-    def test_soft_delete_excludes_leave_type_from_default_manager(self):
+    def test_delete_removes_leave_type(self):
         leave_type = leave_type_factory(name="Deleted", code="DEL-LT")
         leave_type.delete()
 
         self.assertEqual(LeaveType.objects.count(), 0)
-        self.assertEqual(LeaveType.all_objects.count(), 1)
 
     def test_leave_request_factory_defaults(self):
         leave_request = leave_request_factory()

@@ -4,8 +4,14 @@ from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
-from common.http import is_htmx_partial, redirect_to_list_drawer, set_hx_trigger
+from common.http import (
+    delete_blocked_response,
+    is_htmx_partial,
+    redirect_to_list_drawer,
+    set_hx_trigger,
+)
 from common.pagination import list_pagination_context
+from django.db.models import ProtectedError
 from employees.decorators import require_permission
 from employees.forms import (
     DepartmentForm,
@@ -219,7 +225,12 @@ def employee_delete_view(request: HttpRequest, employee_id: int) -> HttpResponse
     employee = employee_get(employee_id=employee_id)
     if employee is None:
         raise Http404
-    employee_delete(employee=employee)
+    try:
+        employee_delete(employee=employee)
+    except ProtectedError:
+        return delete_blocked_response(
+            "Cannot delete employee: they still have leave requests."
+        )
     response = HttpResponse("")
     response["HX-Trigger"] = "employeeDeleted"
     return response

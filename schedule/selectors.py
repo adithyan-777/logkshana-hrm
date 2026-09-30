@@ -252,15 +252,19 @@ def resolve_schedule_for_employee_on_date(
                     schedule=override.schedule, timetable=timetable
                 )
 
-    assignment = (
+    # Walk candidates in precedence order; the top one may be unusable
+    # (schedule out of its own window, dead timetable), in which case
+    # the next assignment still covers the day.
+    assignments = (
         assignment_list(employee=employee, day=day)
         .filter(schedule__is_active=True)
         .order_by("-priority", "-start_date")
-        .first()
     )
-    if assignment is not None and schedule_is_active_on(
-        schedule=assignment.schedule, day=day
-    ):
+    for assignment in assignments:
+        if not schedule_is_active_on(
+            schedule=assignment.schedule, day=day
+        ):
+            continue
         timetable = _usable(schedule=assignment.schedule)
         if timetable is not None:
             return ResolvedSchedule(
@@ -268,7 +272,6 @@ def resolve_schedule_for_employee_on_date(
             )
 
     return ResolvedSchedule(schedule=None, timetable=None)
-
 
 def timetable_for_employee_on_date(*, employee, day: date) -> Timetable | None:
     """Convenience wrapper returning just the timetable (None on day-off)."""

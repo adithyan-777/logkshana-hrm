@@ -6,6 +6,7 @@ model defaults and untouched break rows are skipped.
 """
 
 import json
+from datetime import time
 
 from django.urls import reverse
 
@@ -23,8 +24,6 @@ def _base_data(**overrides):
         "check_out": "18:00",
         "check_out_cross_days": "",
         "work_minutes": "",
-        "check_in_start": "",
-        "check_in_end": "",
         "grace_period_minutes": "",
         "breaks-TOTAL_FORMS": "1",
         "breaks-INITIAL_FORMS": "0",
@@ -52,7 +51,31 @@ class TimetableAddBrowserPostTests(BaseTenantTestCase):
         timetable = Timetable.objects.get(name="Morning")
         self.assertEqual(timetable.grace_period_minutes, 0)
         self.assertEqual(timetable.check_out_cross_days, 0)
+        # day_change_time was omitted from the POST entirely: blank falls
+        # back to the model default rather than failing required.
+        self.assertEqual(timetable.day_change_time, time(8, 0))
         self.assertEqual(timetable.breaks.count(), 0)
+
+    def test_day_change_saved_when_provided(self):
+        response = self.client.post(
+            reverse("timetable_add"), _base_data(day_change_time="05:00")
+        )
+
+        self.assertEqual(response.status_code, 200)
+        timetable = Timetable.objects.get(name="Morning")
+        self.assertEqual(timetable.day_change_time, time(5, 0))
+
+    def test_day_change_after_check_in_rejected(self):
+        response = self.client.post(
+            reverse("timetable_add"), _base_data(day_change_time="10:00")
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.headers.get("HX-Trigger"))
+        self.assertFalse(Timetable.objects.filter(name="Morning").exists())
+        self.assertContains(
+            response, "Day change time must not be later than check-in"
+        )
 
 class TimetableAddDrawerTests(BaseTenantTestCase):
     def test_full_page_get_redirects_to_list_drawer(self):

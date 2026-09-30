@@ -98,12 +98,11 @@ class AttendanceRecordCreateTests(BaseTenantTestCase):
 
 
 class AttendanceModelTests(BaseTenantTestCase):
-    def test_soft_delete_excludes_activity(self):
+    def test_delete_removes_activity(self):
         activity = activity_factory()
         activity.delete()
 
         self.assertEqual(AttendanceActivity.objects.count(), 0)
-        self.assertEqual(AttendanceActivity.all_objects.count(), 1)
 
     def test_record_factory_builds_manual_row(self):
         record = attendance_record_factory(status=Attendance.Status.LEAVE)

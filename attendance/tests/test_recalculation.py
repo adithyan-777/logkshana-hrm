@@ -150,7 +150,7 @@ class RecalculationTests(BaseTenantTestCase):
         self.assertEqual(daily.late_minutes, 0)
         self.assertEqual(daily.early_leave_minutes, 0)
         self.assertIsNotNone(daily.shift)
-        self.assertEqual(daily.attendance_activities.count(), 2)
+        self.assertEqual(daily.activities.count(), 2)
 
     def test_late_punch_marks_late(self):
         self.push(at=aware(2026, 9, 2, 9, 30), gateway_log_id=11)
@@ -185,7 +185,7 @@ class RecalculationTests(BaseTenantTestCase):
         daily = self.daily()
         self.assertEqual(daily.status, Attendance.Status.PRESENT)
         self.assertEqual(daily.worked_minutes, 480)
-        self.assertEqual(daily.attendance_activities.count(), 4)
+        self.assertEqual(daily.activities.count(), 4)
 
     def test_duplicate_taps_within_window_count_once(self):
         self.push(at=aware(2026, 9, 2, 9, 0), gateway_log_id=51)
@@ -195,7 +195,7 @@ class RecalculationTests(BaseTenantTestCase):
         daily = self.daily()
         self.assertEqual(daily.worked_minutes, 540)
         # All three punches are linked; pairing deduped the double-tap.
-        self.assertEqual(daily.attendance_activities.count(), 3)
+        self.assertEqual(daily.activities.count(), 3)
 
     def test_replay_keeps_single_daily_row(self):
         first = self.push(at=aware(2026, 9, 2, 9), gateway_log_id=61)

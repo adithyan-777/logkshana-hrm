@@ -90,7 +90,7 @@ class AttendanceEndToEndTests(BaseTenantTestCase):
         self.assertEqual(
             timezone.localtime(row.last_out).time(), time(18, 2)
         )
-        self.assertEqual(row.attendance_activities.count(), 2)
+        self.assertEqual(row.activities.count(), 2)
         self.assertTrue(row.has_check_in)
         self.assertTrue(row.has_check_out)
 

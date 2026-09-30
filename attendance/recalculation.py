@@ -1,11 +1,23 @@
 """Daily attendance calculation for the 2-model attendance flow.
 
 Punches stream into ``AttendanceActivity``; this module folds one
-(employee, day) window of activities plus the resolved
-``EmployeeScheduleAssignment`` into the ``Attendance`` summary row.
+(employee, day) window of activities plus the resolved schedule into
+the ``Attendance`` summary row.
+
+Each rule has exactly one definition, in its own layer:
+
+* day geometry  — ``day_window`` / ``punches_for``: what "this day"
+  means (the shift's ``day_change_time``, not midnight).
+* calculation   — ``build_day_result``: pure, writes nothing.
+* persistence   — ``recalculate_attendance``: the only writer.
+* reporting     — ``day_report``: read-only over persisted rows, so it
+  can never disagree with the rows it describes.
+* orchestration — ``ensure_day`` / ``calculate_attendance``.
+
 Pure pairing/variance math lives in ``attendance.calculation``.
 """
 
+from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 
 from django.db import transaction
@@ -13,9 +25,11 @@ from django.db.models import Q
 from django.utils import timezone
 
 from attendance.calculation import (
+    DaySummary,
+    DayVariances,
+    attendance_day_for_punch,
     day_variances,
     dedupe_punches,
-    minutes_between,
     pair_punches,
     scheduled_minutes,
     summarize_pairs,
@@ -23,21 +37,26 @@ from attendance.calculation import (
 from attendance.models import Attendance, AttendanceActivity
 from employees.models import Employee
 from schedule.calculation import expected_datetimes
-from schedule.models import EmployeeScheduleAssignment
+from schedule.models import EmployeeScheduleAssignment, EmployeeScheduleOverride
 from schedule.selectors import resolve_schedule_for_employee_on_date
 
 DEFAULT_DAY_CHANGE_TIME = time(8, 0)
 
 
-def _day_window(*, day: date, day_change: time):
-    start = timezone.make_aware(
-        datetime.combine(day, day_change),
-    )
+# --------------------------------------------------------------------------
+# Day geometry — the single definition of "the day".
+# --------------------------------------------------------------------------
+
+
+def day_window(*, day: date, day_change: time) -> tuple[datetime, datetime]:
+    """The ``[start, end)`` window of punches attributed to ``day``."""
+    start = timezone.make_aware(datetime.combine(day, day_change))
     return start, start + timedelta(days=1)
 
 
-def _day_punches(*, employee, day: date, day_change: time):
-    start, end = _day_window(day=day, day_change=day_change)
+def punches_for(*, employee, day: date, day_change: time) -> list:
+    """All of ``employee``'s punches attributed to ``day``, in time order."""
+    start, end = day_window(day=day, day_change=day_change)
     return list(
         AttendanceActivity.objects.filter(
             employee=employee,
@@ -47,63 +66,90 @@ def _day_punches(*, employee, day: date, day_change: time):
     )
 
 
-@transaction.atomic
-def recalculate_attendance(
-    *, employee, day: date, force: bool = False
-) -> Attendance | None:
-    """(Re)calculate the ``Attendance`` row for one employee and day.
+def _day_change_for(timetable) -> time:
+    return timetable.day_change_time if timetable is not None else DEFAULT_DAY_CHANGE_TIME
 
-    Returns the row, or None when there is nothing to record (no
-    schedule coverage, no punches, and no assignment history).
-    Rows with ``is_calculated=False`` are treated as hand-made and left
-    alone unless ``force`` is set.
+
+# --------------------------------------------------------------------------
+# Calculation — pure: punches + resolved schedule -> what the row should say.
+# --------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class DayResult:
+    """Everything needed to write one (employee, day) row. Writes nothing."""
+
+    day: date
+    employee: Employee
+    status: str
+    row_values: dict
+    punches: tuple = ()
+    summary: DaySummary | None = None
+    variances: DayVariances | None = None
+
+
+def build_day_result(*, employee, day: date) -> DayResult | None:
+    """Compute the ``Attendance`` values for one employee and day.
+
+    Returns None when there is genuinely nothing to record (no schedule
+    coverage, no punches, no assignment history). Writes nothing: the
+    caller decides whether to persist.
     """
     resolved = resolve_schedule_for_employee_on_date(employee=employee, day=day)
     timetable = resolved.timetable
-
-    existing = Attendance.objects.filter(employee=employee, day=day).first()
-    if existing is not None and not existing.is_calculated and not force:
-        return existing
-
-    day_change = (
-        timetable.day_change_time
-        if timetable is not None
-        else DEFAULT_DAY_CHANGE_TIME
+    punches = punches_for(
+        employee=employee,
+        day=day,
+        day_change=_day_change_for(timetable),
     )
-    punches = _day_punches(employee=employee, day=day, day_change=day_change)
 
     if not punches:
-        return _record_empty_day(
+        status = _empty_day_status(
             employee=employee,
-            day=day,
             timetable=timetable,
             is_day_off=resolved.is_day_off,
-            existing=existing,
+        )
+        if status is None:
+            return None
+        return DayResult(
+            day=day,
+            employee=employee,
+            status=status,
+            punches=(),
+            summary=None,
+            variances=None,
+            row_values=_row_values(
+                shift=timetable,
+                check_in=None,
+                check_out=None,
+                status=status,
+                worked_minutes=0,
+                overtime_minutes=0,
+                late_minutes=0,
+                early_minutes=0,
+            ),
         )
 
     window = (
-        timetable.duplicate_punch_window_minutes
-        if timetable is not None
-        else 1
+        timetable.duplicate_punch_window_minutes if timetable is not None else 1
     )
     break_windows = (
         [(b.start_time, b.end_time) for b in timetable.breaks.all()]
         if timetable is not None
         else []
     )
-    pairs = pair_punches(
-        dedupe_punches(punches, window_minutes=window),
-        allow_multiple_in_out=(
-            timetable.multiple_in_out if timetable is not None else False
-        ),
-        break_windows=break_windows,
+    summary = summarize_pairs(
+        pair_punches(
+            dedupe_punches(punches, window_minutes=window),
+            allow_multiple_in_out=(
+                timetable.multiple_in_out if timetable is not None else False
+            ),
+            break_windows=break_windows,
+        )
     )
-    summary = summarize_pairs(pairs)
 
     if timetable is not None:
-        expected_in, expected_out = expected_datetimes(
-            timetable=timetable, day=day
-        )
+        expected_in, expected_out = expected_datetimes(timetable=timetable, day=day)
         scheduled = scheduled_minutes(
             timetable=timetable,
             expected_in=expected_in,
@@ -148,82 +194,269 @@ def recalculate_attendance(
         status = Attendance.Status.PRESENT
         overtime_minutes = variances.overtime_minutes
 
-    row, _ = Attendance.objects.update_or_create(
-        employee=employee,
+    return DayResult(
         day=day,
-        defaults={
-            "shift": timetable,
-            "total_work_time": timedelta(minutes=summary.worked_minutes),
-            "over_time": timedelta(minutes=overtime_minutes),
-            "late_time": timedelta(minutes=variances.late_minutes),
-            "early_leave_time": timedelta(minutes=variances.early_minutes),
-            "status": status,
-            "is_calculated": True,
-            "calculated_at": timezone.now(),
-        },
+        employee=employee,
+        status=status,
+        punches=tuple(punches),
+        summary=summary,
+        variances=variances,
+        row_values=_row_values(
+            shift=timetable,
+            check_in=summary.first_in,
+            check_out=summary.last_out,
+            status=status,
+            worked_minutes=summary.worked_minutes,
+            overtime_minutes=overtime_minutes,
+            late_minutes=variances.late_minutes,
+            early_minutes=variances.early_minutes,
+        ),
     )
-    row.attendance_activities.set(punches)
-    AttendanceActivity.objects.filter(
-        pk__in=[punch.pk for punch in punches]
-    ).update(is_attendance_processed=True)
-    return row
 
 
-def _record_empty_day(
-    *, employee, day: date, timetable, is_day_off: bool, existing
-) -> Attendance | None:
-    """Record a punch-less day: day-off, absent, or nothing at all."""
+def _empty_day_status(*, employee, timetable, is_day_off: bool) -> str | None:
+    """Status for a punch-less day, or None when nothing should be recorded."""
     if is_day_off:
-        status = Attendance.Status.DAY_OFF
-    elif timetable is not None:
-        status = Attendance.Status.ABSENT
-    elif EmployeeScheduleAssignment.objects.filter(
-        employees=employee
-    ).exists():
+        return Attendance.Status.DAY_OFF
+    if timetable is not None:
+        return Attendance.Status.ABSENT
+    if EmployeeScheduleAssignment.objects.filter(employees=employee).exists():
         # Assignment history but no coverage today: absent.
-        status = Attendance.Status.ABSENT
-    else:
-        return None
+        return Attendance.Status.ABSENT
+    return None
 
+
+def _row_values(
+    *,
+    shift,
+    check_in,
+    check_out,
+    status: str,
+    worked_minutes: int,
+    overtime_minutes: int,
+    late_minutes: int,
+    early_minutes: int,
+) -> dict:
+    """The exact ``defaults`` dict for a row.
+
+    Every duration is always written: an empty day zeroes them, so a
+    previous LATE can't leave a stale ``late_time`` on an ABSENT row.
+    """
+    return {
+        "shift": shift,
+        "shift_snapshot": _shift_snapshot(shift),
+        "check_in": check_in,
+        "check_out": check_out,
+        "total_work_time": timedelta(minutes=worked_minutes),
+        "over_time": timedelta(minutes=overtime_minutes),
+        "late_time": timedelta(minutes=late_minutes),
+        "early_leave_time": timedelta(minutes=early_minutes),
+        "status": status,
+        "is_calculated": True,
+        "calculated_at": timezone.now(),
+    }
+
+
+def _shift_snapshot(timetable) -> dict | None:
+    """Freeze the shift params that produced a row's numbers."""
+    if timetable is None:
+        return None
+    return {
+        "name": timetable.name,
+        "check_in": timetable.check_in.isoformat() if timetable.check_in else None,
+        "check_out": timetable.check_out.isoformat() if timetable.check_out else None,
+        "day_change_time": timetable.day_change_time.isoformat(),
+        "grace_period_minutes": timetable.grace_period_minutes,
+        "duplicate_punch_window_minutes": timetable.duplicate_punch_window_minutes,
+        "multiple_in_out": timetable.multiple_in_out,
+    }
+
+
+# --------------------------------------------------------------------------
+# Persistence — the only writer.
+# --------------------------------------------------------------------------
+
+
+@transaction.atomic
+def recalculate_attendance(
+    *, employee, day: date, force: bool = False
+) -> Attendance | None:
+    """(Re)calculate the ``Attendance`` row for one employee and day.
+
+    Returns the row, or None when there is nothing to record (no
+    schedule coverage, no punches, and no assignment history).
+    Rows with ``is_calculated=False`` are treated as hand-made and left
+    alone unless ``force`` is set.
+    """
+    existing = Attendance.objects.filter(employee=employee, day=day).first()
+    if existing is not None and not existing.is_calculated and not force:
+        return existing
+
+    result = build_day_result(employee=employee, day=day)
+    if result is None:
+        return None
+    return _persist(result=result)
+
+
+def _persist(*, result: DayResult) -> Attendance:
     row, _ = Attendance.objects.update_or_create(
-        employee=employee,
-        day=day,
-        defaults={
-            "shift": timetable,
-            "total_work_time": None,
-            "over_time": None,
-            "status": status,
-            "is_calculated": True,
-            "calculated_at": timezone.now(),
-        },
+        employee=result.employee,
+        day=result.day,
+        defaults=result.row_values,
     )
-    row.attendance_activities.clear()
+    _set_row_punches(row=row, punches=result.punches)
     return row
 
 
-def calculate_attendance(*, day: date | None = None) -> dict:
-    """Print scheduled employees grouped as absentees, late arrivals,
-    and work hours.
+def _set_row_punches(*, row: Attendance, punches) -> None:
+    """Make ``row``'s linked punches exactly ``punches``.
 
-    Absentees: covered by an active schedule assignment but with no
-    activity punch on `day`. An ``Attendance`` row with status
-    ``ABSENT`` (or ``DAY_OFF``) is created for each of them via
-    ``recalculate_attendance``.
-    Late arrivals: punched, but the first punch is after the expected
-    check-in (plus timetable grace).
-    Work hours: punched-out employees with a complete in/out pair.
-    Created attendance: Attendance rows written via recalculate_attendance
-    for all scheduled employees with punches on `day` (complete pairs
-    become PRESENT/LATE/EARLY_OUT, single/unpaired punches become
-    INCOMPLETE) plus ABSENT/DAY_OFF rows for absentees.
-    Returns {"absentees": [...], "late_arrivals": [...], "work_hours": ...,
-    "created": [...], "incomplete": [...]}
-    where work_hours holds (employee, minutes, first_in, last_out) tuples.
+    Uses ``all_objects`` so soft-deleted punches are unlinked too —
+    the default manager hides them, which would leave a stale
+    ``attendance_id`` behind on a deleted row.
     """
-    if day is None:
-        day = timezone.localtime(timezone.now()).date()
+    punch_ids = [punch.pk for punch in punches]
+    AttendanceActivity.all_objects.filter(attendance=row).exclude(
+        pk__in=punch_ids
+    ).update(attendance=None)
+    if punch_ids:
+        AttendanceActivity.all_objects.filter(pk__in=punch_ids).update(
+            attendance=row
+        )
 
-    scheduled_ids = set(
+
+# --------------------------------------------------------------------------
+# Reporting — read-only over persisted rows.
+# --------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class DayReport:
+    """One day's ``Attendance`` rows, grouped by status.
+
+    Buckets are predicates over columns the writer already persisted;
+    nothing is re-derived from punches, so the report cannot disagree
+    with the rows it describes. ``late_arrivals`` is ``late_time > 0``
+    (not ``status == LATE``): a late employee who never checked out is
+    INCOMPLETE *and* late. ``work_hours`` is a complete pair.
+    """
+
+    day: date
+    rows: tuple
+    present: tuple
+    late: tuple
+    early_out: tuple
+    incomplete: tuple
+    absent: tuple
+    day_off: tuple
+    leave: tuple
+    holiday: tuple
+    late_arrivals: tuple
+    work_hours: tuple
+    unlinked_punches: tuple
+
+
+def day_report(*, day: date) -> DayReport:
+    """Group the persisted rows for ``day``. Reads only, never writes."""
+    rows = tuple(
+        Attendance.objects.filter(day=day)
+        .select_related("employee", "shift")
+        .order_by("employee__first_name", "employee__last_name", "employee__pk")
+    )
+
+    def bucket(status: str) -> tuple:
+        return tuple(row for row in rows if row.status == status)
+
+    return DayReport(
+        day=day,
+        rows=rows,
+        present=bucket(Attendance.Status.PRESENT),
+        late=bucket(Attendance.Status.LATE),
+        early_out=bucket(Attendance.Status.EARLY_OUT),
+        incomplete=bucket(Attendance.Status.INCOMPLETE),
+        absent=bucket(Attendance.Status.ABSENT),
+        day_off=bucket(Attendance.Status.DAY_OFF),
+        leave=bucket(Attendance.Status.LEAVE),
+        holiday=bucket(Attendance.Status.HOLIDAY),
+        late_arrivals=tuple(row for row in rows if row.late_time > timedelta(0)),
+        work_hours=tuple(
+            row for row in rows if row.check_in is not None and row.check_out is not None
+        ),
+        unlinked_punches=_unlinked_punches(day=day),
+    )
+
+
+def _unlinked_punches(*, day: date) -> tuple:
+    """Punches attributed to ``day`` that no row consumed.
+
+    Diagnostics for the gap ``ensure_day`` can't see: employees whose
+    punches exist but who have no schedule coverage (or were excluded
+    from the fanout). Attribution reuses the shared day-geometry rule
+    instead of the calendar date, so post-midnight check-outs are not
+    blamed on the wrong day.
+    """
+    # A punch attributed to `day` lands in [day+change, day+1+change),
+    # so calendar dates {day, day+1} are a safe superset for any change.
+    window_start = timezone.make_aware(datetime.combine(day, time.min))
+    candidates = list(
+        AttendanceActivity.objects.filter(
+            attendance__isnull=True,
+            punch_time__gte=window_start,
+            punch_time__lt=window_start + timedelta(days=2),
+        ).order_by("employee_id", "punch_time", "id")
+    )
+    if not candidates:
+        return ()
+
+    employees = Employee.objects.in_bulk({p.employee_id for p in candidates})
+    kept: list = []
+    index = 0
+    while index < len(candidates):
+        employee_id = candidates[index].employee_id
+        group: list = []
+        while (
+            index < len(candidates)
+            and candidates[index].employee_id == employee_id
+        ):
+            group.append(candidates[index])
+            index += 1
+        employee = employees.get(employee_id)
+        if employee is None:
+            continue
+        day_change = _day_change_for(
+            resolve_schedule_for_employee_on_date(
+                employee=employee, day=day
+            ).timetable
+        )
+        kept.extend(
+            punch
+            for punch in group
+            if attendance_day_for_punch(
+                timestamp=punch.punch_time, day_change_time=day_change
+            )
+            == day
+        )
+    return tuple(kept)
+
+
+# --------------------------------------------------------------------------
+# Orchestration.
+# --------------------------------------------------------------------------
+
+
+def ensure_day(*, day: date) -> list:
+    """Write an ``Attendance`` row for everyone who should have one.
+
+    The candidate set is a cheap superset — active assignments covering
+    ``day``, one-day overrides, and anyone who punched on ``day`` or the
+    following day — and each candidate is then resolved individually by
+    ``recalculate_attendance``, which returns None when there is
+    genuinely nothing to record. Repeat rules, assignment priority,
+    day-off overrides and active-timetable checks therefore all come
+    from the one resolver instead of a raw assignment query, and
+    punched-but-unscheduled employees are not silently dropped.
+    """
+    candidates: set = set(
         EmployeeScheduleAssignment.objects.filter(
             is_active=True,
             start_date__lte=day,
@@ -232,133 +465,58 @@ def calculate_attendance(*, day: date | None = None) -> dict:
         .filter(Q(end_date__gte=day) | Q(end_date__isnull=True))
         .values_list("employees__pk", flat=True)
     )
-    scheduled_ids.discard(None)
-
-    punched_ids = set(
-        AttendanceActivity.objects.filter(punch_time__date=day).values_list(
+    candidates |= set(
+        EmployeeScheduleOverride.objects.filter(date=day).values_list(
             "employee_id", flat=True
         )
     )
+    candidates |= set(
+        AttendanceActivity.objects.filter(
+            punch_time__date__in=[day, day + timedelta(days=1)]
+        ).values_list("employee_id", flat=True)
+    )
+    candidates.discard(None)
 
-    absentees = list(
-        Employee.objects.filter(pk__in=scheduled_ids - punched_ids).order_by(
-            "first_name", "last_name"
-        )
+    created = []
+    employees = Employee.objects.filter(
+        pk__in=candidates, is_active=True
+    ).order_by("first_name", "last_name", "pk")
+    for employee in employees.iterator():
+        row = recalculate_attendance(employee=employee, day=day)
+        if row is not None:
+            created.append(row)
+    return created
+
+
+def calculate_attendance(*, day: date | None = None) -> dict:
+    """Ensure the day's rows, print the grouped report, return it.
+
+    Two phases, so the numbers printed and returned are the rows that
+    were written — there is no second calculation that can disagree
+    with them. Prefer ``ensure_day`` + ``day_report`` when you don't
+    want the console output.
+    """
+    if day is None:
+        day = timezone.localtime(timezone.now()).date()
+
+    created = ensure_day(day=day)
+    report = day_report(day=day)
+
+    absentees = [row.employee for row in report.absent]
+    late_arrivals = [(row.employee, row.late_minutes) for row in report.late_arrivals]
+    work_hours = [
+        (row.employee, row.worked_minutes, row.check_in, row.check_out)
+        for row in report.work_hours
+    ]
+    incomplete = [row.employee for row in report.incomplete]
+
+    _print_report(
+        absentees=absentees,
+        late_arrivals=late_arrivals,
+        work_hours=work_hours,
+        created=created,
     )
 
-    late_arrivals = []
-    work_hours = []
-    incomplete = []
-    eligible_for_creation = []
-    for employee in (
-        Employee.objects.filter(pk__in=scheduled_ids & punched_ids)
-        .order_by("first_name", "last_name")
-        .iterator()
-    ):
-        punches = list(
-            AttendanceActivity.objects.filter(
-                employee=employee, punch_time__date=day
-            ).order_by("punch_time")
-        )
-        if not punches:
-            continue
-        # Every punched scheduled employee gets an Attendance row:
-        # complete pairs -> PRESENT/LATE/EARLY_OUT, single or unpaired
-        # punches -> INCOMPLETE (handled inside recalculate_attendance).
-        eligible_for_creation.append(employee)
-        resolved = resolve_schedule_for_employee_on_date(
-            employee=employee, day=day
-        )
-        timetable = resolved.timetable
-        if (
-            not resolved.is_day_off
-            and timetable is not None
-        ):
-            expected_in, _ = expected_datetimes(
-                timetable=timetable, day=day
-            )
-            if expected_in is not None:
-                late_minutes = minutes_between(
-                    expected_in, punches[0].punch_time
-                ) - (timetable.grace_period_minutes or 0)
-                if late_minutes > 0:
-                    late_arrivals.append((employee, late_minutes))
-        summary = summarize_pairs(
-            pair_punches(
-                dedupe_punches(
-                    punches,
-                    window_minutes=(
-                        timetable.duplicate_punch_window_minutes
-                        if timetable is not None
-                        else 1
-                    ),
-                ),
-                allow_multiple_in_out=(
-                    timetable.multiple_in_out
-                    if timetable is not None
-                    else False
-                ),
-                break_windows=(
-                    [(b.start_time, b.end_time) for b in timetable.breaks.all()]
-                    if timetable is not None
-                    else []
-                ),
-            )
-        )
-        if summary.has_check_in and summary.has_check_out:
-            work_hours.append(
-                (
-                    employee,
-                    summary.worked_minutes,
-                    summary.first_in,
-                    summary.last_out,
-                )
-            )
-        else:
-            incomplete.append(employee)
-
-    for employee in absentees:
-        print(employee.full_name)
-    print("--------------------------------------------------")
-    print("Late arrivals:")
-    print("--------------------------------------------------")
-    for employee, late_minutes in late_arrivals:
-        print(f"{employee.full_name} (+{late_minutes}m)")
-    print("--------------------------------------------------")
-    print("Work hours:")
-    print("--------------------------------------------------")
-    for employee, worked_minutes, first_in, last_out in work_hours:
-        hours, minutes = divmod(worked_minutes, 60)
-        print("--------------------------------------------------")
-        print(
-            f"{employee.full_name}: {hours}h {minutes:02d}m "
-            f"(in {first_in:%H:%M} out {last_out:%H:%M})"
-        )
-        print("--------------------------------------------------")
-    print("--------------------------------------------------")
-    print("Created attendance:")
-    print("--------------------------------------------------")
-    created = []
-    for employee in eligible_for_creation:
-        # recalculate_attendance is atomic per employee and never
-        # overwrites hand-made rows (is_calculated=False) without force.
-        # Complete pairs -> PRESENT/LATE/EARLY_OUT; single/unpaired
-        # punches -> INCOMPLETE.
-        row = recalculate_attendance(employee=employee, day=day)
-        if row is not None:
-            created.append(row)
-            print(f"{employee.full_name} -> {row.status}")
-    # Absentees (scheduled but never punched) get ABSENT rows
-    # (or DAY_OFF when the day is a day-off). recalculate_attendance
-    # routes punch-less days to _record_empty_day which already uses
-    # Attendance.Status.ABSENT / DAY_OFF — both exist in
-    # Attendance.Status, so no new status needs to be created.
-    for employee in absentees:
-        row = recalculate_attendance(employee=employee, day=day)
-        if row is not None:
-            created.append(row)
-            print(f"{employee.full_name} -> {row.status}")
-    print("--------------------------------------------------")
     return {
         "absentees": absentees,
         "late_arrivals": late_arrivals,
@@ -368,7 +526,29 @@ def calculate_attendance(*, day: date | None = None) -> dict:
     }
 
 
-# from django_tenants.utils import schema_context
-# with schema_context('tty'):
-#     from attendance.recalculation import calculate_attendance
-#     calculate_attendance()
+def _print_report(*, absentees, late_arrivals, work_hours, created) -> None:
+    separator = "-" * 50
+    print("Absentees:")
+    print(separator)
+    for employee in absentees:
+        print(employee.full_name)
+    print(separator)
+    print("Late arrivals:")
+    print(separator)
+    for employee, late_minutes in late_arrivals:
+        print(f"{employee.full_name} (+{late_minutes}m)")
+    print(separator)
+    print("Work hours:")
+    print(separator)
+    for employee, worked_minutes, check_in, check_out in work_hours:
+        hours, minutes = divmod(worked_minutes, 60)
+        print(
+            f"{employee.full_name}: {hours}h {minutes:02d}m "
+            f"(in {check_in:%H:%M} out {check_out:%H:%M})"
+        )
+    print(separator)
+    print("Created attendance:")
+    print(separator)
+    for row in created:
+        print(f"{row.employee.full_name} -> {row.status}")
+    print(separator)

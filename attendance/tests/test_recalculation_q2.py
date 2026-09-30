@@ -77,7 +77,7 @@ class RecalculationTests(BaseTenantTestCase):
         self.assertEqual(row.total_work_time, timedelta(minutes=540))
         self.assertEqual(row.over_time, timedelta(minutes=60))  # 540 - 480
         self.assertTrue(row.is_calculated)
-        self.assertEqual(row.attendance_activities.count(), 2)
+        self.assertEqual(row.activities.count(), 2)
         self.assertEqual(row.shift, self.timetable)
 
     def test_late_arrival(self):

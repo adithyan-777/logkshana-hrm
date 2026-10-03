@@ -43,7 +43,7 @@
       {% endif %}
       {% if nav_can.employees %}
       <a href="{% url 'employee_list' %}"
-         class="quick-action {% if request.path|slice:':11' == '/employees/' %}is-active{% endif %}"
+         class="quick-action {% if request.resolver_match.url_name == 'employee_list' or request.resolver_match.url_name == 'employee_add' or request.resolver_match.url_name == 'employee_edit' %}is-active{% endif %}"
          data-nav-match="employees">
         <span class="quick-action__icon"><i class="bx bx-user admin-icon admin-icon--20"></i></span>
         <span class="quick-action__label">Employees</span>
@@ -83,7 +83,7 @@
       {% endif %}
       {% if nav_can.departments %}
       <a href="{% url 'department_list' %}"
-         class="quick-action {% if request.path|slice:':12' == '/departments/' %}is-active{% endif %}"
+         class="quick-action {% if request.path|slice:':23' == '/employees/departments/' %}is-active{% endif %}"
          data-nav-match="departments">
         <span class="quick-action__icon"><i class="bx bx-buildings admin-icon admin-icon--20"></i></span>
         <span class="quick-action__label">Departments</span>
@@ -91,7 +91,7 @@
       {% endif %}
       {% if nav_can.positions %}
       <a href="{% url 'position_list' %}"
-         class="quick-action {% if request.path|slice:':11' == '/positions/' %}is-active{% endif %}"
+         class="quick-action {% if request.path|slice:':21' == '/employees/positions/' %}is-active{% endif %}"
          data-nav-match="positions">
         <span class="quick-action__icon"><i class="bx bx-briefcase-alt-2 admin-icon admin-icon--20"></i></span>
         <span class="quick-action__label">Positions</span>
@@ -99,7 +99,7 @@
       {% endif %}
       {% if nav_can.roles %}
       <a href="{% url 'role_list' %}"
-         class="quick-action {% if request.path|slice:':6' == '/roles/' %}is-active{% endif %}"
+         class="quick-action {% if request.path|slice:':17' == '/employees/roles/' %}is-active{% endif %}"
          data-nav-match="roles">
         <span class="quick-action__icon"><i class="bx bx-shield-quarter admin-icon admin-icon--20"></i></span>
         <span class="quick-action__label">Roles</span>
@@ -107,7 +107,7 @@
       {% endif %}
       {% if nav_can.permissions %}
       <a href="{% url 'permission_list' %}"
-         class="quick-action {% if request.path|slice:':12' == '/permissions/' %}is-active{% endif %}"
+         class="quick-action {% if request.path|slice:':23' == '/employees/permissions/' %}is-active{% endif %}"
          data-nav-match="permissions">
         <span class="quick-action__icon"><i class="bx bx-lock-open admin-icon admin-icon--20"></i></span>
         <span class="quick-action__label">Permissions</span>

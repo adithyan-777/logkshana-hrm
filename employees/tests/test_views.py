@@ -533,3 +533,34 @@ class EmployeeOptionsViewTests(BaseTenantTestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertIn("/accounts/login/", response.url)
+
+
+class SidebarActiveStateTests(BaseTenantTestCase):
+    def test_org_sections_mark_their_nav_item_active(self):
+        for url_name, match in (
+            ("department_list", "departments"),
+            ("position_list", "positions"),
+            ("role_list", "roles"),
+            ("permission_list", "permissions"),
+        ):
+            with self.subTest(url_name=url_name):
+                response = self.client.get(reverse(url_name))
+
+                self.assertRegex(
+                    response.content.decode(),
+                    rf'class="quick-action is-active"\s+data-nav-match="{match}"',
+                )
+
+    def test_employee_directory_only_marks_employees_active(self):
+        html = self.client.get(reverse("employee_list")).content.decode()
+
+        self.assertRegex(
+            html,
+            r'class="quick-action is-active"\s+data-nav-match="employees"',
+        )
+        for match in ("departments", "positions", "roles", "permissions"):
+            with self.subTest(match=match):
+                self.assertNotRegex(
+                    html,
+                    rf'class="quick-action is-active"\s+data-nav-match="{match}"',
+                )

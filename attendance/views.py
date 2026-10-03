@@ -220,14 +220,8 @@ def transaction_edit(request: HttpRequest, transaction_id: int) -> HttpResponse:
     return redirect_to_list_drawer(
         list_url_name="attendance_transaction_list",
         form_url=request.path,
-        title="Edit punch",
-    )
-
-
-def attendance_transaction_edit(
-    request: HttpRequest, attendance_transaction_id: int
-) -> HttpResponse:
-    return transaction_edit(request, transaction_id=attendance_transaction_id)
+            title="Edit punch",
+        )
 
 
 @login_required
@@ -239,12 +233,6 @@ def transaction_delete_view(request: HttpRequest, transaction_id: int) -> HttpRe
     response = HttpResponse("")
     response["HX-Trigger"] = "transactionDeleted"
     return response
-
-
-def attendance_transaction_delete_view(
-    request: HttpRequest, attendance_transaction_id: int
-) -> HttpResponse:
-    return transaction_delete_view(request, transaction_id=attendance_transaction_id)
 
 
 @login_required
@@ -344,14 +332,8 @@ def daily_edit(request: HttpRequest, daily_id: int) -> HttpResponse:
     return redirect_to_list_drawer(
         list_url_name="daily_attendance_list",
         form_url=request.path,
-        title="Edit correction",
-    )
-
-
-def daily_attendance_edit(
-    request: HttpRequest, daily_attendance_id: int
-) -> HttpResponse:
-    return daily_edit(request, daily_id=daily_attendance_id)
+            title="Edit correction",
+        )
 
 
 @login_required
@@ -366,12 +348,6 @@ def daily_delete_view(request: HttpRequest, daily_id: int) -> HttpResponse:
     response = HttpResponse("")
     response["HX-Trigger"] = "dailyDeleted"
     return response
-
-
-def daily_attendance_delete_view(
-    request: HttpRequest, daily_attendance_id: int
-) -> HttpResponse:
-    return daily_delete_view(request, daily_id=daily_attendance_id)
 
 
 @login_required

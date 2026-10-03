@@ -50,7 +50,20 @@ class EmployeeForm(forms.ModelForm):
             )
         else:
             self.fields["password"].required = False
-        apply_form_field_ui(self)
+        apply_form_field_ui(
+            self, placeholders={"emp_code": "Enter employee code"}
+        )
+        # UI-only: digits input hint + strip non-digits. No backend/
+        # validation change — the model still accepts any string.
+        emp_code_widget = self.fields["emp_code"].widget
+        emp_code_widget.attrs.update(
+            {
+                "placeholder": "Enter employee code",
+                "inputmode": "numeric",
+                "pattern": "[0-9]*",
+                "oninput": "this.value=this.value.replace(/[^0-9]/g,'')",
+            }
+        )
 
 
     def _password_check_user(self):

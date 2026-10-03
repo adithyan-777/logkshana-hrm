@@ -2,6 +2,10 @@
   const SECTION_PREFIXES = {
     dashboard: { exact: "/" },
     employees: { prefix: "/employees/" },
+    departments: { prefix: "/employees/departments/" },
+    positions: { prefix: "/employees/positions/" },
+    roles: { prefix: "/employees/roles/" },
+    permissions: { prefix: "/employees/permissions/" },
     attendance: { prefix: "/attendance/" },
     leave: { prefix: "/leave/" },
     schedule: { prefix: "/schedule/" },
@@ -81,11 +85,24 @@
     if (mobile) mobile.checked = false;
   }
 
+  function bestMatch(path) {
+    let best = null;
+    let bestLen = -1;
+    for (const [key, rule] of Object.entries(SECTION_PREFIXES)) {
+      if (!pathMatches(path, rule)) continue;
+      const len = rule.exact ? rule.exact.length + 1000 : rule.prefix.length;
+      if (len > bestLen) {
+        best = key;
+        bestLen = len;
+      }
+    }
+    return best;
+  }
+
   function syncNavActive(path) {
+    const active = bestMatch(path);
     document.querySelectorAll("[data-nav-match]").forEach((el) => {
-      const key = el.getAttribute("data-nav-match");
-      const rule = SECTION_PREFIXES[key];
-      el.classList.toggle("is-active", Boolean(rule && pathMatches(path, rule)));
+      el.classList.toggle("is-active", el.getAttribute("data-nav-match") === active);
     });
   }
 
@@ -106,8 +123,7 @@
         syncNavActive(this.path);
       },
       isSection(name) {
-        const rule = SECTION_PREFIXES[name];
-        return Boolean(rule && pathMatches(this.path, rule));
+        return bestMatch(this.path) === name;
       },
     });
 

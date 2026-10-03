@@ -1,0 +1,147 @@
+# Pattika LOCAL stack (host Postgres + Docker services).
+#
+# Postgres runs on the HOST (your local install on 5432), everything else
+# runs in Docker: Redis + Django/Gunicorn (web) + django-q2 cluster
+# (qcluster) + nginx. No `db` service here — port 5432 is already taken
+# by your host Postgres, which is what web/qcluster connect to via
+# host.docker.internal.
+#
+# Usage (from repo root):
+#   cp docker/local/.env.example docker/local/.env   # then edit secrets if needed
+#   docker compose -f docker/local/docker-compose.yml up --build
+#   docker compose -f docker/local/docker-compose.yml exec web python manage.py ensure_q2_schedules
+#   docker compose -f docker/local/docker-compose.yml exec web python manage.py ensure_device_sync_schedule
+#
+# Handy extras:
+#   Seed demo data:  exec web python manage.py seed_demo_data
+#   Shell:           exec web python manage.py shell
+#
+# Notes:
+# - Project name is pattika-local, so volumes/networks don't clash with the
+#   root docker-compose.yml stack.
+# - Container DB: CONTAINER_DB_HOST wins if set, else DB_HOST, else
+#   host-gateway. Laptop .env: DB_HOST=localhost (host-side) +
+#   CONTAINER_DB_HOST=host.docker.internal. Postgres must listen on the
+#   docker bridge (listen_addresses='*' + pg_hba line for 172.0.0.0/8).
+# - Host publishes: redis 6379, web 8000, nginx 8080/8443.
+#   Change via NGINX_PORT / NGINX_SSL_PORT / REDIS_PUBLISH_PORT.
+# - WARNING: never scale qcluster past 1 replica (duplicate task pickup).
+#   Scale via Q2_WORKERS instead.
+#
+# NOTE: web/qcluster reach host Postgres via host.docker.internal.
+#   Postgres must listen on the docker bridge: set listen_addresses='*'
+#   in postgresql.conf and add a pg_hba line for 172.0.0.0/8, then restart.
+
+name: pattika-local
+
+services:
+  # q2 broker (Redis). web enqueues from the request path; qcluster works
+  # the queue. Tasks are ephemeral; appendonly is just crash hygiene.
+  redis:
+    image: redis:8-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PUBLISH_PORT:-6379}:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    entrypoint: ["/app/entrypoint.sh"]
+    command: ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "60"]
+    env_file:
+      - .env
+    environment:
+      # Container DB: CONTAINER_DB_HOST wins if set, else DB_HOST, else host-gateway.
+      # Laptop .env: DB_HOST=localhost (host-side) + CONTAINER_DB_HOST=host.docker.internal.
+      DB_HOST: ${CONTAINER_DB_HOST:-${DB_HOST:-host.docker.internal}}
+      DB_PORT: ${DB_PORT:-5432}
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_DB: ${REDIS_DB:-0}
+      DEBUG: ${DEBUG:-True}
+      SECURE_COOKIES: ${SECURE_COOKIES:-False}
+      RUN_MIGRATIONS: "1"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8000:8000"
+    volumes:
+      - staticfiles:/app/staticfiles
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # Any HTTP response (even 404 before tenants exist) means Django is
+      # answering; only connection failure is unhealthy.
+      test: ["CMD", "curl", "-s", "-o", "/dev/null", "http://localhost:8000/admin/login/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  qcluster:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    entrypoint: ["/app/entrypoint.sh"]
+    command: ["python", "manage.py", "qcluster"]
+    env_file:
+      - .env
+    environment:
+      # Container DB: CONTAINER_DB_HOST wins if set, else DB_HOST, else host-gateway.
+      DB_HOST: ${CONTAINER_DB_HOST:-${DB_HOST:-host.docker.internal}}
+      DB_PORT: ${DB_PORT:-5432}
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_DB: ${REDIS_DB:-0}
+      DEBUG: ${DEBUG:-True}
+      Q2_WORKERS: ${Q2_WORKERS:-2}
+      WAIT_FOR_TABLES: "django_q_task,companies_company"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started
+    restart: unless-stopped
+    # NEVER: --scale qcluster=2 (duplicate task pickup). Scale via Q2_WORKERS.
+
+  nginx:
+    image: nginx:1.29-alpine
+    ports:
+      - "${NGINX_PORT:-8080}:80"
+      - "${NGINX_SSL_PORT:-8443}:443"
+    volumes:
+      - staticfiles:/app/staticfiles:ro
+      - ../../nginx/conf.d:/etc/nginx/conf.d:ro
+      - ../../nginx/certs:/etc/nginx/certs:ro
+      - certbot-www:/var/www/certbot:ro
+    depends_on:
+      web:
+        condition: service_started
+    healthcheck:
+      # Any HTTP response (even 301/404) means nginx is answering; only
+      # connection failure is unhealthy. wget exits 8 on HTTP error
+      # statuses — that still proves nginx responded.
+      # NOTE: 127.0.0.1, not localhost — localhost resolves to ::1 first
+      # inside the container but nginx listens on IPv4 only.
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/admin/login/ 2>/dev/null; code=$$?; if [ $$code -eq 0 ] || [ $$code -eq 8 ]; then exit 0; fi; wget -q --no-check-certificate -O /dev/null https://127.0.0.1/admin/login/ 2>/dev/null; code=$$?; [ $$code -eq 0 ] || [ $$code -eq 8 ]"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  redisdata:
+  staticfiles:
+  certbot-www:

@@ -157,6 +157,35 @@ class EmployeeViewTests(BaseTenantTestCase):
         self.assertContains(response, 'data-invite-link="')
         self.assertNotContains(response, "onclick=")
         self.assertTrue(Employee.objects.filter(emp_code=emp_code).exists())
+        self.assertTrue(Employee.objects.get(emp_code=emp_code).is_active)
+
+    def test_add_form_renders_active_switch_checked_by_default(self):
+        response = self.client.get(
+            reverse("employee_add"),
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="id_is_active"')
+        self.assertContains(response, "checked")
+
+    def test_add_creates_inactive_employee_when_switch_unchecked(self):
+        emp_code = f"E-{uuid4().hex[:6]}"
+        response = self.client.post(
+            reverse("employee_add"),
+            {
+                "first_name": "Off",
+                "last_name": "Boarded",
+                "emp_code": emp_code,
+                "email": "off.boarded@example.com",
+                "mobile": "+97433555223",
+                "password": "SecurePass123!",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        employee = Employee.objects.get(emp_code=emp_code)
+        self.assertFalse(employee.is_active)
 
     def test_list_shows_created_employee(self):
         employee_factory(first_name="Visible", emp_code="E-VIS")

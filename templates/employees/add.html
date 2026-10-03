@@ -108,6 +108,15 @@
         {{ form.hire_date }}
         {% if form.hire_date.errors %}<span class="error">{{ form.hire_date.errors }}</span>{% endif %}
     </div>
+
+    <div class="field">
+        <label class="form-switch">
+            {{ form.is_active }}
+            <span class="form-switch__ui" aria-hidden="true"></span>
+            <span class="form-switch__label">Active</span>
+        </label>
+        {% if form.is_active.errors %}<span class="error">{{ form.is_active.errors }}</span>{% endif %}
+    </div>
     <div class="form-actions">
         <button class="btn btn--primary" type="submit">Add Employee</button>
     </div>

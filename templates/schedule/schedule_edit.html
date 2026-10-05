@@ -10,13 +10,13 @@
     <span class="card__title">Edit schedule</span>
   </div>
   <div class="card__body">
-    <div id="schedule-edit-form-container">
       {% partialdef schedule_edit_form inline %}
+      <div id="schedule-edit-form-container">
 <form
     id="schedule-edit-form"
     hx-post="{% url 'schedule_edit' schedule.pk %}"
     hx-target="#schedule-edit-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -69,8 +69,8 @@
     <button type="submit">Save changes</button>
     <a href="{% url 'schedule_list' %}">Back to schedules</a>
 </form>
+      </div>
 {% endpartialdef schedule_edit_form %}
-    </div>
   </div>
 </div>
 {% endblock %}

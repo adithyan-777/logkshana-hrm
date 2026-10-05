@@ -10,14 +10,14 @@
     <span class="card__title">Edit correction</span>
   </div>
   <div class="card__body">
-    <div id="daily-edit-form-container">
       {% partialdef daily_edit_form inline %}
+      <div id="daily-edit-form-container">
 <form
     id="daily-edit-form"
     class="tt-form-shell"
     hx-post="{% url 'daily_edit' daily_attendance.pk %}"
     hx-target="#daily-edit-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -56,8 +56,8 @@
         <a href="{% url 'daily_attendance_list' %}" class="btn btn--ghost">Back to daily records</a>
     </div>
 </form>
+      </div>
 {% endpartialdef daily_edit_form %}
-    </div>
   </div>
 </div>
 {% endblock %}

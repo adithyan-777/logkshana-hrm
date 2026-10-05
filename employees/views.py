@@ -8,10 +8,12 @@ from common.http import (
     delete_blocked_response,
     is_htmx_partial,
     redirect_to_list_drawer,
+    set_error_toast,
     set_hx_trigger,
 )
 from common.pagination import list_pagination_context
 from django.db.models import ProtectedError
+from django.forms.forms import NON_FIELD_ERRORS
 from employees.decorators import require_permission
 from employees.forms import (
     DepartmentForm,
@@ -165,6 +167,18 @@ def employee_add(request: HttpRequest) -> HttpResponse:
     )
 
 
+def _form_error_message(form) -> str:
+    """One-line summary of a form's validation errors for an error toast."""
+    parts = []
+    for field, messages in form.errors.items():
+        if field == NON_FIELD_ERRORS:
+            parts.extend(str(message) for message in messages)
+        else:
+            label = form.fields[field].label or field
+            parts.extend(f"{label}: {message}" for message in messages)
+    return "; ".join(parts) or "Please fix the errors below."
+
+
 def _render_edit_form(
     request: HttpRequest,
     form: EmployeeForm,
@@ -201,10 +215,20 @@ def employee_edit(request: HttpRequest, employee_id: int) -> HttpResponse:
                 employee=employee,
                 success_message=f"Employee “{employee.full_name}” updated.",
             )
-            response["HX-Trigger"] = "employeeUpdated"
+            # close_modal=True (default): drawer closes; employeeUpdated
+            # still refreshes the list behind it; toast confirms the save.
+            set_hx_trigger(
+                response,
+                event="employeeUpdated",
+                toast=f"Employee “{employee.full_name}” updated.",
+            )
             return response
 
-        return _render_edit_form(request, form, employee=employee)
+        # Invalid: keep the drawer open (no closeModal), show the errors
+        # inline AND as an error toast.
+        response = _render_edit_form(request, form, employee=employee)
+        set_error_toast(response, _form_error_message(form))
+        return response
 
     form = EmployeeForm(instance=employee)
     if is_htmx_partial(request):

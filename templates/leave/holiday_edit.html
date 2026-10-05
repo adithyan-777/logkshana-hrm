@@ -10,13 +10,13 @@
     <span class="card__title">Edit holiday</span>
   </div>
   <div class="card__body">
-    <div id="holiday-edit-form-container">
       {% partialdef holiday_edit_form inline %}
+      <div id="holiday-edit-form-container">
 <form class="tt-form-shell"
     id="holiday-edit-form"
     hx-post="{% url 'holiday_edit' holiday.pk %}"
     hx-target="#holiday-edit-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -63,8 +63,8 @@
         <a href="{% url 'holiday_list' %}" class="btn btn--ghost">Back to holidays</a>
     </div>
 </form>
+      </div>
 {% endpartialdef holiday_edit_form %}
-    </div>
   </div>
 </div>
 {% endblock %}

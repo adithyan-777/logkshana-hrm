@@ -10,13 +10,13 @@
     <span class="card__title">Edit punch</span>
   </div>
   <div class="card__body">
-    <div id="transaction-edit-form-container">
       {% partialdef transaction_edit_form inline %}
+      <div id="transaction-edit-form-container">
 <form class="tt-form-shell"
     id="transaction-edit-form"
     hx-post="{% url 'transaction_edit' transaction.pk %}"
     hx-target="#transaction-edit-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -49,8 +49,8 @@
         <a href="{% url 'attendance_transaction_list' %}" class="btn btn--ghost">Back to punches</a>
     </div>
 </form>
+      </div>
 {% endpartialdef transaction_edit_form %}
-    </div>
   </div>
 </div>
 {% endblock %}

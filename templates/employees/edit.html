@@ -8,8 +8,8 @@
     <span class="card__title">Edit employee</span>
   </div>
   <div class="card__body">
-    <div id="employee-edit-form-container">
       {% partialdef employee_edit_form inline %}
+      <div id="employee-edit-form-container">
 {% if success_message %}
 <div id="form-messages" class="message success">
     {{ success_message }}
@@ -29,7 +29,7 @@
     id="employee-edit-form"
     hx-post="{% url 'employee_edit' employee.pk %}"
     hx-target="#employee-edit-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -105,8 +105,8 @@
         <a class="btn btn--ghost" href="{% url 'employee_list' %}">Cancel</a>
     </div>
 </form>
+      </div>
 {% endpartialdef employee_edit_form %}
-    </div>
   </div>
 </div>
 {% endblock %}

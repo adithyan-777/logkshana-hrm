@@ -8,13 +8,13 @@
     <span class="card__title">Edit position</span>
   </div>
   <div class="card__body">
-    <div id="position-edit-form-container">
       {% partialdef position_edit_form inline %}
+      <div id="position-edit-form-container">
 <form class="tt-form-shell"
     id="position-edit-form"
     hx-post="{% url 'position_edit' position.pk %}"
     hx-target="#position-edit-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -45,8 +45,8 @@
         <a href="{% url 'position_list' %}" class="btn btn--ghost">Back to positions</a>
     </div>
 </form>
+      </div>
 {% endpartialdef position_edit_form %}
-    </div>
   </div>
 </div>
 {% endblock %}

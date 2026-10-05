@@ -48,6 +48,19 @@ def delete_blocked_response(message: str) -> HttpResponse:
     return response
 
 
+def set_error_toast(response: HttpResponse, message: str) -> HttpResponse:
+    """Attach an error-type toast to an existing response (form stays open).
+
+    Unlike delete_blocked_response, this keeps the response body (a
+    re-rendered form with inline field errors) and emits no list-refresh
+    event — nothing changed, so no closeModal key either.
+    """
+    response["HX-Trigger"] = json.dumps(
+        {"showToast": {"message": message, "type": "error"}}
+    )
+    return response
+
+
 def redirect_to_list_drawer(
     *,
     list_url_name: str,

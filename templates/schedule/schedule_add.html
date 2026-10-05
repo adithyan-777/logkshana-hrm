@@ -10,8 +10,8 @@
     <span class="card__title">Add schedule</span>
   </div>
   <div class="card__body">
-    <div id="schedule-form-container">
       {% partialdef schedule_form inline %}
+      <div id="schedule-form-container">
 {% if success_message %}
 <div id="form-messages" class="message success">
     {{ success_message }}
@@ -25,7 +25,7 @@
     id="schedule-form"
     hx-post="{% url 'schedule_add' %}"
     hx-target="#schedule-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -77,8 +77,8 @@
 
     <button type="submit">Add Schedule</button>
 </form>
+      </div>
 {% endpartialdef schedule_form %}
-    </div>
   </div>
 </div>
 {% endblock %}

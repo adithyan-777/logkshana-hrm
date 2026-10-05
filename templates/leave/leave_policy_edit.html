@@ -10,14 +10,14 @@
     <span class="card__title">Edit leave policy</span>
   </div>
   <div class="card__body">
-    <div id="leave-policy-edit-form-container">
       {% partialdef leave_policy_edit_form inline %}
+      <div id="leave-policy-edit-form-container">
 <form
     id="leave-policy-edit-form"
     class="tt-form-shell"
     hx-post="{% url 'leave_policy_edit' leave_policy.pk %}"
     hx-target="#leave-policy-edit-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -97,8 +97,8 @@
         <a href="{% url 'leave_policy_list' %}" class="btn btn--ghost">Back to leave policies</a>
     </div>
 </form>
+      </div>
 {% endpartialdef leave_policy_edit_form %}
-    </div>
   </div>
 </div>
 {% endblock %}

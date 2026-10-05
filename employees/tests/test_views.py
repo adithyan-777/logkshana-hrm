@@ -1,3 +1,4 @@
+import json
 from uuid import uuid4
 
 from django.urls import reverse
@@ -256,10 +257,71 @@ class EmployeeViewTests(BaseTenantTestCase):
         self.assertEqual(employee.department, department)
         self.assertEqual(employee.email, "after@example.com")
 
+    def test_edit_success_closes_modal_with_success_toast(self):
+        employee = employee_factory(first_name="Before", emp_code="E-CLS")
+
+        response = self.client.post(
+            reverse("employee_edit", args=[employee.pk]),
+            {
+                "first_name": "After",
+                "last_name": "Updated",
+                "emp_code": "E-CLS",
+                "email": "after@example.com",
+                "mobile": "+97433555334",
+                "is_active": "on",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        trigger = json.loads(response.headers.get("HX-Trigger"))
+        self.assertTrue(trigger.get("employeeUpdated"))
+        self.assertTrue(trigger.get("closeModal"))
+        self.assertEqual(trigger["showToast"]["type"], "success")
+        self.assertIn("updated", trigger["showToast"]["message"])
+
+    def test_edit_invalid_form_keeps_modal_open_and_toasts_error(self):
+        employee = employee_factory(first_name="Before", emp_code="E-BAD")
+
+        response = self.client.post(
+            reverse("employee_edit", args=[employee.pk]),
+            {
+                "first_name": "",
+                "last_name": "Updated",
+                "emp_code": "E-BAD",
+                "email": "after@example.com",
+                "mobile": "+97433555335",
+                "is_active": "on",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        trigger = json.loads(response.headers.get("HX-Trigger"))
+        self.assertNotIn("closeModal", trigger)
+        self.assertEqual(trigger["showToast"]["type"], "error")
+        self.assertIn("First name", trigger["showToast"]["message"])
+        # Form re-rendered with inline errors (popup content intact).
+        self.assertContains(response, 'class="error"')
+        employee.refresh_from_db()
+        self.assertEqual(employee.first_name, "Before")
+
     def test_edit_returns_404_for_missing_employee(self):
         response = self.client.get(reverse("employee_edit", args=[999999]))
 
         self.assertEqual(response.status_code, 404)
+
+    def test_edit_htmx_fragment_includes_swap_target(self):
+        # Regression: the drawer's HTMX fragment must contain the container
+        # the form's hx-target points at. Otherwise htmx aborts the POST
+        # before sending it (htmx:targetError) and edits never save.
+        employee = employee_factory(first_name="Swap", emp_code="E-SWP")
+        response = self.client.get(
+            reverse("employee_edit", args=[employee.pk]),
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="employee-edit-form-container"')
+        self.assertContains(response, 'hx-swap="outerHTML"')
 
 
 class DepartmentViewTests(BaseTenantTestCase):

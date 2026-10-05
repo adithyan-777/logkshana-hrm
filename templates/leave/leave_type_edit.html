@@ -10,13 +10,13 @@
     <span class="card__title">Edit leave type</span>
   </div>
   <div class="card__body">
-    <div id="leave-type-edit-form-container">
       {% partialdef leave_type_edit_form inline %}
+      <div id="leave-type-edit-form-container">
 <form class="tt-form-shell"
     id="leave-type-edit-form"
     hx-post="{% url 'leave_type_edit' leave_type.pk %}"
     hx-target="#leave-type-edit-form-container"
-    hx-swap="innerHTML"
+    hx-swap="outerHTML"
 >
     {% csrf_token %}
 
@@ -77,8 +77,8 @@
         <a href="{% url 'leave_type_list' %}" class="btn btn--ghost">Back to leave types</a>
     </div>
 </form>
+      </div>
 {% endpartialdef leave_type_edit_form %}
-    </div>
   </div>
 </div>
 {% endblock %}

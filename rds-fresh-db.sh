@@ -125,8 +125,8 @@ die() {
     exit 1
 }
 
-for bin in psql pg_dump pg_restore docker; do
-    command -v "$bin" >/dev/null 2>&1 || die "Missing required binary: $bin (install postgresql-client / docker)"
+for bin in psql; do
+    command -v "$bin" >/dev/null 2>&1 || die "Missing required binary: $bin (install postgresql-client)"
 done
 
 export PGPASSWORD="$DB_PASSWORD"
@@ -141,6 +141,49 @@ $PSQL -c "SELECT version();" | tee -a "$LOG_FILE" >&2
 $PSQL -c "SELECT 1 FROM pg_database WHERE datname='$OLD_DB';" | grep -q 1 \
     || die "Database '$OLD_DB' does not exist on $DB_HOST"
 
+# Dump/restore tooling, version-matched to the server: pg_dump refuses to
+# talk to a newer major (e.g. host pg_dump 15 vs server 18). Prefer a
+# throwaway Postgres container of the server's major (the server already
+# runs Docker); fall back to host binaries only if they are new enough.
+PG_MAJOR=$($PSQL -c "SHOW server_version_num;" | cut -c1-2)
+log "Server major version: $PG_MAJOR"
+if command -v docker >/dev/null 2>&1; then
+    PG_IMAGE="postgres:${PG_MAJOR}-alpine"
+    log "Pulling $PG_IMAGE for version-matched pg_dump/pg_restore"
+    docker pull "$PG_IMAGE" 2>&1 | tail -n 1 | tee -a "$LOG_FILE" >&2 \
+        || die "Could not pull $PG_IMAGE (registry access required)"
+    BACKUP_ABS="$(cd "$BACKUP_DIR" && pwd)"
+    DUMP_IN_CONTAINER="/backups/$(basename "$DUMP_FILE")"
+    # Inside the container, plain "localhost" means the container itself:
+    # translate to the host gateway (same as entrypoint.sh). Remote
+    # endpoints (e.g. RDS) pass through untouched.
+    DUMP_DB_HOST="$DB_HOST"
+    DOCKER_GATEWAY_ARGS=()
+    if [[ "$DB_HOST" == "localhost" || "$DB_HOST" == "127.0.0.1" ]]; then
+        DUMP_DB_HOST="host.docker.internal"
+        DOCKER_GATEWAY_ARGS=(--add-host=host.docker.internal:host-gateway)
+    fi
+    pg_dump_cmd() {
+        docker run --rm "${DOCKER_GATEWAY_ARGS[@]}" -e "PGPASSWORD=$DB_PASSWORD" \
+            -v "$BACKUP_ABS:/backups" "$PG_IMAGE" pg_dump -h "$DUMP_DB_HOST" "$@"
+    }
+    pg_restore_cmd() {
+        docker run --rm "${DOCKER_GATEWAY_ARGS[@]}" -e "PGPASSWORD=$DB_PASSWORD" \
+            -v "$BACKUP_ABS:/backups" "$PG_IMAGE" pg_restore -h "$DUMP_DB_HOST" "$@"
+    }
+else
+    for tool in pg_dump pg_restore; do
+        command -v "$tool" >/dev/null 2>&1 \
+            || die "Missing $tool and no docker: install postgresql-client >= $PG_MAJOR or docker"
+        tool_major=$($tool --version | grep -oE '[0-9]+' | head -n 1)
+        [[ "$tool_major" -ge "$PG_MAJOR" ]] \
+            || die "$tool $tool_major is too old for server $PG_MAJOR (needs >= $PG_MAJOR)"
+    done
+    DUMP_IN_CONTAINER="$DUMP_FILE"
+    pg_dump_cmd() { pg_dump -h "$DB_HOST" "$@"; }
+    pg_restore_cmd() { pg_restore -h "$DB_HOST" "$@"; }
+fi
+
 BASELINE_FILE="$BACKUP_DIR/baseline_${OLD_DB}_${STAMP}.txt"
 {
     echo "# baseline for $OLD_DB @ $STAMP"
@@ -154,9 +197,9 @@ log "Baseline written to $BASELINE_FILE"
 # Phase 1 — backup (old DB is only ever read).
 # ------------------------------------------------------------------
 log "Phase 1: dumping $OLD_DB -> $DUMP_FILE"
-pg_dump -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -Fc -f "$DUMP_FILE" "$OLD_DB"
+pg_dump_cmd -p "$DB_PORT" -U "$DB_USER" -Fc -f "$DUMP_IN_CONTAINER" "$OLD_DB"
 [[ -s "$DUMP_FILE" ]] || die "Dump file is empty"
-pg_restore --list "$DUMP_FILE" >/dev/null || die "Dump file failed pg_restore --list"
+pg_restore_cmd --list "$DUMP_IN_CONTAINER" >/dev/null || die "Dump file failed pg_restore --list"
 sha256sum "$DUMP_FILE" | tee -a "$BACKUP_DIR/SHA256SUMS" >&2
 log "Dump OK: $(du -h "$DUMP_FILE" | cut -f1)"
 
@@ -165,7 +208,7 @@ if [[ "$SKIP_RESTORE_CHECK" -eq 0 ]]; then
     log "Restore verification into scratch DB $SCRATCH"
     $PSQL -c "DROP DATABASE IF EXISTS $SCRATCH;"
     $PSQL -c "CREATE DATABASE $SCRATCH OWNER \"$DB_USER\";"
-    pg_restore -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$SCRATCH" --no-owner "$DUMP_FILE" \
+    pg_restore_cmd -p "$DB_PORT" -U "$DB_USER" -d "$SCRATCH" --no-owner "$DUMP_IN_CONTAINER" \
         || die "Restore into scratch DB failed"
     RESTORED_COUNT=$($PSQL -d "$SCRATCH" -c \
         "SELECT count(*) FROM pg_tables WHERE schemaname NOT LIKE 'pg\_%' AND schemaname <> 'information_schema';")

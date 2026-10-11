@@ -5,15 +5,19 @@ from django.core.exceptions import ValidationError
 from common.tests.base import BaseTenantTestCase
 from common.tests.factories import (
     employee_factory,
+    holiday_factory,
     schedule_factory,
     timetable_factory,
 )
 from schedule.models import EmployeeScheduleOverride, TimetableBreak
 from schedule.services import (
     assignment_create,
+    get_or_materialize_shift,
     schedule_create,
     timetable_break_create,
     timetable_create,
+    validate_override,
+    validate_timetable_break,
 )
 
 
@@ -97,26 +101,20 @@ class BreakCleanTests(BaseTenantTestCase):
         self.timetable = timetable_factory(name="Brk", code="BRK-1")
 
     def test_inverted_break_rejected(self):
-        break_ = TimetableBreak(
-            timetable=self.timetable,
-            name="Bad",
-            start_time=time(13, 0),
-            end_time=time(12, 0),
-        )
         with self.assertRaises(ValidationError) as ctx:
-            break_.full_clean()
+            validate_timetable_break(
+                start_time=time(13, 0),
+                end_time=time(12, 0),
+            )
         self.assertIn("end_time", ctx.exception.error_dict)
 
     def test_flexible_break_without_minutes_rejected(self):
-        break_ = TimetableBreak(
-            timetable=self.timetable,
-            name="Flex",
-            break_time_type=TimetableBreak.BreakType.FLEXIBLE,
-            start_time=time(13, 0),
-            end_time=time(14, 0),
-        )
         with self.assertRaises(ValidationError) as ctx:
-            break_.full_clean()
+            validate_timetable_break(
+                break_time_type=TimetableBreak.BreakType.FLEXIBLE,
+                start_time=time(13, 0),
+                end_time=time(14, 0),
+            )
         self.assertIn("break_time_minutes", ctx.exception.error_dict)
 
     def test_service_break_still_validates_window(self):
@@ -178,9 +176,12 @@ class OverrideValidationTests(BaseTenantTestCase):
         )
 
     def _override(self, **kwargs):
-        override = EmployeeScheduleOverride(
-            employee=self.employee, date=date(2026, 3, 9), **kwargs
+        params = {"employee": self.employee, "date": date(2026, 3, 9), **kwargs}
+        validate_override(
+            is_day_off=params.get("is_day_off", False),
+            schedule=params.get("schedule"),
         )
+        override = EmployeeScheduleOverride(**params)
         override.full_clean()
         return override
 
@@ -201,3 +202,52 @@ class OverrideValidationTests(BaseTenantTestCase):
         with self.assertRaises(ValidationError) as ctx:
             self._override(is_day_off=False, schedule=None)
         self.assertIn("schedule", ctx.exception.error_dict)
+
+
+class MaterializeHolidayTests(BaseTenantTestCase):
+    def setUp(self):
+        super().setUp()
+        self.employee = employee_factory(first_name="Hol", emp_code="HOL001")
+        self.schedule = schedule_factory(
+            name="Holy Week", timetable=timetable_factory(name="Base", code="HOL-B")
+        )
+        assignment_create(
+            schedule=self.schedule,
+            employees=[self.employee],
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 12, 31),
+        )
+
+    def test_single_day_holiday_only_covers_its_date(self):
+        from schedule.models import ScheduledShiftDay
+
+        holiday_factory(name="One Day", date=date(2026, 3, 9))
+
+        shift, created = get_or_materialize_shift(
+            employee=self.employee, day=date(2026, 3, 9)
+        )
+        self.assertTrue(created)
+        self.assertEqual(shift.day_type, ScheduledShiftDay.DayType.HOLIDAY)
+
+        # A NULL end_date means one day, not open-ended.
+        shift, created = get_or_materialize_shift(
+            employee=self.employee, day=date(2026, 3, 10)
+        )
+        self.assertTrue(created)
+        self.assertEqual(shift.day_type, ScheduledShiftDay.DayType.WORKING)
+
+    def test_ranged_holiday_covers_inside_days(self):
+        from schedule.models import ScheduledShiftDay
+
+        holiday_factory(
+            name="Festival", date=date(2026, 3, 9), end_date=date(2026, 3, 11)
+        )
+
+        for day in (date(2026, 3, 9), date(2026, 3, 10), date(2026, 3, 11)):
+            shift, _ = get_or_materialize_shift(employee=self.employee, day=day)
+            self.assertEqual(shift.day_type, ScheduledShiftDay.DayType.HOLIDAY)
+
+        shift, _ = get_or_materialize_shift(
+            employee=self.employee, day=date(2026, 3, 12)
+        )
+        self.assertEqual(shift.day_type, ScheduledShiftDay.DayType.WORKING)

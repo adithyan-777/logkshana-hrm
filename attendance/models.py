@@ -5,7 +5,7 @@ from django.db import models
 from django.db.models import Q
 
 from common.models import BaseModel
-from schedule.models import Timetable
+from schedule.models import ScheduledShiftDay, Timetable
 
 
 class AttendanceActivity(BaseModel):
@@ -33,6 +33,13 @@ class AttendanceActivity(BaseModel):
     employee = models.ForeignKey(
         "employees.Employee",
         on_delete=models.CASCADE,
+        related_name="attendance_activities",
+    )
+    scheduled_shift = models.ForeignKey(
+        ScheduledShiftDay,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
         related_name="attendance_activities",
     )
     punch_time = models.DateTimeField()

@@ -115,13 +115,24 @@ def _get_or_create_schedule(*, name: str, timetable: Timetable) -> Schedule:
     if schedule:
         return schedule
 
-    return schedule_create(
+    schedule = schedule_create(
         name=name,
         timetable=timetable,
         repeat=True,
         repeat_every=1,
         repeat_unit=Schedule.RepeatUnitType.WEEK,
     )
+    # Same shift every weekday: the materializer resolves each day
+    # through these entries.
+    from schedule.models import ScheduleEntry
+
+    for day_index in range(7):
+        ScheduleEntry.objects.get_or_create(
+            schedule=schedule,
+            day_index=day_index,
+            defaults={"timetable": timetable},
+        )
+    return schedule
 
 
 def seed_demo_data(*, branch=None) -> dict[str, int]:

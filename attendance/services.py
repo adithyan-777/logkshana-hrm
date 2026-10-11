@@ -7,50 +7,48 @@ from django.utils.dateparse import parse_datetime
 from django_tenants.utils import get_public_schema_name, schema_context
 
 from attendance.calculation import (
-    attendance_day_for_punch,
     direction_from_gateway_status,
 )
 from attendance.integrations.gateway import device_gateway_attendance_fetch
 from attendance.models import Attendance, AttendanceActivity
 from attendance.recalculation import (
-    DEFAULT_DAY_CHANGE_TIME,
     recalculate_attendance,
+    recalculate_shift,
 )
 from companies.selectors import device_get_by_serial_number
 from employees.models import Employee
 from employees.selectors import employee_get_by_emp_code
 from employees.services import employee_create
-from schedule.selectors import resolve_schedule_for_employee_on_date
 
 
 def resolve_punch_day(*, employee, timestamp):
-    """Return the (day, schedule, timetable) a punch belongs to.
+    """Return the ``(day, shift)`` a punch belongs to.
 
-    Early-morning punches fall on the previous attendance day per the
-    timetable's ``day_change_time`` (08:00 when unscheduled), so an
-    overnight check-out lands on the day the shift started.
+    Attribution is window containment on the employee's materialized
+    shift rows; when no row exists yet one is materialized on demand
+    (or recorded UNSCHEDULED once punches exist).
     """
+    from attendance.recalculation import _unscheduled_shift_if_punched
+    from schedule.services import find_shift_for_punch, get_or_materialize_shift
+
     ts = timestamp
     if timezone.is_naive(ts):
         ts = timezone.make_aware(ts)
-    local_date = timezone.localtime(ts).date()
-    resolved = resolve_schedule_for_employee_on_date(employee=employee, day=local_date)
-    timetable = resolved.timetable
-    day_change = (
-        timetable.day_change_time if timetable is not None else DEFAULT_DAY_CHANGE_TIME
-    )
-    day = attendance_day_for_punch(timestamp=ts, day_change_time=day_change)
-    if day != local_date:
-        prev = resolve_schedule_for_employee_on_date(employee=employee, day=day)
-        if prev.timetable is not None:
-            resolved, timetable = prev, prev.timetable
-    return day, resolved.schedule, timetable
+    shift = find_shift_for_punch(employee=employee, timestamp=ts)
+    if shift is None:
+        day = timezone.localtime(ts).date()
+        shift, _ = get_or_materialize_shift(employee=employee, day=day)
+        if shift is None:
+            shift = _unscheduled_shift_if_punched(employee=employee, day=day)
+    return (shift.day, shift) if shift is not None else (None, None)
 
 
 def recalculate_attendance_for_punch(*, employee, timestamp):
-    """Recompute the attendance day a single punch belongs to."""
-    day, _, _ = resolve_punch_day(employee=employee, timestamp=timestamp)
-    return recalculate_attendance(employee=employee, day=day)
+    """Recompute the attendance of the shift row a punch belongs to."""
+    _, shift = resolve_punch_day(employee=employee, timestamp=timestamp)
+    if shift is None:
+        return None
+    return recalculate_shift(shift=shift)
 
 
 @transaction.atomic
@@ -103,6 +101,9 @@ def activity_update(
     old_employee = activity.employee
     old_punch_time = activity.punch_time
     activity.employee = employee
+    # Attribution is re-derived from the new time on recalc: drop the old
+    # shift link so a moved punch can't stay claimed by its previous row.
+    activity.scheduled_shift = None
     # external_id is a stable record identifier: keep the existing one
     # unless an explicit replacement is given.
     if external_id:
@@ -361,7 +362,7 @@ def device_attendance_pull(
                 recalculate=False,
             )
             created += 1
-            day, _, _ = resolve_punch_day(employee=employee, timestamp=timestamp)
+            day, _ = resolve_punch_day(employee=employee, timestamp=timestamp)
             affected_days[(employee.pk, day)] = (employee, day)
 
     with schema_context(tenant_schema):

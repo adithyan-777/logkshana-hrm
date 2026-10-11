@@ -11,7 +11,13 @@ Enqueue with ``django_q.tasks.async_task`` by string path, e.g.
 
 from datetime import date, timedelta
 
+from django.db import transaction
 from django.utils import timezone
+from django_q.models import Schedule
+from django_q.tasks import async_task, schedule
+from django_tenants.utils import get_tenant_model, schema_context
+
+P = "attendance.q2_tasks"
 
 GROUP_LABEL = "attendance-calc"
 
@@ -24,11 +30,105 @@ DEVICE_SYNC_TIMEOUT = 300
 #: Base backoff between retries; delay is base * 2**attempt.
 DEVICE_SYNC_RETRY_BASE_SECONDS = 60
 
+#: How far ahead of now a shift may start and still be materialized.
+LEAD = timedelta(hours=2)
+#: Grace after shift start before the absent-check fires.
+GRACE = timedelta(minutes=30)
+
 
 def _day_from_iso(day_iso: str | None) -> date:
     if day_iso:
         return date.fromisoformat(day_iso)
     return timezone.localdate()
+
+
+def materialize_shifts_all_tenants():
+    for t in get_tenant_model().objects.exclude(schema_name="public"):
+        async_task(f"{P}.materialize_shifts_for_tenant", t.schema_name)
+
+
+def materialize_shifts_for_tenant(schema_name):
+    """Create ``ScheduledShiftDay`` rows for today + tomorrow.
+
+    Every assigned/overridden employee gets a plan row; shifts starting
+    beyond the lead horizon are left for a later run. Day-off and holiday
+    rows are always materialized. Existing rows are never touched.
+    """
+    from django.db.models import Q
+
+    from employees.models import Employee
+    from schedule.models import (
+        EmployeeScheduleAssignment,
+        EmployeeScheduleOverride,
+        ScheduledShiftDay,
+    )
+    from schedule.services import get_or_materialize_shift
+
+    with schema_context(schema_name):
+        now = timezone.now()
+        horizon = now + LEAD
+        today = timezone.localdate(now)
+
+        for day in (today, today + timedelta(days=1)):
+            candidates = set(
+                EmployeeScheduleOverride.objects.filter(date=day).values_list(
+                    "employee_id", flat=True
+                )
+            )
+            candidates |= set(
+                EmployeeScheduleAssignment.objects.filter(
+                    is_active=True,
+                    start_date__lte=day,
+                    schedule__is_active=True,
+                )
+                .filter(Q(end_date__gte=day) | Q(end_date__isnull=True))
+                .values_list("employees__pk", flat=True)
+            )
+            candidates.discard(None)
+            employees = Employee.objects.filter(
+                pk__in=candidates, is_active=True
+            ).order_by("pk")
+            for employee in employees.iterator():
+                shift, created = get_or_materialize_shift(employee=employee, day=day)
+                if shift is None or not created:
+                    continue
+                if (
+                    shift.day_type != ScheduledShiftDay.DayType.WORKING
+                    or shift.shift_start is None
+                ):
+                    continue
+                if shift.shift_start > horizon or shift.shift_end <= now:
+                    continue
+                if shift.attendance_activities.exists():
+                    continue
+                transaction.on_commit(
+                    lambda pk=shift.pk, s=shift.shift_start: after_shift_created(
+                        pk, s, schema_name
+                    )
+                )
+
+
+def after_shift_created(shift_pk, start_at, schema_name):
+    async_task(f"{P}.notify_employee_shift_upcoming", shift_pk, schema_name)
+    schedule(
+        f"{P}.mark_absent_if_no_punch",
+        shift_pk,
+        schema_name,
+        name=f"absent-check:{schema_name}:{shift_pk}",
+        schedule_type=Schedule.ONCE,
+        next_run=start_at + GRACE,
+        repeats=1,
+    )
+
+
+def notify_employee_shift_upcoming(shift_pk, schema_name):
+    with schema_context(schema_name):
+        pass
+
+
+def mark_absent_if_no_punch(shift_pk, schema_name):
+    with schema_context(schema_name):
+        pass
 
 
 def fanout_daily_attendance(day_iso: str | None = None) -> dict:

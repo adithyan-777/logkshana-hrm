@@ -5,19 +5,22 @@ from django.forms import inlineformset_factory
 from common.forms import apply_form_field_ui
 from employees.models import Department, Employee
 from schedule.models import (
-    BREAK_OUTSIDE_WORK_ERROR,
     Schedule,
     Timetable,
     TimetableBreak,
-    default_day_change_time,
 )
 from schedule.services import (
     ASSIGNMENT_MODE_ALL_EXCEPT,
     ASSIGNMENT_MODE_DEPARTMENT,
     ASSIGNMENT_MODE_INDIVIDUAL,
     ASSIGNMENT_MODES,
+    BREAK_OUTSIDE_WORK_ERROR,
+    default_day_change_time,
     resolve_assignment_employees,
     validate_break_within_timetable,
+    validate_schedule,
+    validate_timetable,
+    validate_timetable_break,
 )
 
 TIME_INPUT = forms.TimeInput(attrs={"type": "time"})
@@ -71,6 +74,21 @@ class TimetableForm(forms.ModelForm):
             check_out_cross_days=self.cleaned_data.get("check_out_cross_days") or 0
         )
 
+    def clean(self):
+        cleaned_data = super().clean()
+        try:
+            validate_timetable(
+                check_in=cleaned_data.get("check_in"),
+                check_out=cleaned_data.get("check_out"),
+                check_out_cross_days=cleaned_data.get("check_out_cross_days") or 0,
+                type=cleaned_data.get("type") or Timetable.Type.NORMAL,
+                work_minutes=cleaned_data.get("work_minutes"),
+                day_change_time=cleaned_data.get("day_change_time"),
+            )
+        except ValidationError as exc:
+            raise forms.ValidationError(exc.message_dict if hasattr(exc, "error_dict") else exc.messages)
+        return cleaned_data
+
 
 class TimetableBreakForm(forms.ModelForm):
     class Meta:
@@ -100,6 +118,22 @@ class TimetableBreakForm(forms.ModelForm):
         if not any(data.get(self.add_prefix(name)) for name in meaningful):
             return False
         return super().has_changed()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get("DELETE"):
+            return cleaned_data
+        try:
+            validate_timetable_break(
+                start_time=cleaned_data.get("start_time"),
+                end_time=cleaned_data.get("end_time"),
+                break_time_type=cleaned_data.get("break_time_type")
+                or TimetableBreak.BreakType.FIXED,
+                break_time_minutes=cleaned_data.get("break_time_minutes"),
+            )
+        except ValidationError as exc:
+            raise forms.ValidationError(exc.message_dict if hasattr(exc, "error_dict") else exc.messages)
+        return cleaned_data
 
 
 class BaseTimetableBreakFormSet(forms.BaseInlineFormSet):
@@ -313,3 +347,16 @@ class ScheduleForm(forms.ModelForm):
         ).order_by("name")
         self.fields["end_date"].label = "End date (blank = open-ended)"
         apply_form_field_ui(self)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        try:
+            validate_schedule(
+                start_date=cleaned_data.get("start_date"),
+                end_date=cleaned_data.get("end_date"),
+                repeat=cleaned_data.get("repeat", True),
+                repeat_every=cleaned_data.get("repeat_every"),
+            )
+        except ValidationError as exc:
+            raise forms.ValidationError(exc.message_dict if hasattr(exc, "error_dict") else exc.messages)
+        return cleaned_data

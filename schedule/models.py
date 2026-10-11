@@ -1,99 +1,10 @@
 
-from datetime import date, datetime, timedelta
 from datetime import time as dt_time
 
-from django.core.exceptions import ValidationError
 from django.db import models
 
 from common.models import BaseModel
 from employees.models import Employee
-
-TIMETABLE_TIMES_ORDER_ERROR = (
-    "Check-out must be after check-in. For an overnight shift "
-    "(e.g. 22:00 to 06:00), set check-out cross days to 1."
-)
-
-BREAK_OUTSIDE_WORK_ERROR = (
-    "Break must be within working hours (check-in to check-out)."
-)
-
-
-def default_day_change_time(*, check_out_cross_days: int = 0) -> dt_time:
-    """Boundary below which a punch belongs to the previous attendance day.
-
-    A same-day shift starts and ends on one date, so midnight is the only
-    sensible boundary: any earlier check-in simply stays on its own day.
-    An overnight shift (check-out past midnight) instead needs a morning
-    boundary, otherwise the early-morning checkout would be attributed to
-    the day the shift ended rather than the one it started on.
-    """
-    return dt_time(8, 0) if check_out_cross_days else dt_time(0, 0)
-
-
-def validate_timetable_times(
-    *,
-    check_in,
-    check_out,
-    check_out_cross_days,
-) -> None:
-    """
-    Check-out must land strictly after check-in on the effective
-    timeline (check-out offset by its cross-day value), so 22:00 ->
-    06:00 is only valid with check_out_cross_days >= 1.
-
-    Missing times or cross-day values are skipped here; field-level
-    validation reports them.
-    """
-    if check_in is None or check_out is None:
-        return
-    if check_out_cross_days is None:
-        return
-
-    # Compare on a timeline anchored to one date, offset by the
-    # cross-day field.
-    anchor = date(2000, 1, 1)
-    effective_in = datetime.combine(anchor, check_in)
-    effective_out = datetime.combine(
-        anchor + timedelta(days=check_out_cross_days),
-        check_out,
-    )
-    if effective_out <= effective_in:
-        raise ValidationError({"check_out_cross_days": TIMETABLE_TIMES_ORDER_ERROR})
-
-
-def validate_break_within_timetable(
-    *,
-    start_time,
-    end_time,
-    check_in,
-    check_out,
-    check_out_cross_days: int = 0,
-) -> None:
-    """Break window must sit inside the timetable's work window.
-
-    Overnight-aware: with ``check_out_cross_days >= 1`` the work window
-    spans midnight, and early-morning breaks are read on the next day.
-    Flexible timetables without fixed times are skipped (no window).
-    """
-    if start_time is None or end_time is None:
-        return
-    if check_in is None or check_out is None:
-        return
-    anchor = date(2000, 1, 1)
-    work_start = datetime.combine(anchor, check_in)
-    work_end = datetime.combine(
-        anchor + timedelta(days=check_out_cross_days or 0),
-        check_out,
-    )
-    break_start = datetime.combine(anchor, start_time)
-    break_end = datetime.combine(anchor, end_time)
-    if break_end <= break_start:
-        return  # Reported separately as an ordering error.
-    if (check_out_cross_days or 0) and break_start < work_start:
-        break_start += timedelta(days=1)
-        break_end += timedelta(days=1)
-    if break_start < work_start or break_end > work_end:
-        raise ValidationError({"start_time": BREAK_OUTSIDE_WORK_ERROR})
 
 
 class Timetable(BaseModel):
@@ -154,37 +65,6 @@ class Timetable(BaseModel):
 
     is_active = models.BooleanField(default=True)
 
-    def clean(self):
-        super().clean()
-        validate_timetable_times(
-            check_in=self.check_in,
-            check_out=self.check_out,
-            check_out_cross_days=self.check_out_cross_days,
-        )
-        if self.type == self.Type.FLEXIBLE and self.work_minutes in (None, ""):
-            raise ValidationError(
-                {
-                    "work_minutes": (
-                        "Required working minutes must be set for flexible timetables."
-                    )
-                }
-            )
-        # Punches before day_change_time attribute to the previous day,
-        # so a check-in punch earlier than it would land on the wrong day.
-        if (
-            self.check_in is not None
-            and self.day_change_time is not None
-            and self.day_change_time > self.check_in
-        ):
-            raise ValidationError(
-                {
-                    "day_change_time": (
-                        "Day change time must not be later than check-in; "
-                        "punches before it count toward the previous day."
-                    )
-                }
-            )
-
     def __str__(self):
         return self.name
 
@@ -216,31 +96,6 @@ class TimetableBreak(BaseModel):
 
     start_time = models.TimeField()
     end_time = models.TimeField()
-
-    def clean(self):
-        super().clean()
-        # Work-window containment is owned by the break formset (fresh
-        # parent values) and by timetable_break_create (explicit window);
-        # only parent-independent rules live here.
-        if (
-            self.start_time is not None
-            and self.end_time is not None
-            and self.end_time <= self.start_time
-        ):
-            raise ValidationError(
-                {"end_time": "End time must be after start time."}
-            )
-        if (
-            self.break_time_type == TimetableBreak.BreakType.FLEXIBLE
-            and self.break_time_minutes is None
-        ):
-            raise ValidationError(
-                {
-                    "break_time_minutes": (
-                        "Break minutes are required for flexible breaks."
-                    )
-                }
-            )
 
     def __str__(self):
         return f"{self.timetable} - {self.name}"
@@ -282,23 +137,6 @@ class Schedule(BaseModel):
     )
     is_active = models.BooleanField(default=True)
 
-    def clean(self):
-        super().clean()
-        if (
-            self.start_date
-            and self.end_date
-            and self.end_date < self.start_date
-        ):
-            raise ValidationError({"end_date": "End date must not be before start date."})
-        if (
-            self.repeat
-            and self.repeat_every is not None
-            and self.repeat_every < 1
-        ):
-            raise ValidationError(
-                {"repeat_every": "Repeat interval must be at least 1."}
-            )
-
     def __str__(self):
         return self.name
 
@@ -334,15 +172,6 @@ class EmployeeScheduleAssignment(BaseModel):
         help_text="Higher wins when assignments overlap on the same day.",
     )
     is_active = models.BooleanField(default=True)
-
-    def clean(self):
-        super().clean()
-        if (
-            self.start_date
-            and self.end_date
-            and self.end_date < self.start_date
-        ):
-            raise ValidationError({"end_date": "End date must not be before start date."})
 
     class Meta:
         ordering = ["-priority", "-start_date"]
@@ -381,26 +210,6 @@ class EmployeeScheduleOverride(BaseModel):
     is_day_off = models.BooleanField(default=False)
     reason = models.CharField(max_length=255, blank=True)
 
-    def clean(self):
-        super().clean()
-        if self.is_day_off and self.schedule_id:
-            raise ValidationError(
-                {
-                    "schedule": (
-                        "A day-off override must not point at a schedule."
-                    )
-                }
-            )
-        if not self.is_day_off and self.schedule_id is None:
-            raise ValidationError(
-                {
-                    "schedule": (
-                        "Choose a schedule for the swap, or mark the day "
-                        "as a day off."
-                    )
-                }
-            )
-
     class Meta:
         ordering = ["date"]
         constraints = [
@@ -420,4 +229,89 @@ class EmployeeScheduleOverride(BaseModel):
         if self.is_day_off:
             return f"{self.employee} - {self.date} (day off)"
         return f"{self.employee} - {self.date} -> {self.schedule}"
+
+class ScheduleEntry(BaseModel):
+    schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE, related_name="entries")
+    day_index = models.PositiveSmallIntegerField()  # 0-6 weekday, or offset within the cycle
+    timetable = models.ForeignKey(Timetable, on_delete=models.PROTECT, related_name="schedule_entries")
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=("schedule", "day_index"), name="uniq_schedule_entry_day")]
+
+
+class ScheduledShiftDay(BaseModel):
+    """
+    Resolved plan for one (employee, day), generated from override /
+    holiday / assignment + entry + timetable. Day-off and holiday rows are
+    materialized too, so every punch has somewhere to land and "no row"
+    never has to mean "off or not generated yet".
+ 
+    This is the table the calculator reads: ``timetable_snapshot`` is a
+    frozen, fully-resolved copy of the timetable (absolute datetimes,
+    breaks, grace, thresholds) and punches hang off it via
+    ``AttendanceActivity.scheduled_shift``. Leave is NOT part of the plan.
+ 
+    ``day`` is the local (tenant-timezone) date the shift starts on.
+    Never regenerate a row that already has punches or an attendance.
+    """
+ 
+    class DayType(models.TextChoices):
+        WORKING = "working", "Working"
+        DAY_OFF = "day_off", "Day off"
+        HOLIDAY = "holiday", "Holiday"
+ 
+    class Source(models.TextChoices):
+        ASSIGNMENT = "assignment", "Assignment"
+        OVERRIDE = "override", "Override"
+        HOLIDAY = "holiday", "Holiday calendar"
+        UNSCHEDULED = "unscheduled", "Unscheduled"  # no assignment covers the day
+ 
+    employee = models.ForeignKey(
+        "employees.Employee",
+        on_delete=models.PROTECT,
+        related_name="scheduled_shifts",
+    )
+    day = models.DateField()
+    day_type = models.CharField(
+        max_length=10,
+        choices=DayType.choices,
+        default=DayType.WORKING,
+    )
+    timetable = models.ForeignKey(
+        Timetable,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="scheduled_shifts",
+    )
+    shift_start = models.DateTimeField(null=True, blank=True)
+    shift_end = models.DateTimeField(null=True, blank=True)
+    window_start = models.DateTimeField(null=True, blank=True)
+    window_end = models.DateTimeField(null=True, blank=True)
+    timetable_snapshot = models.JSONField(null=True, blank=True)
+    is_half_holiday = models.BooleanField(default=False)
+ 
+    source = models.CharField(max_length=12, choices=Source.choices)
+    assignment = models.ForeignKey(
+        EmployeeScheduleAssignment,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+    override = models.ForeignKey(
+        EmployeeScheduleOverride,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+
+ 
+    @property
+    def is_working(self) -> bool:
+        return self.day_type == self.DayType.WORKING
+ 
+    def __str__(self):
+        return f"{self.employee_id} {self.day} {self.day_type}"
     

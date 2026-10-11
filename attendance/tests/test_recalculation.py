@@ -1,16 +1,11 @@
 from datetime import date, datetime, time
-from types import SimpleNamespace
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from django.test import SimpleTestCase
 from django.utils import timezone
 
-from attendance.calculation import (
-    direction_from_gateway_status,
-    pair_punches,
-    summarize_pairs,
-)
+from attendance.calculation import direction_from_gateway_status
 from attendance.models import Attendance
 from attendance.recalculation import recalculate_attendance
 from attendance.services import activity_delete, device_attendance_pull
@@ -51,58 +46,10 @@ class DirectionMappingTests(SimpleTestCase):
                 self.assertEqual(direction_from_gateway_status(status), "out")
 
     def test_checkin_and_unknown_statuses_stay_unknown(self):
-        # Most devices report every punch as 0: keep UNKNOWN so the
-        # first punch still pairs as check-in.
+        # Most devices report every punch as 0: keep UNKNOWN.
         for status in (0, 3, 4, 99, None, "", "bogus"):
             with self.subTest(status=status):
                 self.assertEqual(direction_from_gateway_status(status), "unknown")
-
-
-class PairingTests(SimpleTestCase):
-    def punch(self, at, direction="unknown"):
-        # Unsaved stand-ins: pairing only reads punch_time/direction.
-        return SimpleNamespace(punch_time=at, direction=direction)
-
-    def test_unknown_punches_alternate_in_out(self):
-        pairs = pair_punches(
-            [
-                self.punch(aware(2026, 9, 2, 9)),
-                self.punch(aware(2026, 9, 2, 18)),
-            ]
-        )
-        self.assertEqual(len(pairs), 1)
-        self.assertEqual(pairs[0][0].punch_time, aware(2026, 9, 2, 9))
-        self.assertEqual(pairs[0][1].punch_time, aware(2026, 9, 2, 18))
-
-    def test_explicit_out_closes_open_in(self):
-        pairs = pair_punches(
-            [
-                self.punch(aware(2026, 9, 2, 9)),
-                self.punch(aware(2026, 9, 2, 12), direction="out"),
-                self.punch(aware(2026, 9, 2, 13)),
-                self.punch(aware(2026, 9, 2, 18), direction="out"),
-            ]
-        )
-        self.assertEqual(len(pairs), 2)
-        self.assertTrue(all(c is not None and o is not None for c, o in pairs))
-
-    def test_summary_totals_first_last_and_break(self):
-        summary = summarize_pairs(
-            pair_punches(
-                [
-                    self.punch(aware(2026, 9, 2, 9)),
-                    self.punch(aware(2026, 9, 2, 12), direction="out"),
-                    self.punch(aware(2026, 9, 2, 13)),
-                    self.punch(aware(2026, 9, 2, 18), direction="out"),
-                ]
-            )
-        )
-        self.assertTrue(summary.has_check_in)
-        self.assertTrue(summary.has_check_out)
-        self.assertEqual(summary.first_in, aware(2026, 9, 2, 9))
-        self.assertEqual(summary.last_out, aware(2026, 9, 2, 18))
-        self.assertEqual(summary.worked_minutes, 480)
-        self.assertEqual(summary.break_minutes, 60)
 
 
 class RecalculationTests(BaseTenantTestCase):
@@ -176,7 +123,7 @@ class RecalculationTests(BaseTenantTestCase):
         self.assertTrue(daily.has_check_in)
         self.assertFalse(daily.has_check_out)
 
-    def test_split_day_pairs_two_periods_with_break(self):
+    def test_split_day_spans_break_first_to_last(self):
         self.push(at=aware(2026, 9, 2, 9), gateway_log_id=41)
         self.push(at=aware(2026, 9, 2, 12), status=1, gateway_log_id=42)
         self.push(at=aware(2026, 9, 2, 13), gateway_log_id=43)
@@ -184,7 +131,9 @@ class RecalculationTests(BaseTenantTestCase):
 
         daily = self.daily()
         self.assertEqual(daily.status, Attendance.Status.PRESENT)
-        self.assertEqual(daily.worked_minutes, 480)
+        # First-in/last-out: the full 09:00 -> 18:00 span counts as
+        # worked (breaks only shrink the scheduled denominator).
+        self.assertEqual(daily.worked_minutes, 540)
         self.assertEqual(daily.activities.count(), 4)
 
     def test_duplicate_taps_within_window_count_once(self):

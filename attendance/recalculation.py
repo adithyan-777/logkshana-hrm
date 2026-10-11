@@ -1,20 +1,25 @@
-"""Daily attendance calculation for the 2-model attendance flow.
+"""Daily attendance calculation, driven by materialized shift rows.
 
-Punches stream into ``AttendanceActivity``; this module folds one
-(employee, day) window of activities plus the resolved schedule into
-the ``Attendance`` summary row.
+``ScheduledShiftDay`` is the single definition of the plan: one row per
+(employee, day) with absolute shift times, a frozen timetable snapshot,
+and an attribution window. Punches link to their row via
+``AttendanceActivity.scheduled_shift`` (window containment); this module
+folds one row plus its punches into the ``Attendance`` summary row.
 
-Each rule has exactly one definition, in its own layer:
+Layers:
 
-* day geometry  — ``day_window`` / ``punches_for``: what "this day"
-  means (the shift's ``day_change_time``, not midnight).
-* calculation   — ``build_day_result``: pure, writes nothing.
-* persistence   — ``recalculate_attendance``: the only writer.
-* reporting     — ``day_report``: read-only over persisted rows, so it
-  can never disagree with the rows it describes.
+* attribution   — ``link_punch_to_shift`` / ``shift_punches``: which
+  punches belong to a row (window containment, nothing else).
+* calculation   — ``build_shift_result``: pure first-in/last-out math
+  against the row's own times. Writes nothing.
+* persistence   — ``recalculate_shift`` / ``recalculate_attendance``:
+  the only writers.
+* reporting     — ``day_report``: read-only over persisted rows.
 * orchestration — ``ensure_day`` / ``calculate_attendance``.
 
-Pure pairing/variance math lives in ``attendance.calculation``.
+No live schedule resolution happens here: assignments, overrides,
+repeat rules and holidays are all resolved once, at materialization
+time (``schedule.services.get_or_materialize_shift``).
 """
 
 from dataclasses import dataclass
@@ -24,54 +29,65 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from attendance.calculation import (
-    DaySummary,
-    DayVariances,
-    attendance_day_for_punch,
-    day_variances,
-    dedupe_punches,
-    pair_punches,
-    scheduled_minutes,
-    summarize_pairs,
-)
+from attendance.calculation import minutes_between
 from attendance.models import Attendance, AttendanceActivity
 from employees.models import Employee
-from schedule.calculation import expected_datetimes
-from schedule.models import EmployeeScheduleAssignment, EmployeeScheduleOverride
-from schedule.selectors import resolve_schedule_for_employee_on_date
-
-DEFAULT_DAY_CHANGE_TIME = time(8, 0)
-
+from schedule.models import (
+    EmployeeScheduleAssignment,
+    EmployeeScheduleOverride,
+    ScheduledShiftDay,
+)
+from schedule.services import find_shift_for_punch, get_or_materialize_shift
 
 # --------------------------------------------------------------------------
-# Day geometry — the single definition of "the day".
+# Attribution — window containment is the single definition of belonging.
 # --------------------------------------------------------------------------
 
 
-def day_window(*, day: date, day_change: time) -> tuple[datetime, datetime]:
-    """The ``[start, end)`` window of punches attributed to ``day``."""
-    start = timezone.make_aware(datetime.combine(day, day_change))
-    return start, start + timedelta(days=1)
+def link_punch_to_shift(*, punch: AttendanceActivity):
+    """Point one punch at the shift row whose window contains it."""
+    shift = find_shift_for_punch(
+        employee=punch.employee, timestamp=punch.punch_time
+    )
+    if shift is not None and punch.scheduled_shift_id != shift.pk:
+        punch.scheduled_shift = shift
+        punch.save(update_fields=["scheduled_shift"])
+    return shift
 
 
-def punches_for(*, employee, day: date, day_change: time) -> list:
-    """All of ``employee``'s punches attributed to ``day``, in time order."""
-    start, end = day_window(day=day, day_change=day_change)
+def shift_punches(*, shift: ScheduledShiftDay) -> list:
+    """All punches belonging to ``shift``, in time order.
+
+    Strays inside the row's window are linked on the way in, so a punch
+    created before its row existed still lands correctly. Rows without a
+    window (day-off / holiday) collect the calendar day's punches.
+    """
+    if shift.window_start is not None and shift.window_end is not None:
+        strays = AttendanceActivity.objects.filter(
+            employee=shift.employee,
+            punch_time__gte=shift.window_start,
+            punch_time__lt=shift.window_end,
+            scheduled_shift__isnull=True,
+        )
+        if strays.exists():
+            strays.update(scheduled_shift=shift)
+    else:
+        day_start = timezone.make_aware(datetime.combine(shift.day, time.min))
+        strays = AttendanceActivity.objects.filter(
+            employee=shift.employee,
+            punch_time__gte=day_start,
+            punch_time__lt=day_start + timedelta(days=1),
+            scheduled_shift__isnull=True,
+        )
+        if strays.exists():
+            strays.update(scheduled_shift=shift)
     return list(
-        AttendanceActivity.objects.filter(
-            employee=employee,
-            punch_time__gte=start,
-            punch_time__lt=end,
-        ).order_by("punch_time", "id")
+        shift.attendance_activities.order_by("punch_time", "id")
     )
 
 
-def _day_change_for(timetable) -> time:
-    return timetable.day_change_time if timetable is not None else DEFAULT_DAY_CHANGE_TIME
-
-
 # --------------------------------------------------------------------------
-# Calculation — pure: punches + resolved schedule -> what the row should say.
+# Calculation — pure: one shift row + its punches -> what the row says.
 # --------------------------------------------------------------------------
 
 
@@ -84,42 +100,90 @@ class DayResult:
     status: str
     row_values: dict
     punches: tuple = ()
-    summary: DaySummary | None = None
-    variances: DayVariances | None = None
 
 
-def build_day_result(*, employee, day: date) -> DayResult | None:
-    """Compute the ``Attendance`` values for one employee and day.
+def _snapshot_value(*, shift: ScheduledShiftDay, key: str, default=None):
+    """Read a frozen param, falling back to the live timetable.
 
-    Returns None when there is genuinely nothing to record (no schedule
-    coverage, no punches, no assignment history). Writes nothing: the
-    caller decides whether to persist.
+    Rows materialized before snapshots existed (or with a deleted
+    timetable) still calculate from whatever is available.
     """
-    resolved = resolve_schedule_for_employee_on_date(employee=employee, day=day)
-    timetable = resolved.timetable
-    punches = punches_for(
-        employee=employee,
-        day=day,
-        day_change=_day_change_for(timetable),
-    )
+    snapshot = shift.timetable_snapshot or {}
+    if key in snapshot:
+        return snapshot[key]
+    timetable = shift.timetable
+    return getattr(timetable, key, default) if timetable is not None else default
+
+
+def _snapshot_breaks(*, shift: ScheduledShiftDay) -> list:
+    """Break windows as ``(start, end, type, minutes)`` time tuples."""
+    snapshot = shift.timetable_snapshot or {}
+    raw = snapshot.get("breaks")
+    if raw is None:
+        if shift.timetable is None:
+            return []
+        return [
+            (b.start_time, b.end_time, b.break_time_type, b.break_time_minutes)
+            for b in shift.timetable.breaks.all()
+        ]
+    out = []
+    for item in raw:
+        out.append(
+            (
+                time.fromisoformat(item["start_time"]),
+                time.fromisoformat(item["end_time"]),
+                item.get("break_time_type", "fixed"),
+                item.get("break_time_minutes"),
+            )
+        )
+    return out
+
+
+def _break_overlap_minutes(*, start: datetime, end: datetime, breaks: list) -> int:
+    """Unpaid break minutes overlapping ``[start, end)``.
+
+    Each break counts once: its wall-clock window is scored on every
+    calendar day the shift touches and the best overlap wins (covers
+    overnight shifts with early-morning breaks).
+    """
+    unpaid = 0
+    span_days = (end.date() - start.date()).days
+    for break_start, break_end, break_type, break_minutes in breaks:
+        best = 0
+        for offset in range(-1, span_days + 2):
+            day = (start + timedelta(days=offset)).date()
+            window_start = timezone.make_aware(
+                datetime.combine(day, break_start)
+            )
+            window_end = timezone.make_aware(datetime.combine(day, break_end))
+            if window_end <= window_start:
+                continue
+            best = max(
+                best,
+                minutes_between(max(start, window_start), min(end, window_end)),
+            )
+        if break_type == "flexible":
+            best = min(best, break_minutes or 0)
+        unpaid += best
+    return unpaid
+
+
+def build_shift_result(*, shift: ScheduledShiftDay) -> DayResult:
+    """Compute the ``Attendance`` values for one shift row. Writes nothing."""
+    punches = shift_punches(shift=shift)
 
     if not punches:
-        status = _empty_day_status(
-            employee=employee,
-            timetable=timetable,
-            is_day_off=resolved.is_day_off,
-        )
-        if status is None:
-            return None
+        status = {
+            ScheduledShiftDay.DayType.DAY_OFF: Attendance.Status.DAY_OFF,
+            ScheduledShiftDay.DayType.HOLIDAY: Attendance.Status.HOLIDAY,
+        }.get(shift.day_type, Attendance.Status.ABSENT)
         return DayResult(
-            day=day,
-            employee=employee,
+            day=shift.day,
+            employee=shift.employee,
             status=status,
             punches=(),
-            summary=None,
-            variances=None,
             row_values=_row_values(
-                shift=timetable,
+                shift=shift,
                 check_in=None,
                 check_out=None,
                 status=status,
@@ -130,105 +194,120 @@ def build_day_result(*, employee, day: date) -> DayResult | None:
             ),
         )
 
-    window = (
-        timetable.duplicate_punch_window_minutes if timetable is not None else 1
-    )
-    break_windows = (
-        [(b.start_time, b.end_time) for b in timetable.breaks.all()]
-        if timetable is not None
-        else []
-    )
-    summary = summarize_pairs(
-        pair_punches(
-            dedupe_punches(punches, window_minutes=window),
-            allow_multiple_in_out=(
-                timetable.multiple_in_out if timetable is not None else False
+    first_in = punches[0].punch_time
+    last_out = punches[-1].punch_time
+
+    if shift.day_type != ScheduledShiftDay.DayType.WORKING or (
+        shift.shift_start is None or shift.shift_end is None
+    ):
+        # Worked day-off / holiday / unscheduled: present, everything
+        # counts as overtime.
+        worked_minutes = (
+            minutes_between(first_in, last_out) if len(punches) > 1 else 0
+        )
+        status = Attendance.Status.PRESENT
+        if len(punches) == 1:
+            status = Attendance.Status.INCOMPLETE
+            worked_minutes = 0
+        return DayResult(
+            day=shift.day,
+            employee=shift.employee,
+            status=status,
+            punches=tuple(punches),
+            row_values=_row_values(
+                shift=shift,
+                check_in=first_in,
+                check_out=last_out if len(punches) > 1 else None,
+                status=status,
+                worked_minutes=worked_minutes,
+                overtime_minutes=worked_minutes,
+                late_minutes=0,
+                early_minutes=0,
             ),
-            break_windows=break_windows,
         )
+
+    if len(punches) == 1:
+        # Lone check-in: incomplete, but lateness is still recorded (a
+        # late employee who never checked out is INCOMPLETE *and* late).
+        grace = _snapshot_value(
+            shift=shift, key="grace_period_minutes", default=0
+        ) or 0
+        late_minutes = max(
+            0, minutes_between(shift.shift_start, first_in) - max(0, grace)
+        )
+        return DayResult(
+            day=shift.day,
+            employee=shift.employee,
+            status=Attendance.Status.INCOMPLETE,
+            punches=tuple(punches),
+            row_values=_row_values(
+                shift=shift,
+                check_in=first_in,
+                check_out=None,
+                status=Attendance.Status.INCOMPLETE,
+                worked_minutes=0,
+                overtime_minutes=0,
+                late_minutes=late_minutes,
+                early_minutes=0,
+            ),
+        )
+
+    worked_minutes = minutes_between(first_in, last_out)
+    scheduled_minutes = max(
+        0,
+        minutes_between(shift.shift_start, shift.shift_end)
+        - _break_overlap_minutes(
+            start=shift.shift_start,
+            end=shift.shift_end,
+            breaks=_snapshot_breaks(shift=shift),
+        ),
     )
-
-    if timetable is not None:
-        expected_in, expected_out = expected_datetimes(timetable=timetable, day=day)
-        scheduled = scheduled_minutes(
-            timetable=timetable,
-            expected_in=expected_in,
-            expected_out=expected_out,
+    grace = _snapshot_value(
+        shift=shift, key="grace_period_minutes", default=0
+    ) or 0
+    checkout_grace = (
+        grace
+        if _snapshot_value(
+            shift=shift, key="grace_period_check_out", default=False
         )
-        late_grace = timetable.grace_period_minutes
-        early_grace = (
-            timetable.grace_period_minutes
-            if timetable.grace_period_check_out
-            else 0
-        )
-    else:
-        expected_in = expected_out = None
-        scheduled = 0
-        late_grace = early_grace = 0
-
-    variances = day_variances(
-        first_in=summary.first_in,
-        last_out=summary.last_out,
-        worked_minutes=summary.worked_minutes,
-        expected_in=expected_in,
-        expected_out=expected_out,
-        scheduled=scheduled,
-        late_grace_minutes=late_grace,
-        early_grace_minutes=early_grace,
+        else 0
     )
+    late_minutes = max(
+        0, minutes_between(shift.shift_start, first_in) - max(0, grace)
+    )
+    early_minutes = max(
+        0, minutes_between(last_out, shift.shift_end) - max(0, checkout_grace)
+    )
+    overtime_minutes = max(0, worked_minutes - scheduled_minutes)
 
-    if resolved.is_day_off:
-        # Worked day-off: present, everything counts as overtime.
-        status = Attendance.Status.PRESENT
-        overtime_minutes = summary.worked_minutes
-    elif not summary.has_check_in or not summary.has_check_out:
-        status = Attendance.Status.INCOMPLETE
-        overtime_minutes = variances.overtime_minutes
-    elif variances.late_minutes > 0:
+    if late_minutes > 0:
         status = Attendance.Status.LATE
-        overtime_minutes = variances.overtime_minutes
-    elif variances.early_minutes > 0:
+    elif early_minutes > 0:
         status = Attendance.Status.EARLY_OUT
-        overtime_minutes = variances.overtime_minutes
     else:
         status = Attendance.Status.PRESENT
-        overtime_minutes = variances.overtime_minutes
 
     return DayResult(
-        day=day,
-        employee=employee,
+        day=shift.day,
+        employee=shift.employee,
         status=status,
         punches=tuple(punches),
-        summary=summary,
-        variances=variances,
         row_values=_row_values(
-            shift=timetable,
-            check_in=summary.first_in,
-            check_out=summary.last_out,
+            shift=shift,
+            check_in=first_in,
+            check_out=last_out,
             status=status,
-            worked_minutes=summary.worked_minutes,
+            worked_minutes=worked_minutes,
             overtime_minutes=overtime_minutes,
-            late_minutes=variances.late_minutes,
-            early_minutes=variances.early_minutes,
+            late_minutes=late_minutes,
+            early_minutes=early_minutes,
         ),
     )
 
 
-def _empty_day_status(*, employee, timetable, is_day_off: bool) -> str | None:
-    """Status for a punch-less day, or None when nothing should be recorded."""
-    if is_day_off:
-        return Attendance.Status.DAY_OFF
-    if timetable is not None:
-        return Attendance.Status.ABSENT
-    if EmployeeScheduleAssignment.objects.filter(employees=employee).exists():
-        # Assignment history but no coverage today: absent.
-        return Attendance.Status.ABSENT
-    return None
-
-
 def _row_values(
     *,
-    shift,
+    shift: ScheduledShiftDay,
     check_in,
     check_out,
     status: str,
@@ -241,10 +320,17 @@ def _row_values(
 
     Every duration is always written: an empty day zeroes them, so a
     previous LATE can't leave a stale ``late_time`` on an ABSENT row.
+    The snapshot is the row's frozen copy (built on demand for legacy
+    rows), so later timetable edits never rewrite history.
     """
+    from schedule.services import build_timetable_snapshot
+
     return {
-        "shift": shift,
-        "shift_snapshot": _shift_snapshot(shift),
+        "shift": shift.timetable,
+        "shift_snapshot": (
+            shift.timetable_snapshot
+            or build_timetable_snapshot(timetable=shift.timetable)
+        ),
         "check_in": check_in,
         "check_out": check_out,
         "total_work_time": timedelta(minutes=worked_minutes),
@@ -257,24 +343,38 @@ def _row_values(
     }
 
 
-def _shift_snapshot(timetable) -> dict | None:
-    """Freeze the shift params that produced a row's numbers."""
-    if timetable is None:
-        return None
-    return {
-        "name": timetable.name,
-        "check_in": timetable.check_in.isoformat() if timetable.check_in else None,
-        "check_out": timetable.check_out.isoformat() if timetable.check_out else None,
-        "day_change_time": timetable.day_change_time.isoformat(),
-        "grace_period_minutes": timetable.grace_period_minutes,
-        "duplicate_punch_window_minutes": timetable.duplicate_punch_window_minutes,
-        "multiple_in_out": timetable.multiple_in_out,
-    }
-
-
 # --------------------------------------------------------------------------
 # Persistence — the only writer.
 # --------------------------------------------------------------------------
+
+
+def _unscheduled_shift_if_punched(*, employee, day: date):
+    """A plan row for punches with no coverage, else None."""
+    day_start = timezone.make_aware(datetime.combine(day, time.min))
+    has_punches = AttendanceActivity.objects.filter(
+        employee=employee,
+        punch_time__gte=day_start,
+        punch_time__lt=day_start + timedelta(days=1),
+    ).exists()
+    if not has_punches:
+        return None
+    return ScheduledShiftDay.objects.create(
+        employee=employee,
+        day=day,
+        day_type=ScheduledShiftDay.DayType.WORKING,
+        source=ScheduledShiftDay.Source.UNSCHEDULED,
+    )
+
+
+@transaction.atomic
+def recalculate_shift(*, shift: ScheduledShiftDay, force: bool = False):
+    """(Re)calculate the ``Attendance`` row for one shift row."""
+    existing = Attendance.objects.filter(
+        employee=shift.employee, day=shift.day
+    ).first()
+    if existing is not None and not existing.is_calculated and not force:
+        return existing
+    return _persist(result=build_shift_result(shift=shift))
 
 
 @transaction.atomic
@@ -283,19 +383,20 @@ def recalculate_attendance(
 ) -> Attendance | None:
     """(Re)calculate the ``Attendance`` row for one employee and day.
 
-    Returns the row, or None when there is nothing to record (no
-    schedule coverage, no punches, and no assignment history).
-    Rows with ``is_calculated=False`` are treated as hand-made and left
-    alone unless ``force`` is set.
+    Returns the row, or None when there is genuinely nothing to record
+    (no plan coverage and no punches). Rows with ``is_calculated=False``
+    are treated as hand-made and left alone unless ``force`` is set.
     """
     existing = Attendance.objects.filter(employee=employee, day=day).first()
     if existing is not None and not existing.is_calculated and not force:
         return existing
 
-    result = build_day_result(employee=employee, day=day)
-    if result is None:
+    shift, _ = get_or_materialize_shift(employee=employee, day=day)
+    if shift is None:
+        shift = _unscheduled_shift_if_punched(employee=employee, day=day)
+    if shift is None:
         return None
-    return _persist(result=result)
+    return recalculate_shift(shift=shift, force=force)
 
 
 def _persist(*, result: DayResult) -> Attendance:
@@ -309,14 +410,22 @@ def _persist(*, result: DayResult) -> Attendance:
 
 
 def _set_row_punches(*, row: Attendance, punches) -> None:
-    """Make ``row``'s linked punches exactly ``punches``."""
+    """Make ``row``'s linked punches exactly ``punches``.
+
+    Consumed punches point at both the row and its shift plan row.
+    Punches the row drops keep their shift link: the shift is still
+    their plan home even when this row ignores them.
+    """
+    shift = (
+        ScheduledShiftDay.objects.filter(employee=row.employee, day=row.day).first()
+    )
     punch_ids = [punch.pk for punch in punches]
     AttendanceActivity.objects.filter(attendance=row).exclude(
         pk__in=punch_ids
     ).update(attendance=None)
     if punch_ids:
         AttendanceActivity.objects.filter(pk__in=punch_ids).update(
-            attendance=row
+            attendance=row, scheduled_shift=shift
         )
 
 
@@ -382,56 +491,19 @@ def day_report(*, day: date) -> DayReport:
 
 
 def _unlinked_punches(*, day: date) -> tuple:
-    """Punches attributed to ``day`` that no row consumed.
+    """Punches near ``day`` that no row consumed and no shift claimed.
 
-    Diagnostics for the gap ``ensure_day`` can't see: employees whose
-    punches exist but who have no schedule coverage (or were excluded
-    from the fanout). Attribution reuses the shared day-geometry rule
-    instead of the calendar date, so post-midnight check-outs are not
-    blamed on the wrong day.
+    A calendar-day superset (plus one) covers every attribution window
+    without re-deriving day geometry.
     """
-    # A punch attributed to `day` lands in [day+change, day+1+change),
-    # so calendar dates {day, day+1} are a safe superset for any change.
     window_start = timezone.make_aware(datetime.combine(day, time.min))
-    candidates = list(
+    return tuple(
         AttendanceActivity.objects.filter(
             attendance__isnull=True,
             punch_time__gte=window_start,
             punch_time__lt=window_start + timedelta(days=2),
         ).order_by("employee_id", "punch_time", "id")
     )
-    if not candidates:
-        return ()
-
-    employees = Employee.objects.in_bulk({p.employee_id for p in candidates})
-    kept: list = []
-    index = 0
-    while index < len(candidates):
-        employee_id = candidates[index].employee_id
-        group: list = []
-        while (
-            index < len(candidates)
-            and candidates[index].employee_id == employee_id
-        ):
-            group.append(candidates[index])
-            index += 1
-        employee = employees.get(employee_id)
-        if employee is None:
-            continue
-        day_change = _day_change_for(
-            resolve_schedule_for_employee_on_date(
-                employee=employee, day=day
-            ).timetable
-        )
-        kept.extend(
-            punch
-            for punch in group
-            if attendance_day_for_punch(
-                timestamp=punch.punch_time, day_change_time=day_change
-            )
-            == day
-        )
-    return tuple(kept)
 
 
 # --------------------------------------------------------------------------
@@ -440,17 +512,15 @@ def _unlinked_punches(*, day: date) -> tuple:
 
 
 def ensure_day(*, day: date) -> list:
-    """Write an ``Attendance`` row for everyone who should have one.
+    """Write an ``Attendance`` row for every shift row of ``day``.
 
-    The candidate set is a cheap superset — active assignments covering
-    ``day``, one-day overrides, and anyone who punched on ``day`` or the
-    following day — and each candidate is then resolved individually by
-    ``recalculate_attendance``, which returns None when there is
-    genuinely nothing to record. Repeat rules, assignment priority,
-    day-off overrides and active-timetable checks therefore all come
-    from the one resolver instead of a raw assignment query, and
-    punched-but-unscheduled employees are not silently dropped.
+    Missing plan rows are materialized first for the cheap candidate
+    superset (assignments, overrides, punch owners); rows that genuinely
+    have nothing to record resolve to None.
     """
+    for shift in ScheduledShiftDay.objects.filter(day=day):
+        recalculate_shift(shift=shift)
+
     candidates: set = set(
         EmployeeScheduleAssignment.objects.filter(
             is_active=True,
@@ -478,7 +548,7 @@ def ensure_day(*, day: date) -> list:
     ).order_by("first_name", "last_name", "pk")
     for employee in employees.iterator():
         row = recalculate_attendance(employee=employee, day=day)
-        if row is not None:
+        if row is not None and row not in created:
             created.append(row)
     return created
 

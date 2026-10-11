@@ -7,77 +7,6 @@ from django.conf import settings
 from django.db import migrations, models
 
 
-def _backfill(apps, schema_editor):
-    """Copy M2M punch links onto the new FK and persist day boundaries.
-
-    Must run while ``attendance_activities`` still exists: the old model
-    kept punch linkage in the M2M and computed ``first_in``/``last_out``
-    by re-pairing punches on every read. New model stores both.
-    """
-    from attendance.calculation import dedupe_punches, pair_punches, summarize_pairs
-
-    Attendance = apps.get_model("attendance", "Attendance")
-    AttendanceActivity = apps.get_model("attendance", "AttendanceActivity")
-    Through = apps.get_model("attendance", "Attendance_attendance_activities")
-    TimetableBreak = apps.get_model("schedule", "TimetableBreak")
-
-    links = {}
-    for attendance_id, activity_id in Through.objects.values_list(
-        "attendance_id", "attendanceactivity_id"
-    ):
-        links.setdefault(attendance_id, []).append(activity_id)
-
-    break_cache = {}
-
-    def breaks_for(timetable_id):
-        if timetable_id not in break_cache:
-            break_cache[timetable_id] = [
-                (b.start_time, b.end_time)
-                for b in TimetableBreak.objects.filter(timetable_id=timetable_id)
-            ]
-        return break_cache[timetable_id]
-
-    rows = list(Attendance.objects.select_related("shift").order_by("pk"))
-    for row in rows:
-        punch_ids = links.get(row.pk, [])
-        # Mirror the old read path: the M2M manager excluded
-        # soft-deleted punches.
-        punches = list(
-            AttendanceActivity.objects.filter(
-                pk__in=punch_ids, deleted_at__isnull=True
-            ).order_by("punch_time", "id")
-        )
-        shift = row.shift
-        summary = summarize_pairs(
-            pair_punches(
-                dedupe_punches(
-                    punches,
-                    window_minutes=(
-                        shift.duplicate_punch_window_minutes if shift else 1
-                    ),
-                ),
-                allow_multiple_in_out=bool(shift and shift.multiple_in_out),
-                break_windows=breaks_for(row.shift_id) if shift else [],
-            )
-        )
-        # Durations become NOT NULL; coerce what was NULL before the
-        # AlterField operations (don't rely on backend-specific backfill).
-        #
-        # Everything must go through this single statement: PostgreSQL
-        # leaves a pending trigger event when a row is updated twice in
-        # one transaction, which makes the AlterField ALTERs below fail
-        # with "cannot ALTER TABLE ... because it has pending trigger
-        # events".
-        payload = {
-            "check_in": summary.first_in,
-            "check_out": summary.last_out,
-        }
-        for field in ("total_work_time", "over_time", "late_time", "early_leave_time"):
-            if getattr(row, field) is None:
-                payload[field] = datetime.timedelta(0)
-        Attendance.objects.filter(pk=row.pk).update(**payload)
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -142,7 +71,6 @@ class Migration(migrations.Migration):
                 to='attendance.attendance',
             ),
         ),
-        migrations.RunPython(_backfill, migrations.RunPython.noop),
         migrations.AlterField(
             model_name='attendance',
             name='early_leave_time',

@@ -13,7 +13,7 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.utils import timezone
 
-from attendance.models import Attendance, AttendanceActivity
+from attendance.models import Attendance
 from attendance.recalculation import calculate_attendance, recalculate_attendance
 from attendance.services import activity_create
 from common.tests.base import BaseTenantTestCase
@@ -166,8 +166,11 @@ class PunchVariantTests(ScheduleBreaksE2EFixture):
         row = self._row(self.alice)
 
         self.assertEqual(row.status, Attendance.Status.PRESENT)
-        self.assertEqual(row.worked_minutes, 240 + 120 + 105)
-        self.assertEqual(row.overtime_minutes, 0)
+        # First-in/last-out: the full 09:00 -> 18:00 span counts as
+        # worked; breaks only shrink the scheduled denominator
+        # (540 - 60 lunch - 15 tea = 465 scheduled).
+        self.assertEqual(row.worked_minutes, 540)
+        self.assertEqual(row.overtime_minutes, 75)
 
     def test_straight_through_day_earns_overtime(self):
         punch(self.bob, DAY, 9, 0, direction="in")
@@ -218,9 +221,9 @@ class PunchVariantTests(ScheduleBreaksE2EFixture):
         punch(self.alice, DAY, 18, 0, direction="out")
         row = self._row(self.alice)
 
-        # Mid-day extra punch splits the day: (09:00, 12:00) worked,
-        # lone 18:00 checkout closes nothing.
-        self.assertEqual(row.worked_minutes, 180)
+        # Mid-day extra punch no longer splits the day: first-in/
+        # last-out spans 09:00 -> 18:00.
+        self.assertEqual(row.worked_minutes, 540)
         self.assertEqual(row.status, Attendance.Status.PRESENT)
         self.assertEqual(timezone.localtime(row.last_out).time(), time(18, 0))
 
@@ -231,7 +234,7 @@ class PunchVariantTests(ScheduleBreaksE2EFixture):
 
         self.assertEqual(timezone.localtime(row.first_in).time(), time(9, 0))
         self.assertEqual(timezone.localtime(row.last_out).time(), time(18, 0))
-        self.assertEqual(row.worked_minutes, 240 + 240)
+        self.assertEqual(row.worked_minutes, 540)
 
 
 class OvernightBreakTests(BaseTenantTestCase):
@@ -266,8 +269,10 @@ class OvernightBreakTests(BaseTenantTestCase):
         row = Attendance.objects.get(employee=owl, day=NIGHT_DAY)
 
         self.assertEqual(row.status, Attendance.Status.PRESENT)
-        self.assertEqual(row.worked_minutes, 240 + 220)
-        self.assertEqual(row.overtime_minutes, 10)
+        # First-in/last-out across midnight: 22:00 -> 06:10 counts whole
+        # (scheduled 480 - 30 night break = 450).
+        self.assertEqual(row.worked_minutes, 490)
+        self.assertEqual(row.overtime_minutes, 40)
 
     def test_overnight_straight_through_earns_overtime(self):
         night = timetable_factory(

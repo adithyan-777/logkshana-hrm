@@ -58,7 +58,39 @@ if [[ ! -f "$ENV_FILE" ]]; then
 fi
 
 # shellcheck disable=SC1090
-set -a; source "$ENV_FILE"; set +a
+# NOTE: the env file is parsed, never sourced: values may contain spaces,
+# quotes, $, backticks or other shell metacharacters (common in generated
+# passwords) that would break or dangerously execute under `source`.
+load_env_file() {
+    local file="$1" line key value
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        # Trim leading/trailing whitespace (incl. CRLF).
+        line="${line%$'\r'}"
+        [[ "$line" =~ ^[[:space:]]*$ ]] && continue
+        [[ "$line" =~ ^[[:space:]]*# ]] && continue
+        # Optional `export ` prefix.
+        [[ "$line" =~ ^[[:space:]]*export[[:space:]]+ ]] && \
+            line="${line#*export}" && line="${line#"${line%%[![:space:]]*}"}"
+        if [[ ! "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+            echo "Warning: ignoring non-assignment line in $file: $line" >&2
+            continue
+        fi
+        key="${BASH_REMATCH[1]}"
+        value="${BASH_REMATCH[2]}"
+        # Strip one layer of matching surrounding quotes. Unquoted values
+        # get python-dotenv treatment: a " #" suffix starts a comment.
+        if [[ "${value:0:1}" == '"' && "${value: -1}" == '"' && ${#value} -ge 2 ]]; then
+            value="${value:1:-1}"
+        elif [[ "${value:0:1}" == "'" && "${value: -1}" == "'" && ${#value} -ge 2 ]]; then
+            value="${value:1:-1}"
+        else
+            [[ "$value" =~ ^(.*[^[:space:]])[[:space:]]+\#.*$ ]] && value="${BASH_REMATCH[1]}"
+        fi
+        printf -v "$key" '%s' "$value"
+        export "$key"
+    done < "$file"
+}
+load_env_file "$ENV_FILE"
 
 for var in DB_HOST DB_PORT DB_USER DB_PASSWORD DB_NAME; do
     if [[ -z "${!var:-}" ]]; then

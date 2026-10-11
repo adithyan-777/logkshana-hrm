@@ -13,7 +13,8 @@
 #   ./rds-fresh-db.sh --help
 #
 # Examples:
-#   ./rds-fresh-db.sh pattika_fresh /var/backups/pattika
+#   ./rds-fresh-db.sh pattika_fresh ~/backups/pattika
+#   ./rds-fresh-db.sh pattika_fresh
 #   ENV_FILE=/srv/pattika/.env ./rds-fresh-db.sh pattika_fresh
 #
 # Flags (must come before positional args):
@@ -50,7 +51,9 @@ if [[ $# -lt 1 ]]; then
     exit 2
 fi
 NEW_DB="$1"
-BACKUP_DIR="${2:-./backups}"
+# Home-based default: /var/backups typically needs root, and this script
+# must run as a normal user. $HOME (not ~) so it expands inside quotes.
+BACKUP_DIR="${2:-$HOME/backups/pattika}"
 
 if [[ ! -f "$ENV_FILE" ]]; then
     echo "Env file not found: $ENV_FILE" >&2

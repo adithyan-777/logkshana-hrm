@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q
+from django.db.models.functions import Lower
 
 from common.models import BaseModel
 from companies.models import Branch
@@ -155,6 +157,16 @@ class Employee(BaseModel):
     hire_date = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
 
+    class Meta:
+        # Per-tenant table, so this is automatically per-tenant.
+        # Case-insensitive, blank exempt ("" means "no email").
+        constraints = [
+            models.UniqueConstraint(
+                Lower("email"),
+                name="uniq_employee_email_ci",
+                condition=~Q(email=""),
+            ),
+        ]
 
     def clean(self):
         super().clean()

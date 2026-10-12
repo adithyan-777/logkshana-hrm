@@ -5,7 +5,7 @@ from django_tenants.utils import get_public_schema_name, schema_context
 
 from common.tests.base import BaseTenantTestCase
 from common.tests.factories import device_factory, employee_factory
-from employees.q2_tasks import create_device_user
+from employees.q2_tasks import create_device_user, delete_device_user
 
 
 class CreateDeviceUserTaskTests(BaseTenantTestCase):
@@ -73,3 +73,84 @@ class CreateDeviceUserTaskTests(BaseTenantTestCase):
         for call in mock_async.call_args_list:
             self.assertEqual(call.args[0], "employees.q2_tasks.create_device_user")
             self.assertEqual(call.args[1], self.tenant.schema_name)
+
+
+class DeleteDeviceUserTaskTests(BaseTenantTestCase):
+    @patch("employees.services.device_user_delete")
+    def test_delete_delegates_to_service_with_pin(self, mock_delete):
+        employee = employee_factory(first_name="Gone", emp_code="G001")
+
+        result = delete_device_user(self.tenant.schema_name, employee.emp_code, "TEST001")
+
+        mock_delete.assert_called_once()
+        call_kwargs = mock_delete.call_args.kwargs
+        self.assertEqual(call_kwargs["emp_code"], "G001")
+        self.assertEqual(call_kwargs["serial_number"], "TEST001")
+        self.assertTrue(result["deleted"])
+
+    @patch("employees.services.device_user_delete")
+    def test_transient_error_schedules_retry(self, mock_delete):
+        from django_q.models import Schedule
+
+        mock_delete.side_effect = ValidationError(
+            {"device": "Gateway returned HTTP 502."}
+        )
+        with schema_context(get_public_schema_name()):
+            before = Schedule.objects.count()
+            result = delete_device_user(self.tenant.schema_name, "G001", "TEST001")
+            retries = list(Schedule.objects.all()[before:])
+
+        self.assertTrue(result["retried"])
+        self.assertEqual(result["attempt"], 1)
+        self.assertEqual(len(retries), 1)
+        self.assertEqual(retries[0].func, "employees.q2_tasks.delete_device_user")
+
+    @patch("employees.services.device_user_delete")
+    def test_permanent_error_raises_without_retry(self, mock_delete):
+        from django_q.models import Schedule
+
+        mock_delete.side_effect = ValidationError(
+            {"serial_number": "Unknown or inactive device."}
+        )
+        with schema_context(get_public_schema_name()):
+            before = Schedule.objects.count()
+            with self.assertRaises(ValidationError):
+                delete_device_user(self.tenant.schema_name, "G001", "TEST001")
+            after = Schedule.objects.count()
+
+        self.assertEqual(before, after)
+
+    def test_employee_delete_enqueues_removal_per_device(self):
+        from employees.services import employee_delete
+
+        device_factory(serial_number="D001", company=self.tenant)
+        device_factory(serial_number="D002", company=self.tenant)
+        employee = employee_factory(first_name="Leaver", emp_code="LV001")
+
+        with (
+            patch("django_q.tasks.async_task") as mock_async,
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            employee_delete(employee=employee)
+
+        self.assertEqual(mock_async.call_count, 2)
+        for call in mock_async.call_args_list:
+            self.assertEqual(call.args[0], "employees.q2_tasks.delete_device_user")
+            self.assertEqual(call.args[1], self.tenant.schema_name)
+            self.assertEqual(call.args[2], "LV001")
+        serials = {call.args[3] for call in mock_async.call_args_list}
+        self.assertEqual(serials, {"D001", "D002"})
+
+    def test_employee_delete_without_pin_enqueues_nothing(self):
+        from employees.services import employee_delete
+
+        device_factory(serial_number="D001", company=self.tenant)
+        employee = employee_factory(first_name="NoPin", emp_code=None)
+
+        with (
+            patch("django_q.tasks.async_task") as mock_async,
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            employee_delete(employee=employee)
+
+        mock_async.assert_not_called()

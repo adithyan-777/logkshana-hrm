@@ -70,3 +70,53 @@ def create_device_user(
         "serial_number": serial_number,
         "pushed": True,
     }
+
+
+def delete_device_user(
+    schema_name: str, emp_code: str, serial_number: str, attempt: int = 0
+) -> dict:
+    """Remove one device user (PIN); bounded retry on transient errors.
+
+    Takes the PIN, not an employee id: the employee row is already gone
+    when this runs (enqueued on_commit from ``employee_delete``).
+    Permanent failures (no PIN, unknown/inactive device, 4xx) raise
+    immediately.
+    """
+    from django_q.models import Schedule
+    from django_q.tasks import schedule as schedule_once
+    from django_tenants.utils import get_public_schema_name, schema_context
+
+    from attendance.integrations.gateway import is_transient_gateway_error
+    from employees.services import device_user_delete
+
+    try:
+        device_user_delete(emp_code=emp_code, serial_number=serial_number)
+    except Exception as exc:
+        if attempt < DEVICE_USER_MAX_RETRIES and is_transient_gateway_error(
+            exc, field_keys=("device", "device_gateway")
+        ):
+            delay = DEVICE_USER_RETRY_BASE_SECONDS * (2**attempt)
+            with schema_context(get_public_schema_name()):
+                schedule_once(
+                    "employees.q2_tasks.delete_device_user",
+                    schema_name,
+                    emp_code,
+                    serial_number,
+                    attempt + 1,
+                    schedule_type=Schedule.ONCE,
+                    next_run=timezone.now() + timedelta(seconds=delay),
+                )
+            return {
+                "schema": schema_name,
+                "emp_code": emp_code,
+                "serial_number": serial_number,
+                "retried": True,
+                "attempt": attempt + 1,
+            }
+        raise
+    return {
+        "schema": schema_name,
+        "emp_code": emp_code,
+        "serial_number": serial_number,
+        "deleted": True,
+    }

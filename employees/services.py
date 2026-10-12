@@ -53,6 +53,33 @@ def _generate_username(*, first_name: str, last_name: str) -> str:
     return username
 
 
+def normalize_email(*, email: str = "") -> str:
+    """Strip + lowercase; blank stays blank (exempt from uniqueness)."""
+    return (email or "").strip().lower()
+
+
+def _ensure_user_email_available(*, email: str, exclude_pk=None) -> None:
+    """Friendly duplicate check; the DB constraint is the backstop."""
+    if not email:
+        return
+    taken = User.objects.filter(email__iexact=email)
+    if exclude_pk is not None:
+        taken = taken.exclude(pk=exclude_pk)
+    if taken.exists():
+        raise ValidationError({"email": "This email is already in use."})
+
+
+def _ensure_employee_email_available(*, email: str, exclude_pk=None) -> None:
+    """Friendly duplicate check; the DB constraint is the backstop."""
+    if not email:
+        return
+    taken = Employee.objects.filter(email__iexact=email)
+    if exclude_pk is not None:
+        taken = taken.exclude(pk=exclude_pk)
+    if taken.exists():
+        raise ValidationError({"email": "This email is already in use."})
+
+
 @transaction.atomic
 def employee_create(
     *,
@@ -83,8 +110,11 @@ def employee_create(
         # carry the schema name — resolve the real Company row for M2M writes.
         tenant = Company.objects.get(schema_name=connection.schema_name)
     mobile = (mobile or "").strip()
+    email = normalize_email(email=email)
     username = _generate_username(first_name=first_name, last_name=last_name)
     user_email = email or f"{username}@{tenant.schema_name}.com"
+    _ensure_user_email_available(email=user_email)
+    _ensure_employee_email_available(email=email)
     if password:
         _validate_employee_password(
             password=password,
@@ -173,6 +203,8 @@ def employee_update(
     employee.emp_code = emp_code or None
     employee.department = department
     employee.position = position
+    email = normalize_email(email=email)
+    _ensure_employee_email_available(email=email, exclude_pk=employee.pk)
     employee.email = email
     employee.mobile = mobile
     employee.hire_date = hire_date
@@ -183,7 +215,8 @@ def employee_update(
     user = employee.user
     if user is not None:
         user_updates: list[str] = []
-        if email and user.email != email:
+        if email and user.email.lower() != email:
+            _ensure_user_email_available(email=email, exclude_pk=user.pk)
             user.email = email
             user_updates.append("email")
         if user.is_active != is_active:
@@ -234,13 +267,45 @@ def employee_update(
 
 @transaction.atomic
 def employee_delete(*, employee: Employee) -> Employee:
-    """Deletes the employee and deactivates their login account."""
+    """Deletes the employee, deactivates their login, unenrolls devices.
+
+    Device unenrollment is queued per active device (PIN captured before
+    the row is gone); employees without an emp_code were never enrolled.
+    """
+    from django_q.tasks import async_task
+
+    from employees.q2_tasks import DEVICE_USER_GROUP, DEVICE_USER_TIMEOUT
+
     user = employee.user
+    emp_code = employee.emp_code
+    schema_name = connection.schema_name
+    serials = []
+    if emp_code:
+        serials = list(
+            Device.objects.filter(
+                company__schema_name=connection.schema_name,
+                is_active=True,
+            ).values_list("serial_number", flat=True)
+        )
     employee.delete()
     if user is not None and user.is_active:
         with schema_context(get_public_schema_name()):
             user.is_active = False
             user.save(update_fields=["is_active"])
+    if serials:
+        transaction.on_commit(
+            lambda: [
+                async_task(
+                    "employees.q2_tasks.delete_device_user",
+                    schema_name,
+                    emp_code,
+                    serial,
+                    group=DEVICE_USER_GROUP,
+                    timeout=DEVICE_USER_TIMEOUT,
+                )
+                for serial in serials
+            ]
+        )
     return employee
 
 
@@ -306,16 +371,37 @@ def device_user_create(*, employee: Employee, serial_number: str) -> None:
     device = device_get_by_serial_number(serial_number=serial_number)
     if device is None or not device.is_active:
         raise ValidationError({"serial_number": "Unknown or inactive device."})
+    _gateway_post_users(
+        serial_number=serial_number,
+        path_suffix="users",
+        payload={
+            "pin": employee.emp_code,
+            "name": employee.full_name,
+            "privilege": 0,
+            "card": "",
+        },
+    )
+
+
+def device_user_delete(*, emp_code: str, serial_number: str) -> None:
+    """Remove one device user (PIN) from the gateway enrollment queue."""
+    if not emp_code:
+        raise ValidationError({"emp_code": "Employee has no emp_code (device PIN)."})
+    device = device_get_by_serial_number(serial_number=serial_number)
+    if device is None or not device.is_active:
+        raise ValidationError({"serial_number": "Unknown or inactive device."})
+    _gateway_post_users(
+        serial_number=serial_number,
+        path_suffix="users/delete",
+        payload={"pin": emp_code},
+    )
+
+
+def _gateway_post_users(*, serial_number: str, path_suffix: str, payload: dict) -> None:
     url = (
         f"{settings.DEVICE_GATEWAY_BASE_URL.rstrip('/')}"
-        f"/api/devices/{serial_number}/users"
+        f"/api/devices/{serial_number}/{path_suffix}"
     )
-    payload = {
-        "pin": employee.emp_code,
-        "name": employee.full_name,
-        "privilege": 0,
-        "card": "",
-    }
     from attendance.integrations.gateway import gateway_auth_headers
 
     request = Request(

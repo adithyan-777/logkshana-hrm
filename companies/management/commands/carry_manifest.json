@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "description": "Legacy carry-over selection: employees (+linked login users), punches, devices, schedules (+timetables, entries, assignments). Attendance rows are NOT carried (recalculated); shift-day/entry tables were empty at source.",
+  "source_schema": "demo",
+  "entities": [
+    {
+      "name": "departments",
+      "schema": "demo",
+      "table": "employees_department",
+      "natural_key": ["code"],
+      "columns": ["id", "name", "code"]
+    },
+    {
+      "name": "positions",
+      "schema": "demo",
+      "table": "employees_position",
+      "natural_key": ["code"],
+      "columns": ["id", "title", "code"]
+    },
+    {
+      "name": "roles",
+      "schema": "demo",
+      "table": "employees_role",
+      "natural_key": ["name"],
+      "columns": ["id", "name", "is_system"]
+    },
+    {
+      "name": "employees",
+      "schema": "demo",
+      "table": "employees_employee",
+      "natural_key": ["emp_code"],
+      "columns": ["id", "emp_code", "first_name", "last_name", "employee_type", "email", "mobile", "hire_date", "is_active", "branch_id", "department_id", "position_id", "role_id", "user_id"],
+      "with": ["user", "department", "position", "role", "branch"]
+    },
+    {
+      "name": "timetables",
+      "schema": "demo",
+      "table": "schedule_timetable",
+      "natural_key": ["code"],
+      "columns": ["id", "name", "code", "type", "check_in", "check_out", "check_out_cross_days", "day_change_time", "work_minutes", "grace_period_check_out", "grace_period_minutes", "count_break_time_as_work_time", "multiple_in_out", "duplicate_punch_window_minutes", "is_active"]
+    },
+    {
+      "name": "breaks",
+      "schema": "demo",
+      "table": "schedule_timetablebreak",
+      "natural_key": ["timetable_id", "name", "start_time"],
+      "columns": ["id", "timetable_id", "name", "break_time_type", "break_time_minutes", "start_time", "end_time"]
+    },
+    {
+      "name": "schedules",
+      "schema": "demo",
+      "table": "schedule_schedule",
+      "natural_key": ["name"],
+      "columns": ["id", "name", "timetable_id", "start_date", "end_date", "repeat", "repeat_every", "repeat_unit", "is_active"]
+    },
+    {
+      "name": "entries",
+      "generate": {"per_schedule": 7, "from_timetable": true},
+      "note": "Old entry table is empty; generate weekday entries 0-6 from each schedule's own timetable."
+    },
+    {
+      "name": "assignments",
+      "schema": "demo",
+      "table": "schedule_employeescheduleassignment",
+      "natural_key": ["schedule_id", "start_date"],
+      "columns": ["id", "name", "schedule_id", "start_date", "end_date", "priority", "is_active"],
+      "with_members": {"table": "schedule_employeescheduleassignment_employees", "link": "employeescheduleassignment_id", "member": "employee_id"}
+    },
+    {
+      "name": "device_brands",
+      "schema": "public",
+      "table": "companies_devicebrand",
+      "natural_key": ["name"],
+      "columns": ["id", "name", "description", "is_active"]
+    },
+    {
+      "name": "device_types",
+      "schema": "public",
+      "table": "companies_devicetype",
+      "natural_key": ["brand_id", "model_name"],
+      "columns": ["id", "brand_id", "model_name", "description", "is_active"]
+    },
+    {
+      "name": "devices",
+      "schema": "public",
+      "table": "companies_device",
+      "natural_key": ["serial_number"],
+      "columns": ["id", "serial_number", "name", "is_active", "last_gateway_log_id", "last_synced_at", "last_sync_error", "branch_id", "company_id", "device_type_id"],
+      "with": ["branch", "device_type"]
+    },
+    {
+      "name": "punches",
+      "schema": "demo",
+      "table": "attendance_attendanceactivity",
+      "natural_key": ["external_id"],
+      "fallback_key": ["employee_id", "punch_time"],
+      "columns": ["id", "employee_id", "punch_time", "direction", "method", "external_id", "raw_data"]
+    }
+  ]
+}

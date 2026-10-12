@@ -10,6 +10,7 @@ staticfiles/
 # Backup files # 
 *.bak
 backups/
+carry_data/
 *.sql
 
 # If you are using PyCharm # 

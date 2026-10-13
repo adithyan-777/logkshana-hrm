@@ -123,7 +123,9 @@ services:
       - "${NGINX_SSL_PORT:-8443}:443"
     volumes:
       - staticfiles:/app/staticfiles:ro
-      - ../../nginx/conf.d:/etc/nginx/conf.d:ro
+      # Local nginx config (plain :80 proxy). Production uses
+      # nginx/conf.d/pattika.conf (with HTTPS redirect) instead.
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ../../nginx/certs:/etc/nginx/certs:ro
       - certbot-www:/var/www/certbot:ro
     depends_on:

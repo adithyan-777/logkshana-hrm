@@ -28,6 +28,8 @@ REPORT_COLUMNS: dict[str, list[ReportColumn]] = {
         ReportColumn("overtime_minutes", "OT (min)"),
     ],
     INDIVIDUAL_ATTENDANCE: [
+        ReportColumn("employee", "Employee"),
+        ReportColumn("department", "Department"),
         ReportColumn("date", "Date"),
         ReportColumn("status", "Status"),
         ReportColumn("expected_in", "Expected In"),

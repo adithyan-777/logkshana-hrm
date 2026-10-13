@@ -60,6 +60,12 @@ def individual_attendance_row_dicts(records) -> list[dict]:
             expected_in, expected_out = None, None
         dicts.append(
             {
+                "employee": f"{record.employee.first_name} {record.employee.last_name}".strip(),
+                "department": (
+                    record.employee.department.name
+                    if record.employee.department is not None
+                    else "Unassigned"
+                ),
                 "date": record.day,
                 "status": record.get_status_display(),
                 "status_code": record.status,

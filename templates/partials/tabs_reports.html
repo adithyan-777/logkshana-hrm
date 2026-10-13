@@ -1,10 +1,10 @@
 {% partialdef tabs_reports inline %}
 <div class="tabs" role="tablist" aria-label="Report sections">
   {% if nav_can.reports %}
-  <a href="{% url 'report_attendance_summary' %}"
+  <!-- <a href="{% url 'report_attendance_summary' %}"
       class="tab {% if request.resolver_match.url_name == 'report_attendance_summary' %}is-active{% endif %}"
       role="tab">Attendance</a>
-  {% endif %}
+  {% endif %} -->
   {% if nav_can.reports_self %}
   <a href="{% url 'report_individual_attendance' %}"
       class="tab {% if request.resolver_match.url_name == 'report_individual_attendance' %}is-active{% endif %}"

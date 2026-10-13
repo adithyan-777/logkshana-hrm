@@ -135,10 +135,10 @@ def _strip_company_filters(form) -> None:
 @require_permission(PermissionCodename.REPORTS_VIEW)
 @require_http_methods(["GET"])
 def report_hub_view(request: HttpRequest) -> HttpResponse:
-    """Reports landing page: Attendance section is the default."""
+    """Reports landing page: Individual report is the default."""
     from django.shortcuts import redirect
 
-    return redirect("report_attendance_summary")
+    return redirect("report_individual_attendance")
 
 
 @login_required
@@ -202,8 +202,10 @@ def individual_attendance_view(request: HttpRequest) -> HttpResponse:
     can_view_all, own_employee = _self_service_scope(request)
     form = IndividualReportFilterForm(request.GET or None)
     date_from, date_to = current_month_range()
+    department_id = None
     employee_id = None
     queryset = []
+    queried = False
 
     if not can_view_all:
         _strip_company_filters(form)
@@ -211,23 +213,25 @@ def individual_attendance_view(request: HttpRequest) -> HttpResponse:
     if form.is_valid():
         date_from, date_to = form.cleaned_date_range()
         if can_view_all:
+            if form.cleaned_data["department"]:
+                department_id = form.cleaned_data["department"].pk
             if form.cleaned_data["employee"]:
                 employee_id = form.cleaned_data["employee"].pk
-                queryset = individual_attendance_list(
-                    date_from=date_from,
-                    date_to=date_to,
-                    employee_id=employee_id,
-                )
         elif own_employee is not None:
             employee_id = own_employee.pk
-            queryset = individual_attendance_list(
-                date_from=date_from,
-                date_to=date_to,
-                employee_id=employee_id,
-            )
+
+    if can_view_all or employee_id is not None:
+        queryset = individual_attendance_list(
+            date_from=date_from,
+            date_to=date_to,
+            department_id=department_id,
+            employee_id=employee_id,
+        )
+        queried = True
 
     columns = _resolve_columns(request, INDIVIDUAL_ATTENDANCE)
-    if employee_id:
+    has_data = bool(queryset) if isinstance(queryset, list) else queryset.exists()
+    if has_data:
         export_response = _maybe_export(
             request,
             data=individual_attendance_report_data(list(queryset), columns),
@@ -246,7 +250,7 @@ def individual_attendance_view(request: HttpRequest) -> HttpResponse:
         "report_rows": individual_attendance_row_dicts(page_obj),
         "date_from": date_from,
         "date_to": date_to,
-        "employee_selected": employee_id is not None,
+        "employee_selected": queried,
         "self_service": not can_view_all,
         "own_employee": own_employee,
     }

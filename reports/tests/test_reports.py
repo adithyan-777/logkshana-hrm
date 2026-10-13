@@ -84,6 +84,44 @@ class IndividualAttendanceSelectorTests(BaseTenantTestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].employee, employee)
 
+    def test_defaults_to_all_employees(self):
+        employee = employee_factory(first_name="Bob", emp_code="R002A")
+        other = employee_factory(first_name="Other", emp_code="R003A")
+        attendance_record_factory(employee=employee, day=date(2026, 3, 1))
+        attendance_record_factory(employee=other, day=date(2026, 3, 1))
+
+        results = list(
+            individual_attendance_list(
+                date_from=date(2026, 3, 1),
+                date_to=date(2026, 3, 31),
+            )
+        )
+
+        self.assertEqual(len(results), 2)
+
+    def test_filters_by_department(self):
+        department = department_factory(name="Ops", code="OPS2")
+        other_department = department_factory(name="Sales", code="SAL2")
+        employee = employee_factory(
+            first_name="Dept", emp_code="R002B", department=department
+        )
+        other = employee_factory(
+            first_name="Other", emp_code="R003B", department=other_department
+        )
+        attendance_record_factory(employee=employee, day=date(2026, 3, 1))
+        attendance_record_factory(employee=other, day=date(2026, 3, 1))
+
+        results = list(
+            individual_attendance_list(
+                date_from=date(2026, 3, 1),
+                date_to=date(2026, 3, 31),
+                department_id=department.pk,
+            )
+        )
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].employee, employee)
+
 
 class DepartmentAttendanceSelectorTests(BaseTenantTestCase):
     def test_groups_by_department(self):
@@ -252,11 +290,11 @@ class ExportTests(BaseTenantTestCase):
 
 
 class ReportViewTests(BaseTenantTestCase):
-    def test_hub_redirects_to_attendance(self):
+    def test_hub_redirects_to_individual(self):
         response = self.client.get(reverse("report_hub"))
         self.assertEqual(response.status_code, 302)
         self.assertEqual(
-            response.url, reverse("report_attendance_summary")
+            response.url, reverse("report_individual_attendance")
         )
 
     def test_attendance_summary_html_and_exports(self):
@@ -312,6 +350,86 @@ class ReportViewTests(BaseTenantTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Ind")
+
+    def test_individual_report_defaults_to_all_employees(self):
+        department = department_factory(name="Ops", code="OPS3")
+        employee = employee_factory(
+            first_name="IndAll", emp_code="R012A", department=department
+        )
+        other = employee_factory(first_name="IndOther", emp_code="R012B")
+        attendance_record_factory(employee=employee, day=date(2026, 10, 1))
+        attendance_record_factory(employee=other, day=date(2026, 10, 2))
+
+        response = self.client.get(
+            reverse("report_individual_attendance"),
+            {
+                "date_from": "2026-10-01",
+                "date_to": "2026-10-31",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["employee_selected"])
+        self.assertEqual(len(response.context["report_rows"]), 2)
+        self.assertContains(response, "IndAll")
+        self.assertContains(response, "IndOther")
+        self.assertContains(response, "Ops")
+
+    def test_individual_report_filters_by_department(self):
+        department = department_factory(name="Ops", code="OPS4")
+        other_department = department_factory(name="Sales", code="SAL4")
+        employee = employee_factory(
+            first_name="IndDept", emp_code="R012C", department=department
+        )
+        other = employee_factory(
+            first_name="IndElse", emp_code="R012D", department=other_department
+        )
+        attendance_record_factory(employee=employee, day=date(2026, 10, 1))
+        attendance_record_factory(employee=other, day=date(2026, 10, 1))
+
+        response = self.client.get(
+            reverse("report_individual_attendance"),
+            {
+                "date_from": "2026-10-01",
+                "date_to": "2026-10-31",
+                "department": department.pk,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["report_rows"]), 1)
+        self.assertContains(response, "IndDept")
+        self.assertNotContains(response, "IndElse")
+
+    def test_individual_report_loads_without_filter_params(self):
+        from reports.utils import current_month_range
+
+        first_of_month = current_month_range()[0]
+        employee = employee_factory(first_name="IndNoParams", emp_code="R012F")
+        attendance_record_factory(employee=employee, day=first_of_month)
+
+        response = self.client.get(reverse("report_individual_attendance"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["employee_selected"])
+        self.assertEqual(len(response.context["report_rows"]), 1)
+        self.assertContains(response, "IndNoParams")
+
+    def test_individual_report_exports_without_employee_filter(self):
+        employee = employee_factory(first_name="IndExp", emp_code="R012E")
+        attendance_record_factory(employee=employee, day=date(2026, 10, 1))
+
+        response = self.client.get(
+            reverse("report_individual_attendance"),
+            {
+                "date_from": "2026-10-01",
+                "date_to": "2026-10-31",
+                "format": "csv",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"IndExp", response.content)
 
 
 class ReportSelfServiceTests(BaseTenantTestCase):

@@ -22,7 +22,7 @@
     <div class="data-table-wrap">
       {% partialdef individual_table inline %}
 {% if not employee_selected %}
-<p class="empty-state">Select an employee to view their attendance timesheet.</p>
+<p class="empty-state">No attendance records for the selected filters.</p>
 {% elif page_obj.paginator.count %}
 <table class="data-table">
     <thead>
@@ -48,7 +48,7 @@
 </table>
 {% include "partials/pagination.html#pagination" %}
 {% else %}
-<p class="empty-state">No attendance records for the selected employee and date range.</p>
+<p class="empty-state">No attendance records for the selected filters.</p>
 {% endif %}
 {% endpartialdef individual_table %}
     </div>

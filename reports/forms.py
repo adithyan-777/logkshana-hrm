@@ -53,7 +53,7 @@ class IndividualReportFilterForm(DateRangeFilterForm):
             "first_name", "last_name"
         ),
         required=False,
-        empty_label="Select employee",
+        empty_label="All employees",
     )
 
 

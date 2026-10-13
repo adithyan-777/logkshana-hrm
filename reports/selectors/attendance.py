@@ -63,17 +63,19 @@ def individual_attendance_list(
     *,
     date_from: date,
     date_to: date,
-    employee_id: int,
+    employee_id: int | None = None,
+    department_id: int | None = None,
 ):
     return (
         _attendance_base_queryset(
             date_from=date_from,
             date_to=date_to,
+            department_id=department_id,
             employee_id=employee_id,
         )
-        .select_related("shift")
+        .select_related("shift", "employee__department")
         .prefetch_related("activities")
-        .order_by("day")
+        .order_by("employee__first_name", "employee__last_name", "day")
     )
 
 

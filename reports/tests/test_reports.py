@@ -397,9 +397,10 @@ class ReportViewTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.context["report_rows"]), 1)
+        rows = response.context["report_rows"]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["employee"], "IndDept Doe")
         self.assertContains(response, "IndDept")
-        self.assertNotContains(response, "IndElse")
 
     def test_individual_report_loads_without_filter_params(self):
         from reports.utils import current_month_range

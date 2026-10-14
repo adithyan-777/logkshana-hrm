@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import date
 
-from django.db.models import Q, QuerySet
+from django.db.models import Count, Q, QuerySet
 
 from schedule.models import (
     EmployeeScheduleAssignment,
@@ -98,9 +98,14 @@ def assignment_list(
     day: date | None = None,
     search: str = "",
 ) -> QuerySet[EmployeeScheduleAssignment]:
-    queryset = EmployeeScheduleAssignment.objects.select_related(
-        "schedule", "schedule__timetable"
-    ).prefetch_related("employees")
+    queryset = (
+        EmployeeScheduleAssignment.objects.select_related(
+            "schedule", "schedule__timetable"
+        )
+        .prefetch_related("employees")
+        .annotate(employees_count=Count("employees"))
+        .order_by("-priority", "-start_date")
+    )
 
     if active_only:
         queryset = queryset.filter(is_active=True)
@@ -135,9 +140,40 @@ def assignment_get(
             "schedule", "schedule__timetable"
         )
         .prefetch_related("employees")
+        .annotate(employees_count=Count("employees"))
         .filter(pk=assignment_id)
         .first()
     )
+
+
+def employee_schedule_list(*, search: str = "") -> QuerySet:
+    """One row per employee, with their assignments prefetched.
+
+    Powers the 'By employee' page: each employee → assigned schedule(s).
+    """
+    from employees.models import Employee
+
+    queryset = (
+        Employee.objects.filter(is_active=True)
+        .select_related("department")
+        .prefetch_related(
+            "schedule_assignments__schedule__timetable",
+            "schedule_assignments__employees",
+        )
+        .order_by("first_name", "last_name")
+    )
+
+    if search:
+        queryset = queryset.filter(
+            Q(first_name__icontains=search)
+            | Q(last_name__icontains=search)
+            | Q(emp_code__icontains=search)
+            | Q(email__icontains=search)
+            | Q(department__name__icontains=search)
+            | Q(schedule_assignments__schedule__name__icontains=search)
+        ).distinct()
+
+    return queryset
 
 
 def override_list(

@@ -30,8 +30,18 @@ urlpatterns = [
     path("assignments/", views.assignment_list_view, name="assignment_list"),
     path("assignments/add/", views.assignment_add, name="assignment_add"),
     path(
+        "assignments/<int:assignment_id>/edit/",
+        views.assignment_edit,
+        name="assignment_edit",
+    ),
+    path(
         "assignments/<int:assignment_id>/delete/",
         views.assignment_delete_view,
         name="assignment_delete",
+    ),
+    path(
+        "by-employee/",
+        views.employee_schedule_list_view,
+        name="employee_schedule_list",
     ),
 ]

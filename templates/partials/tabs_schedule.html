@@ -7,7 +7,10 @@
      class="tab {% if request.resolver_match.url_name == 'schedule_list' or request.resolver_match.url_name == 'schedule_add' %}is-active{% endif %}"
      role="tab" title="Assign timetables to people">Schedules</a>
   <a href="{% url 'assignment_list' %}"
-     class="tab {% if request.resolver_match.url_name == 'assignment_list' or request.resolver_match.url_name == 'assignment_add' %}is-active{% endif %}"
+     class="tab {% if request.resolver_match.url_name == 'assignment_list' or request.resolver_match.url_name == 'assignment_add' or request.resolver_match.url_name == 'assignment_edit' %}is-active{% endif %}"
      role="tab" title="Put people on schedules">Assignments</a>
+  <a href="{% url 'employee_schedule_list' %}"
+     class="tab {% if request.resolver_match.url_name == 'employee_schedule_list' %}is-active{% endif %}"
+     role="tab" title="Each employee and their schedule">By Employee</a>
 </div>
 {% endpartialdef tabs_schedule %}

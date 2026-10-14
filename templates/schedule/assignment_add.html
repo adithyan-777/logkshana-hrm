@@ -79,18 +79,10 @@
             {% if form.departments.errors %}<span class="error">{{ form.departments.errors }}</span>{% endif %}
         </div>
         <div class="field" data-assign-section="individual">
-            <label class="form-label">People</label>
-            <div class="check-list">
-                {{ form.employees }}
-            </div>
-            {% if form.employees.errors %}<span class="error">{{ form.employees.errors }}</span>{% endif %}
+            {% include "partials/employee_multiselect.html" with field=form.employees box_id="assign-employees" label="People — search to add" %}
         </div>
         <div class="field" data-assign-section="all_except">
-            <label class="form-label">Exclude</label>
-            <div class="check-list">
-                {{ form.excluded_employees }}
-            </div>
-            {% if form.excluded_employees.errors %}<span class="error">{{ form.excluded_employees.errors }}</span>{% endif %}
+            {% include "partials/employee_multiselect.html" with field=form.excluded_employees box_id="assign-excluded" label="Exclude — search to add" %}
         </div>
     </fieldset>
 

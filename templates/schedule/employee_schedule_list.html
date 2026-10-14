@@ -1,0 +1,99 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block title %}Employee Schedules{% endblock %}
+
+{% block page_content %}
+{% include "partials/tabs_schedule.html#tabs_schedule" %}
+
+<div class="toolbar">
+  <label class="sr-only" for="employee-schedule-search">Search</label>
+  <input
+    id="employee-schedule-search"
+    class="search-input toolbar__search"
+    type="search"
+    name="q"
+    value="{{ search }}"
+    placeholder="Employee, department, or schedule..."
+    hx-get="{% url 'employee_schedule_list' %}"
+    hx-target="#employee-schedule-list"
+    hx-trigger="keyup changed delay:300ms, search"
+  >
+</div>
+
+<p class="muted">{{ total_scheduled }} employees scheduled across {{ total_assignments }} assignments.</p>
+
+<div class="card card--table">
+  <div class="card__body">
+    <div
+      id="employee-schedule-list"
+      class="data-table-wrap"
+      hx-get="{% url 'employee_schedule_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+      hx-trigger="assignmentCreated from:body, assignmentUpdated from:body, assignmentDeleted from:body"
+      hx-target="this"
+      hx-swap="innerHTML"
+    >
+      {% partialdef employee_schedule_table inline %}
+{% if page_obj.paginator.count %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Employee</th>
+            <th>Department</th>
+            <th>Assigned schedule</th>
+            <th>Shift time</th>
+            <th>Dates</th>
+            <th>Priority</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for emp in page_obj %}
+        <tr>
+            <td><strong>{{ emp.full_name }}</strong>{% if emp.emp_code %}<br><span class="muted">{{ emp.emp_code }}</span>{% endif %}</td>
+            <td>{{ emp.department.name|default:"—" }}</td>
+            <td>
+              {% for assignment in emp.schedule_assignments.all %}
+                <div><strong>{{ assignment.schedule.name }}</strong>{% if assignment.name %} <span class="muted">({{ assignment.name }})</span>{% endif %}{% if not assignment.is_active %} <span class="muted">(inactive)</span>{% endif %}</div>
+              {% empty %}
+                <span class="muted">No schedule assigned</span>
+              {% endfor %}
+            </td>
+            <td>
+              {% for assignment in emp.schedule_assignments.all %}
+                <div>{% if assignment.schedule.timetable.check_in %}{{ assignment.schedule.timetable.check_in|time:"H:i" }} – {{ assignment.schedule.timetable.check_out|time:"H:i" }}{% else %}<span class="muted">Flexible</span>{% endif %}</div>
+              {% empty %}
+                <span class="muted">—</span>
+              {% endfor %}
+            </td>
+            <td>
+              {% for assignment in emp.schedule_assignments.all %}
+                <div>{{ assignment.start_date }}{% if assignment.end_date %} – {{ assignment.end_date }}{% else %} – …{% endif %}</div>
+              {% empty %}
+                <span class="muted">—</span>
+              {% endfor %}
+            </td>
+            <td>
+              {% for assignment in emp.schedule_assignments.all %}
+                <div>{{ assignment.priority }}</div>
+              {% empty %}
+                <span class="muted">—</span>
+              {% endfor %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/pagination.html#pagination" %}
+{% else %}
+<p class="empty-state">
+    {% if search %}
+    No employees match "{{ search }}".
+    {% else %}
+    No employees found.
+    {% endif %}
+</p>
+{% endif %}
+{% endpartialdef employee_schedule_table %}
+    </div>
+  </div>
+</div>
+{% endblock %}

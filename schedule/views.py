@@ -16,16 +16,24 @@ from employees.decorators import require_permission
 from employees.permission_catalog import PermissionCodename
 from employees.selectors import user_has_permission
 from schedule.forms import (
+    ScheduleAssignmentEditForm,
     ScheduleAssignmentForm,
     ScheduleForm,
     TimetableForm,
     build_timetable_break_formset,
 )
 from schedule.models import Schedule, Timetable
-from schedule.selectors import assignment_get, assignment_list, schedule_list, timetable_list
+from schedule.selectors import (
+    assignment_get,
+    assignment_list,
+    employee_schedule_list,
+    schedule_list,
+    timetable_list,
+)
 from schedule.services import (
     assignment_create,
     assignment_delete,
+    assignment_update,
     schedule_create,
     schedule_delete,
     schedule_update,
@@ -398,6 +406,97 @@ def assignment_add(request: HttpRequest) -> HttpResponse:
             f"{f'?schedule={schedule_id}' if schedule_id else ''}"
         ),
         title="Assign employees",
+    )
+
+
+def _render_assignment_edit_form(
+    request: HttpRequest, form: ScheduleAssignmentEditForm, *, assignment
+) -> HttpResponse:
+    return render(
+        request,
+        "schedule/assignment_edit.html#assignment_edit_form",
+        {"form": form, "assignment": assignment},
+    )
+
+
+@login_required
+@require_permission(PermissionCodename.SCHEDULE_VIEW)
+@require_http_methods(["GET"])
+def employee_schedule_list_view(request: HttpRequest) -> HttpResponse:
+    """Each employee → their assigned schedule(s), with timetable times."""
+    search = request.GET.get("q", "").strip()
+    queryset = employee_schedule_list(search=search)
+    context = list_pagination_context(
+        request,
+        queryset,
+        search=search,
+        base_url=reverse("employee_schedule_list"),
+        hx_target="#employee-schedule-list",
+    )
+    context["total_scheduled"] = queryset.filter(
+        schedule_assignments__isnull=False
+    ).distinct().count()
+    context["total_assignments"] = assignment_list(active_only=False).count()
+
+    if is_htmx_partial(request):
+        return render(
+            request,
+            "schedule/employee_schedule_list.html#employee_schedule_table",
+            context,
+        )
+
+    return render(request, "schedule/employee_schedule_list.html", context)
+
+
+@login_required
+@require_permission(PermissionCodename.SCHEDULE_ADD)
+@require_http_methods(["GET", "POST"])
+def assignment_edit(request: HttpRequest, assignment_id: int) -> HttpResponse:
+    assignment = assignment_get(assignment_id=assignment_id)
+    if assignment is None:
+        from django.http import Http404
+
+        raise Http404
+
+    if request.method == "POST":
+        form = ScheduleAssignmentEditForm(request.POST, instance=assignment)
+        if form.is_valid():
+            assignment_update(
+                assignment=assignment,
+                schedule=form.cleaned_data["schedule"],
+                employees=list(form.cleaned_data["employees"]),
+                start_date=form.cleaned_data["start_date"],
+                end_date=form.cleaned_data.get("end_date"),
+                priority=form.cleaned_data.get("priority") or 0,
+                name=form.cleaned_data.get("name") or "",
+                is_active=form.cleaned_data.get("is_active", True),
+            )
+            response = _render_assignment_edit_form(
+                request,
+                ScheduleAssignmentEditForm(instance=assignment),
+                assignment=assignment,
+            )
+            set_hx_trigger(
+                response,
+                event="assignmentUpdated",
+                toast=f"Assignment to “{assignment.schedule.name}” updated.",
+            )
+            return response
+
+        return _render_assignment_edit_form(
+            request, form, assignment=assignment
+        )
+
+    form = ScheduleAssignmentEditForm(instance=assignment)
+    if is_htmx_partial(request):
+        return _render_assignment_edit_form(
+            request, form, assignment=assignment
+        )
+
+    return redirect_to_list_drawer(
+        list_url_name="assignment_list",
+        form_url=request.path,
+        title="Edit assignment",
     )
 
 

@@ -103,18 +103,28 @@ def employee_list_view(request: HttpRequest) -> HttpResponse:
 def employee_options_view(request: HttpRequest) -> HttpResponse:
     """HTMX fragment: searchable employee options (min 2 chars).
 
-    Used by attendance forms (Add/Edit correction, Record/Edit punch).
+    Used by attendance forms (Add/Edit correction, Record/Edit punch)
+    and schedule assignment forms (multi-select).
     Accepts ``?q=`` (or ``?employee_q=`` from the combobox input).
+    With ``?mode=multi&target=<box-id>`` returns Add-button options
+    for the multi-select widget instead of single-select options.
     Returns a small HTML fragment for ``#employee-results``.
     """
     allowed = (
         user_has_permission(user=request.user, codename=PermissionCodename.ATTENDANCE_ADD)
         or user_has_permission(user=request.user, codename=PermissionCodename.ATTENDANCE_VIEW)
         or user_has_permission(user=request.user, codename=PermissionCodename.EMPLOYEES_VIEW)
+        or user_has_permission(user=request.user, codename=PermissionCodename.SCHEDULE_VIEW)
+        or user_has_permission(user=request.user, codename=PermissionCodename.SCHEDULE_ADD)
     )
     if not allowed:
         raise PermissionDenied
     q = request.GET.get("q", request.GET.get("employee_q", "")).strip()
+    target = request.GET.get("target", "")
+    if not q and request.GET.get("mode") == "multi" and target:
+        # Each multi-select search box has its own input name so two
+        # pickers can share one form without clobbering each other.
+        q = request.GET.get(f"{target}_q", "").strip()
     if len(q) < 2:
         return HttpResponse("")
     employees = list(
@@ -127,6 +137,16 @@ def employee_options_view(request: HttpRequest) -> HttpResponse:
         )
         .order_by("first_name", "last_name")[:20]
     )
+    if request.GET.get("mode") == "multi":
+        return render(
+            request,
+            "partials/employee_multi_options.html",
+            {
+                "query": q,
+                "employees": employees,
+                "target": target,
+            },
+        )
     return render(
         request,
         "partials/employee_options.html",

@@ -566,6 +566,35 @@ def assignment_create(
 
 
 @transaction.atomic
+def assignment_update(
+    *,
+    assignment: EmployeeScheduleAssignment,
+    schedule: Schedule,
+    employees,
+    start_date,
+    end_date=None,
+    priority: int = 0,
+    name: str = "",
+    is_active: bool = True,
+) -> EmployeeScheduleAssignment:
+    """Update an assignment row and replace its employee set."""
+    assignment.schedule = schedule
+    assignment.start_date = start_date
+    assignment.end_date = end_date
+    assignment.priority = priority
+    assignment.name = name
+    assignment.is_active = is_active
+    assignment.full_clean()
+    validate_assignment(
+        start_date=assignment.start_date,
+        end_date=assignment.end_date,
+    )
+    assignment.save()
+    assignment.employees.set(employees or [])
+    return assignment
+
+
+@transaction.atomic
 def assignment_delete(
     *, assignment: EmployeeScheduleAssignment
 ) -> EmployeeScheduleAssignment:

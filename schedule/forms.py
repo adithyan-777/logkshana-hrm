@@ -5,6 +5,7 @@ from django.forms import inlineformset_factory
 from common.forms import apply_form_field_ui
 from employees.models import Department, Employee
 from schedule.models import (
+    EmployeeScheduleAssignment,
     Schedule,
     Timetable,
     TimetableBreak,
@@ -240,7 +241,8 @@ class ScheduleAssignmentForm(forms.Form):
             "first_name", "last_name"
         ),
         required=False,
-        widget=forms.CheckboxSelectMultiple,
+        # Rendered hidden: employee_multiselect.html provides the search UI.
+        widget=forms.SelectMultiple,
         label="People",
     )
     excluded_employees = forms.ModelMultipleChoiceField(
@@ -248,7 +250,8 @@ class ScheduleAssignmentForm(forms.Form):
             "first_name", "last_name"
         ),
         required=False,
-        widget=forms.CheckboxSelectMultiple,
+        # Rendered hidden: employee_multiselect.html provides the search UI.
+        widget=forms.SelectMultiple,
         label="Exclude",
     )
     start_date = forms.DateField(
@@ -320,6 +323,57 @@ class ScheduleAssignmentForm(forms.Form):
         if start_date and end_date and end_date < start_date:
             self.add_error("end_date", "End date must not be before start date.")
         self.resolved_employees = resolved
+        return cleaned_data
+
+
+class ScheduleAssignmentEditForm(forms.ModelForm):
+    """Edit everything on an assignment: schedule, people, dates, priority."""
+
+    class Meta:
+        model = EmployeeScheduleAssignment
+        fields = [
+            "schedule",
+            "employees",
+            "start_date",
+            "end_date",
+            "priority",
+            "name",
+            "is_active",
+        ]
+        widgets = {
+            "start_date": forms.DateInput(attrs={"type": "date"}),
+            "end_date": forms.DateInput(attrs={"type": "date"}),
+            # Rendered hidden: templates/partials/employee_multiselect.html
+            # provides the search-box UI driving this select.
+            "employees": forms.SelectMultiple,
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["schedule"].queryset = Schedule.objects.filter(
+            is_active=True
+        ).order_by("name")
+        self.fields["employees"].queryset = Employee.objects.filter(
+            is_active=True
+        ).order_by("first_name", "last_name")
+        self.fields["end_date"].required = False
+        self.fields["priority"].required = False
+        self.fields["name"].required = False
+        self.fields["name"].label = "Label (optional)"
+        self.fields["end_date"].label = "End date (blank = open-ended)"
+        apply_form_field_ui(self)
+
+    def clean_priority(self):
+        return self.cleaned_data.get("priority") or 0
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if not cleaned_data.get("employees"):
+            self.add_error("employees", "Select at least one person.")
+        start_date = cleaned_data.get("start_date")
+        end_date = cleaned_data.get("end_date")
+        if start_date and end_date and end_date < start_date:
+            self.add_error("end_date", "End date must not be before start date.")
         return cleaned_data
 
 

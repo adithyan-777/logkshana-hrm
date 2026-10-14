@@ -398,6 +398,12 @@
 
   document.body.addEventListener("htmx:pushedIntoHistory", () => {
     if (window.Alpine) window.Alpine.store("spa").sync();
+    // Boosted (AJAX) navigation to a ?drawer= URL (e.g. following the
+    // add/edit redirect) swaps content without a full page load, so
+    // alpine:initialized never fires — open the drawer here instead.
+    // No-op when the URL carries no drawer params (they are stripped
+    // on first open, so this cannot double-open).
+    openDrawerFromQuery();
   });
 
   function openDrawerFromQuery() {

@@ -26,7 +26,7 @@
       id="assignment-list"
       class="data-table-wrap"
       hx-get="{% url 'assignment_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
-      hx-trigger="assignmentCreated from:body, assignmentDeleted from:body"
+      hx-trigger="assignmentCreated from:body, assignmentUpdated from:body, assignmentDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >
@@ -36,7 +36,8 @@
     <thead>
         <tr>
             <th>Schedule</th>
-            <th>People</th>
+            <th>People scheduled</th>
+            <th>Employees</th>
             <th>Dates</th>
             <th>Priority</th>
             <th></th>
@@ -45,11 +46,22 @@
     <tbody>
         {% for assignment in page_obj %}
         <tr>
-            <td>{{ assignment.schedule.name }}</td>
-            <td>{{ assignment.employees.count }}</td>
-            <td>{{ assignment.start_date }}{% if assignment.end_date %} – {{ assignment.end_date }}{% else %} – …{% endif %}</td>
+            <td>
+              <strong>{{ assignment.schedule.name }}</strong>
+              {% if assignment.name %}<br><span class="muted">{{ assignment.name }}</span>{% endif %}
+              <br><span class="muted">{{ assignment.schedule.timetable.name }}</span>
+            </td>
+            <td><span class="count-badge">{{ assignment.employees_count|default:assignment.employees.count }}</span></td>
+            <td>
+              {% for emp in assignment.employees.all|slice:":3" %}{{ emp.full_name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="muted">—</span>{% endfor %}{% if assignment.employees_count|default:assignment.employees.count > 3 %} <span class="muted">+{{ assignment.employees_count|default:assignment.employees.count|add:"-3" }} more</span>{% endif %}
+            </td>
+            <td>{{ assignment.start_date }}{% if assignment.end_date %} – {{ assignment.end_date }}{% else %} – …{% endif %}{% if not assignment.is_active %} <span class="muted">(inactive)</span>{% endif %}</td>
             <td>{{ assignment.priority }}</td>
             <td class="table-actions">
+                {% if can_edit %}
+                {% url 'assignment_edit' assignment.pk as assignment_edit_url %}
+                {% include "partials/drawer_link.html" with url=assignment_edit_url title="Edit assignment" icon="bx-edit" class="btn-icon" %}
+                {% endif %}
                 {% if can_delete %}
                 <button
                   type="button"
@@ -57,7 +69,7 @@
                   title="Delete assignment"
                   aria-label="Delete assignment to {{ assignment.schedule.name }}"
                   hx-delete="{% url 'assignment_delete' assignment.pk %}"
-                  hx-confirm="Remove {{ assignment.employees.count }} people from {{ assignment.schedule.name }}?"
+                  hx-confirm="Remove {{ assignment.employees_count|default:assignment.employees.count }} people from {{ assignment.schedule.name }}?"
                   hx-swap="none"
                 >
                     <i class="bx bx-trash admin-icon admin-icon--18"></i>

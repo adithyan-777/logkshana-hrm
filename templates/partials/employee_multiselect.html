@@ -1,0 +1,136 @@
+{% comment %}
+Search-box multi employee picker (attendance-correction style, multi-select).
+
+Required context: field (BoundField for a ModelMultipleChoiceField),
+box_id (unique per page, e.g. "assign-employees"), label.
+Renders the real <select multiple> hidden plus a search box whose HTMX
+results add options, and removable chips for the current selection.
+POST shape is unchanged (repeated <name>=<id>), so forms/tests keep working.
+{% endcomment %}
+<div class="combo combo-multi" data-multi-combo="{{ box_id }}">
+  <label class="form-label" for="{{ box_id }}-search">{{ label }}</label>
+  <div hidden>{{ field }}</div>
+  <input
+    type="search"
+    id="{{ box_id }}-search"
+    name="{{ box_id }}_q"
+    class="form-input"
+    placeholder="Type at least 2 letters to search…"
+    autocomplete="off"
+    hx-get="{% url 'employee_options' %}?mode=multi&amp;target={{ box_id }}"
+    hx-target="#{{ box_id }}-results"
+    hx-swap="innerHTML"
+    hx-push-url="false"
+    hx-trigger="keyup[event.target.value.trim().length >= 2] delay:300ms, search[event.target.value.trim().length >= 2]"
+    onkeydown="if(event.key==='Enter'){event.preventDefault();}"
+    onsearch="multiEmployeeSearchCleared(this, '{{ box_id }}')"
+  >
+  <div id="{{ box_id }}-selected" class="combo-chips" aria-live="polite"></div>
+  <div id="{{ box_id }}-results" class="combo-results" aria-live="polite"></div>
+  {% if field.errors %}<span class="error">{{ field.errors }}</span>{% endif %}
+</div>
+<script>
+(function () {
+  function comboWrap(boxId) {
+    return document.querySelector('[data-multi-combo="' + boxId + '"]');
+  }
+  function comboParts(boxId) {
+    var wrap = comboWrap(boxId);
+    if (!wrap) return {};
+    return {
+      wrap: wrap,
+      select: wrap.querySelector("select"),
+      search: document.getElementById(boxId + "-search"),
+      chips: document.getElementById(boxId + "-selected"),
+      results: document.getElementById(boxId + "-results")
+    };
+  }
+  function renderChips(boxId) {
+    var parts = comboParts(boxId);
+    if (!parts.chips || !parts.select) return;
+    var selected = Array.prototype.filter.call(parts.select.options, function (o) { return o.selected; });
+    parts.chips.innerHTML = "";
+    if (!selected.length) {
+      parts.chips.innerHTML = '<span class="combo-hint">No one selected yet — search above to add people.</span>';
+      return;
+    }
+    var count = document.createElement("p");
+    count.className = "combo-hint";
+    count.textContent = selected.length + (selected.length === 1 ? " person selected." : " people selected.");
+    parts.chips.appendChild(count);
+    selected.forEach(function (opt) {
+      var chip = document.createElement("span");
+      chip.className = "combo-chip";
+      var name = document.createElement("span");
+      name.textContent = opt.textContent;
+      chip.appendChild(name);
+      var remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "combo-chip__remove";
+      remove.textContent = "×";
+      remove.title = "Remove";
+      remove.setAttribute("aria-label", "Remove " + opt.textContent);
+      remove.setAttribute("data-target", boxId);
+      remove.setAttribute("data-id", opt.value);
+      remove.setAttribute("onclick", "removeMultiEmployee(this)");
+      chip.appendChild(remove);
+      parts.chips.appendChild(chip);
+    });
+  }
+  if (!window.addMultiEmployee) {
+    window.addMultiEmployee = function (btn) {
+      var boxId = btn.getAttribute("data-target");
+      var parts = comboParts(boxId);
+      if (!parts.select) return;
+      var id = btn.getAttribute("data-id");
+      var label = btn.getAttribute("data-label");
+      var opt = parts.select.querySelector('option[value="' + id + '"]');
+      if (!opt) {
+        opt = document.createElement("option");
+        opt.value = id;
+        opt.textContent = label;
+        parts.select.appendChild(opt);
+      }
+      opt.selected = true;
+      renderChips(boxId);
+      if (parts.search) { parts.search.value = ""; parts.search.focus(); }
+      if (parts.results) parts.results.innerHTML = "";
+    };
+    window.removeMultiEmployee = function (btn) {
+      var boxId = btn.getAttribute("data-target");
+      var parts = comboParts(boxId);
+      if (!parts.select) return;
+      var opt = parts.select.querySelector('option[value="' + btn.getAttribute("data-id") + '"]');
+      if (opt) opt.selected = false;
+      renderChips(boxId);
+    };
+    window.multiEmployeeSearchCleared = function (input, boxId) {
+      if (input.value) return;
+      var parts = comboParts(boxId);
+      if (parts.results) parts.results.innerHTML = "";
+    };
+    window.initMultiEmployeeCombos = function () {
+      document.querySelectorAll("[data-multi-combo]").forEach(function (wrap) {
+        renderChips(wrap.getAttribute("data-multi-combo"));
+      });
+    };
+  }
+  window.initMultiEmployeeCombos();
+})();
+</script>
+<style>
+.combo-multi .combo-chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .5rem; }
+.combo-multi .combo-chips .combo-hint { flex-basis: 100%; margin: 0; }
+.combo-chip { display: inline-flex; align-items: center; gap: .45rem; padding: .2rem .25rem .2rem .65rem; border: 1px solid var(--border); border-radius: 999px; background: var(--bg-muted); color: var(--text); font-size: .82rem; line-height: 1.4; }
+.combo-chip__remove { display: inline-flex; align-items: center; justify-content: center; width: 1.25rem; height: 1.25rem; padding: 0; border: none; border-radius: 50%; background: transparent; color: var(--text-muted); font-size: 1rem; line-height: 1; cursor: pointer; }
+.combo-chip__remove:hover { background: color-mix(in srgb, var(--danger) 15%, transparent); color: var(--danger); }
+.combo-results { margin-top: .5rem; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: .5rem; padding: .5rem; box-shadow: 0 8px 24px rgba(0,0,0,.08); color: var(--text); }
+.combo-results:empty { display: none; }
+.combo-list { display: flex; flex-direction: column; gap: .25rem; max-height: 220px; overflow-y: auto; background: transparent; }
+.combo-option { display: flex; justify-content: space-between; align-items: center; gap: .5rem; padding: .5rem .6rem; border: 1px solid var(--border); border-radius: .5rem; background: var(--bg-elevated); color: var(--text); cursor: pointer; text-align: left; width: 100%; }
+.combo-option:hover { border-color: var(--accent); background: var(--hover-subtle); }
+.combo-option__name { font-weight: 600; color: var(--text); }
+.combo-option__meta { font-size: .8rem; color: var(--text-muted); }
+.combo-hint { font-size: .85rem; color: var(--text-muted); margin: .25rem 0; }
+.combo-empty { font-size: .9rem; color: var(--danger); }
+</style>

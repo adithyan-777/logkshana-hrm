@@ -453,14 +453,21 @@
     if (!box) return;
     if (label) {
       box.classList.remove("combo-selected--empty");
-      box.innerHTML = "Selected: <strong></strong> ";
-      box.querySelector("strong").textContent = label;
+      box.innerHTML = "";
+      const chip = document.createElement("span");
+      chip.className = "combo-chip";
+      const name = document.createElement("span");
+      name.textContent = label;
+      chip.appendChild(name);
       const clear = document.createElement("button");
       clear.type = "button";
-      clear.className = "btn btn--ghost btn--sm";
-      clear.textContent = "Clear";
+      clear.className = "combo-chip__remove";
+      clear.textContent = "×";
+      clear.title = "Clear";
+      clear.setAttribute("aria-label", "Clear selected employee");
       clear.setAttribute("onclick", "clearEmployeeOption()");
-      box.appendChild(clear);
+      chip.appendChild(clear);
+      box.appendChild(chip);
     } else {
       box.classList.add("combo-selected--empty");
       box.innerHTML = '<span class="combo-hint">No employee selected.</span>';

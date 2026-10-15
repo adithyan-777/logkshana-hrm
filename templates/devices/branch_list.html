@@ -1,0 +1,93 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block title %}Branches{% endblock %}
+
+{% block page_content %}
+
+<div class="tabs" role="tablist" aria-label="Devices and branches">
+  {% if can_view_devices %}
+  <a class="tab" href="{% url 'device_list' %}" role="tab" aria-selected="false">Devices</a>
+  {% endif %}
+  <a class="tab is-active" href="{% url 'branch_list' %}" role="tab" aria-selected="true">Branches</a>
+</div>
+
+<div class="toolbar">
+  <label class="sr-only" for="branch-search">Search</label>
+  <input
+    id="branch-search"
+    class="search-input toolbar__search"
+    type="search"
+    name="q"
+    value="{{ search }}"
+    placeholder="Name or code..."
+    hx-get="{% url 'branch_list' %}"
+    hx-target="#branch-list"
+    hx-trigger="keyup changed delay:300ms, search"
+  >
+</div>
+
+<div class="card card--table">
+  <div class="card__body">
+    <div
+      id="branch-list"
+      class="data-table-wrap"
+      hx-get="{% url 'branch_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+      hx-trigger="branchCreated from:body, branchUpdated from:body, branchDeleted from:body"
+      hx-target="this"
+      hx-swap="innerHTML"
+    >
+      {% partialdef branch_table inline %}
+{% if page_obj.paginator.count %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Code</th>
+            <th>Devices</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for branch in page_obj %}
+        <tr>
+            <td>{{ branch.name }}</td>
+            <td>{{ branch.code|default:"—" }}</td>
+            <td>{{ branch.devices.count }}</td>
+            <td class="table-actions">
+                {% if can_edit %}
+                {% url 'branch_edit' branch.pk as branch_edit_url %}
+                {% include "partials/drawer_link.html" with url=branch_edit_url title="Edit branch" icon="bx-edit" class="btn-icon" %}
+                {% endif %}
+                {% if can_delete %}
+                <button
+                  type="button"
+                  class="btn-icon btn-icon--danger"
+                  title="Delete branch"
+                  aria-label="Delete {{ branch.name }}"
+                  hx-delete="{% url 'branch_delete' branch.pk %}"
+                  hx-confirm="Delete branch “{{ branch.name }}”?"
+                  hx-swap="none"
+                >
+                    <i class="bx bx-trash admin-icon admin-icon--18"></i>
+                </button>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/pagination.html#pagination" %}
+{% else %}
+<p class="empty-state">
+    {% if search %}
+    No branches match "{{ search }}".
+    {% else %}
+    No branches yet. {% url 'branch_add' as branch_add_url %}{% include "partials/drawer_link.html" with url=branch_add_url title="Add branch" label="Add the first branch" %}.
+    {% endif %}
+</p>
+{% endif %}
+{% endpartialdef branch_table %}
+    </div>
+  </div>
+</div>
+{% endblock %}

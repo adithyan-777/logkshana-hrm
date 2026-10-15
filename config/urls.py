@@ -37,6 +37,7 @@ urlpatterns = [
     path("leave/", include("leave.urls")),
     path("attendance/", include("attendance.urls")),
     path("reports/", include("reports.urls")),
+    path("devices/", include("companies.urls_devices")),
     path("api/", include("companies.urls")),
     path("sentry-debug/", trigger_error),
 ]

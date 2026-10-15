@@ -113,6 +113,14 @@
         <span class="quick-action__label">Permissions</span>
       </a>
       {% endif %}
+      {% if nav_can.devices %}
+      <a href="{% url 'device_list' %}"
+         class="quick-action {% if request.path|slice:':9' == '/devices/' %}is-active{% endif %}"
+         data-nav-match="devices">
+        <span class="quick-action__icon"><i class="bx bx-chip admin-icon admin-icon--20"></i></span>
+        <span class="quick-action__label">Devices</span>
+      </a>
+      {% endif %}
     </nav>
   </div>
 </aside>

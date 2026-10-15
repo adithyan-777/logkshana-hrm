@@ -39,6 +39,8 @@ def navigation(request):
             "roles": True,
             "permissions": True,
             "attendance": True,
+            "devices": True,
+            "branches": True,
         },
         "attendance_nav_url": "",
     }
@@ -85,6 +87,8 @@ def navigation(request):
             "permissions": can(PermissionCodename.PERMISSIONS_VIEW),
             "attendance": can(PermissionCodename.ATTENDANCE_VIEW)
             or can(PermissionCodename.ATTENDANCE_OWN_VIEW),
+            "devices": can(PermissionCodename.DEVICES_VIEW),
+            "branches": can(PermissionCodename.BRANCHES_VIEW),
         }
         if can(PermissionCodename.ATTENDANCE_VIEW):
             context["attendance_nav_url"] = reverse_url("daily_attendance_list")

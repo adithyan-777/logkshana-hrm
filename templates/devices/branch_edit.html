@@ -1,0 +1,46 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block title %}Edit Branch{% endblock %}
+
+{% block page_content %}
+<div class="card" style="max-width:720px;">
+  <div class="card__header">
+    <span class="card__title">Edit branch</span>
+  </div>
+  <div class="card__body">
+      {% partialdef branch_edit_form inline %}
+      <div id="branch-edit-form-container">
+<form class="tt-form-shell"
+    id="branch-edit-form"
+    hx-post="{% url 'branch_edit' branch.pk %}"
+    hx-target="#branch-edit-form-container"
+    hx-swap="outerHTML"
+>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="message error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="field">
+        <label for="{{ form.name.id_for_label }}">Name *</label>
+        {{ form.name }}
+        {% if form.name.errors %}<span class="error">{{ form.name.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.code.id_for_label }}">Code</label>
+        {{ form.code }}
+        {% if form.code.errors %}<span class="error">{{ form.code.errors }}</span>{% endif %}
+    </div>
+
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Save changes</button>
+        <a href="{% url 'branch_list' %}" class="btn btn--ghost">Back to branches</a>
+    </div>
+</form>
+      </div>
+{% endpartialdef branch_edit_form %}
+  </div>
+</div>
+{% endblock %}

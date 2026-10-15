@@ -1,0 +1,66 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block title %}Edit Device{% endblock %}
+
+{% block page_content %}
+<div class="card" style="max-width:720px;">
+  <div class="card__header">
+    <span class="card__title">Edit device</span>
+  </div>
+  <div class="card__body">
+      {% partialdef device_edit_form inline %}
+      <div id="device-edit-form-container">
+<form class="tt-form-shell"
+    id="device-edit-form"
+    hx-post="{% url 'device_edit' device.pk %}"
+    hx-target="#device-edit-form-container"
+    hx-swap="outerHTML"
+>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="message error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="field">
+        <label for="{{ form.serial_number.id_for_label }}">Serial number *</label>
+        {{ form.serial_number }}
+        {% if form.serial_number.errors %}<span class="error">{{ form.serial_number.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.name.id_for_label }}">Name</label>
+        {{ form.name }}
+        {% if form.name.errors %}<span class="error">{{ form.name.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.branch.id_for_label }}">Branch *</label>
+        {{ form.branch }}
+        {% if form.branch.errors %}<span class="error">{{ form.branch.errors }}</span>{% endif %}
+    </div>
+
+    <div class="field">
+        <label for="{{ form.device_type.id_for_label }}">Brand / model</label>
+        {{ form.device_type }}
+        {% if form.device_type.errors %}<span class="error">{{ form.device_type.errors }}</span>{% endif %}
+        <p class="field__hint">Brands and models are managed by an administrator.</p>
+    </div>
+
+    <div class="field">
+        <label>
+            {{ form.is_active }} Active
+        </label>
+        {% if form.is_active.errors %}<span class="error">{{ form.is_active.errors }}</span>{% endif %}
+    </div>
+
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Save changes</button>
+        <a href="{% url 'device_list' %}" class="btn btn--ghost">Back to devices</a>
+    </div>
+</form>
+      </div>
+{% endpartialdef device_edit_form %}
+  </div>
+</div>
+{% endblock %}

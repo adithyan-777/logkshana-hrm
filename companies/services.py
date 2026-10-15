@@ -7,7 +7,7 @@ from django_tenants.utils import get_public_schema_name, schema_context
 from attendance.calculation import direction_from_gateway_status
 from attendance.models import AttendanceActivity
 from attendance.services import activity_create
-from companies.models import Branch, Company, Device
+from companies.models import Branch, Company, Device, DeviceType
 from companies.selectors import device_get_by_serial_number
 from employees.models import Employee
 from employees.selectors import employee_get_by_emp_code
@@ -21,6 +21,74 @@ def branch_create(*, name: str, company: Company, code: str | None = None) -> Br
     branch.full_clean()
     branch.save()
     return branch
+
+
+def branch_update(
+    *,
+    branch: Branch,
+    name: str,
+    code: str | None = None,
+) -> Branch:
+    branch.name = name
+    branch.code = code or None
+    branch.full_clean()
+    branch.save()
+    return branch
+
+
+def branch_delete(*, branch: Branch) -> Branch:
+    branch.delete()
+    return branch
+
+
+def device_create(
+    *,
+    company: Company,
+    serial_number: str,
+    branch: Branch,
+    name: str | None = None,
+    device_type: DeviceType | None = None,
+    is_active: bool = True,
+) -> Device:
+    if branch.company_id != company.id:
+        raise ValidationError({"branch": "Branch belongs to a different company."})
+    device = Device(
+        company=company,
+        serial_number=(serial_number or "").strip(),
+        branch=branch,
+        name=(name or "").strip() or None,
+        device_type=device_type,
+        is_active=is_active,
+    )
+    device.full_clean()
+    device.save()
+    return device
+
+
+def device_update(
+    *,
+    device: Device,
+    serial_number: str,
+    branch: Branch,
+    name: str | None = None,
+    device_type: DeviceType | None = None,
+    is_active: bool = True,
+) -> Device:
+    if branch.company_id != device.company_id:
+        raise ValidationError({"branch": "Branch belongs to a different company."})
+    device.serial_number = (serial_number or "").strip()
+    device.branch = branch
+    device.name = (name or "").strip() or None
+    device.device_type = device_type
+    device.is_active = is_active
+    device.full_clean()
+    device.save()
+    return device
+
+
+def device_delete(*, device: Device) -> Device:
+    device.delete()
+    return device
 
 
 def company_primary_branch_get_or_create(*, company: Company) -> tuple[Branch, bool]:

@@ -1,0 +1,99 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block title %}Devices{% endblock %}
+
+{% block page_content %}
+
+<div class="tabs" role="tablist" aria-label="Devices and branches">
+  <a class="tab is-active" href="{% url 'device_list' %}" role="tab" aria-selected="true">Devices</a>
+  {% if can_view_branches %}
+  <a class="tab" href="{% url 'branch_list' %}" role="tab" aria-selected="false">Branches</a>
+  {% endif %}
+</div>
+
+<div class="toolbar">
+  <label class="sr-only" for="device-search">Search</label>
+  <input
+    id="device-search"
+    class="search-input toolbar__search"
+    type="search"
+    name="q"
+    value="{{ search }}"
+    placeholder="Serial, name, branch or model..."
+    hx-get="{% url 'device_list' %}"
+    hx-target="#device-list"
+    hx-trigger="keyup changed delay:300ms, search"
+  >
+</div>
+
+<div class="card card--table">
+  <div class="card__body">
+    <div
+      id="device-list"
+      class="data-table-wrap"
+      hx-get="{% url 'device_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+      hx-trigger="deviceCreated from:body, deviceUpdated from:body, deviceDeleted from:body"
+      hx-target="this"
+      hx-swap="innerHTML"
+    >
+      {% partialdef device_table inline %}
+{% if page_obj.paginator.count %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Serial</th>
+            <th>Name</th>
+            <th>Branch</th>
+            <th>Brand / model</th>
+            <th>Status</th>
+            <th>Last sync</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for device in page_obj %}
+        <tr>
+            <td>{{ device.serial_number }}</td>
+            <td>{{ device.name|default:"—" }}</td>
+            <td>{{ device.branch.name }}</td>
+            <td>{% if device.device_type %}{{ device.device_type.brand.name }} — {{ device.device_type.model_name }}{% else %}—{% endif %}</td>
+            <td>{% if device.is_active %}<span class="badge badge--success">Active</span>{% else %}<span class="badge badge--muted">Inactive</span>{% endif %}</td>
+            <td>{% if device.last_synced_at %}{{ device.last_synced_at|date:"Y-m-d H:i" }}{% else %}—{% endif %}</td>
+            <td class="table-actions">
+                {% if can_edit %}
+                {% url 'device_edit' device.pk as device_edit_url %}
+                {% include "partials/drawer_link.html" with url=device_edit_url title="Edit device" icon="bx-edit" class="btn-icon" %}
+                {% endif %}
+                {% if can_delete %}
+                <button
+                  type="button"
+                  class="btn-icon btn-icon--danger"
+                  title="Delete device"
+                  aria-label="Delete {{ device.serial_number }}"
+                  hx-delete="{% url 'device_delete' device.pk %}"
+                  hx-confirm="Delete device “{{ device.serial_number }}”?"
+                  hx-swap="none"
+                >
+                    <i class="bx bx-trash admin-icon admin-icon--18"></i>
+                </button>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/pagination.html#pagination" %}
+{% else %}
+<p class="empty-state">
+    {% if search %}
+    No devices match "{{ search }}".
+    {% else %}
+    No devices yet. {% url 'device_add' as device_add_url %}{% include "partials/drawer_link.html" with url=device_add_url title="Add device" label="Add the first device" %}.
+    {% endif %}
+</p>
+{% endif %}
+{% endpartialdef device_table %}
+    </div>
+  </div>
+</div>
+{% endblock %}

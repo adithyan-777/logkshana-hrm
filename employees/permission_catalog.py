@@ -32,6 +32,12 @@ class PermissionCodename(models.TextChoices):
     SCHEDULE_VIEW = "schedule.view", "View schedule"
     SCHEDULE_ADD = "schedule.add", "Add schedules"
     SCHEDULE_DELETE = "schedule.delete", "Delete schedules"
+    DEVICES_VIEW = "devices.view", "View devices"
+    DEVICES_ADD = "devices.add", "Add devices"
+    DEVICES_DELETE = "devices.delete", "Delete devices"
+    BRANCHES_VIEW = "branches.view", "View branches"
+    BRANCHES_ADD = "branches.add", "Add branches"
+    BRANCHES_DELETE = "branches.delete", "Delete branches"
     REPORTS_VIEW = "reports.view", "View reports"
 
 
@@ -66,6 +72,12 @@ _DESCRIPTIONS: dict[str, str] = {
     PermissionCodename.SCHEDULE_VIEW: "View timetables, shifts, and assignments.",
     PermissionCodename.SCHEDULE_ADD: "Create timetables, shifts, and assignments.",
     PermissionCodename.SCHEDULE_DELETE: "Delete timetables, shifts, assignments, and overrides.",
+    PermissionCodename.DEVICES_VIEW: "View company devices.",
+    PermissionCodename.DEVICES_ADD: "Create and edit company devices.",
+    PermissionCodename.DEVICES_DELETE: "Delete company devices.",
+    PermissionCodename.BRANCHES_VIEW: "View company branches.",
+    PermissionCodename.BRANCHES_ADD: "Create and edit company branches.",
+    PermissionCodename.BRANCHES_DELETE: "Delete company branches.",
     PermissionCodename.REPORTS_VIEW: "Open reports and analytics.",
 }
 
@@ -83,6 +95,8 @@ PERMISSION_MODULE_LABELS: dict[str, str] = {
     "attendance": "Attendance",
     "leave": "Leave",
     "schedule": "Schedule",
+    "devices": "Devices",
+    "branches": "Branches",
     "reports": "Reports",
 }
 

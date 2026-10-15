@@ -56,7 +56,7 @@ services:
       context: ../..
       dockerfile: Dockerfile
     entrypoint: ["/app/entrypoint.sh"]
-    command: ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "60"]
+    command: ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "60", "--access-logfile", "-", "--error-logfile", "-", "--log-level", "info"]
     env_file:
       - .env
     environment:
@@ -141,7 +141,32 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # Alloy: ships web/qcluster/nginx container logs + host /var/log to
+  # Grafana Cloud Loki (basic_auth from env) or docs server when
+  # LOKI_DOCS_URL is set. Secrets from docker/local/.env (git-ignored).
+  # Start it with: docker compose -f docker/local/docker-compose.yml --profile logging up -d alloy
+  alloy:
+    image: grafana/alloy:v1.7.4
+    command: ["run", "/etc/alloy/config.alloy", "--storage.path=/tmp/alloy-data"]
+    environment:
+      LOKI_URL: ${LOKI_URL:-}
+      LOKI_USERNAME: ${LOKI_USERNAME:-}
+      LOKI_PASSWORD: ${LOKI_PASSWORD:-}
+      LOKI_DOCS_URL: ${LOKI_DOCS_URL:-}
+      ALLOY_ENV: ${ALLOY_ENV:-local}
+    volumes:
+      - ../alloy:/etc/alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/log:/var/log:ro
+      - alloy-positions:/tmp/alloy-data
+    depends_on:
+      web:
+        condition: service_started
+    profiles: ["logging"]
+    restart: unless-stopped
+
 volumes:
   redisdata:
   staticfiles:
   certbot-www:
+  alloy-positions:

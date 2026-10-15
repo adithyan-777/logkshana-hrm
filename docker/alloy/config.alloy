@@ -1,0 +1,91 @@
+// Alloy collector — ships Docker app logs + host /var/log to Loki. Shared
+// by BOTH stacks (root docker-compose.yml and docker/local/docker-compose.yml)
+// via a read-only mount.
+//
+// Destination: LOKI_DOCS_URL wins when set (docs server, no auth), else the
+// Grafana Cloud endpoint below (basic_auth from env). Label the environment
+// with ALLOY_ENV (compose sets "local" vs "prod"). All secrets come from the
+// environment — never hardcode tokens in this file.
+//
+// Sources: web / qcluster / nginx containers only (redis, db, etc. dropped
+// by the keep rule) plus /var/log/*.log from the host (mount required).
+
+loki.write "grafanacloud" {
+	endpoint {
+		url = coalesce(
+			sys.env("LOKI_DOCS_URL"),
+			sys.env("LOKI_URL"),
+			"https://logs-prod-028.grafana.net/loki/api/v1/push",
+		)
+
+		basic_auth {
+			username = sys.env("LOKI_USERNAME")
+			password = sys.env("LOKI_PASSWORD")
+		}
+	}
+
+	external_labels = {
+		app = "pattika",
+		env = coalesce(sys.env("ALLOY_ENV"), "local"),
+	}
+}
+
+discovery.docker "containers" {
+	host             = "unix:///var/run/docker.sock"
+	refresh_interval = "5s"
+}
+
+discovery.relabel "app_containers" {
+	targets = discovery.docker.containers.targets
+
+	// Keep app containers only: <project>-web-1, <project>-qcluster-1,
+	// <project>-nginx-1 (matches both pattika-* and pattika-local-*).
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/.*-(web|qcluster|nginx)-1"
+		action        = "keep"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		regex         = "/.*-(web|qcluster|nginx)-1"
+		target_label  = "compose_service"
+		replacement   = "$1"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		target_label  = "container_name"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_compose_project"]
+		target_label  = "compose_project"
+	}
+}
+
+loki.source.docker "app" {
+	host    = "unix:///var/run/docker.sock"
+	targets = discovery.relabel.app_containers.output
+
+	forward_to = [loki.process.drop_healthchecks.receiver]
+}
+
+loki.process "drop_healthchecks" {
+	// Drop noisy nginx /healthz probe spam; everything else passes through.
+	stage.drop {
+		expression          = "{compose_service=\"nginx\"} |= \"GET /healthz \""
+		drop_counter_reason = "healthcheck_spam"
+	}
+
+	forward_to = [loki.write.grafanacloud.receiver]
+}
+
+local.file_match "varlogs" {
+	path_targets = [{ "__path__" = "/var/log/*.log" }]
+}
+
+loki.source.file "system" {
+	targets    = local.file_match.varlogs.targets
+	forward_to = [loki.write.grafanacloud.receiver]
+}

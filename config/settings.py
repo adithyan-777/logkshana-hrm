@@ -214,6 +214,47 @@ USE_I18N = True
 
 USE_TZ = True
 
+# Console logging so container stdout (scraped by Alloy -> Loki) always
+# carries Django request errors and server errors. Gunicorn workers inherit
+# this; access logs are handled by gunicorn --access-logfile - instead.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "default": {
+            "format": "[{asctime}] {levelname} {name}: {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "default",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": os.getenv("DJANGO_LOG_LEVEL", "WARNING"),
+    },
+    "loggers": {
+        "django.request": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "django.server": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "gunicorn.error": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}
+
 DEVICE_GATEWAY_BASE_URL = os.getenv("DEVICE_GATEWAY_BASE_URL")
 
 

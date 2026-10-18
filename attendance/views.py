@@ -1,6 +1,8 @@
 import json
+import logging
 from functools import wraps
 
+import sentry_sdk
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import HttpRequest, HttpResponse, JsonResponse
@@ -31,6 +33,8 @@ from common.pagination import list_pagination_context
 from employees.decorators import require_permission
 from employees.permission_catalog import PermissionCodename
 from employees.selectors import employee_get_for_user, user_has_permission
+
+logger = logging.getLogger("attendance.gateway")
 
 
 def verify_gateway_secret_key(request: HttpRequest) -> bool:
@@ -406,6 +410,9 @@ def gateway_view(request: HttpRequest) -> HttpResponse:
     try:
         payload = json.loads(request.body or b"")
     except (json.JSONDecodeError, UnicodeDecodeError):
+        _log_gateway_rejection(
+            None, {"body": "Invalid JSON body."}
+        )
         return JsonResponse({"detail": "Invalid JSON body."}, status=400)
 
     is_batch = isinstance(payload, list)
@@ -438,6 +445,22 @@ def gateway_view(request: HttpRequest) -> HttpResponse:
     return JsonResponse(body, status=207)
 
 
+def _log_gateway_rejection(item, errors):
+    """ERROR-log a rejected gateway push and raise a Sentry issue."""
+    ref = _gateway_log_ref(item) if item else {}
+    logger.error(
+        "Gateway push rejected: %s (serial=%s, log_id=%s)",
+        errors,
+        ref.get("serial_number"),
+        ref.get("gateway_log_id"),
+    )
+    with sentry_sdk.new_scope() as scope:
+        scope.set_tag("gateway.rejected", True)
+        scope.set_extra("errors", errors)
+        scope.set_extra("payload", item)
+        sentry_sdk.capture_message("Gateway push rejected", level="error")
+
+
 def _gateway_push_item(item: dict, attendance_log_create) -> dict:
     """Process one gateway push log. Returns {"ok": bool, "body": dict}."""
     serial_number = item.get("serial_number")
@@ -453,6 +476,7 @@ def _gateway_push_item(item: dict, attendance_log_create) -> dict:
     if timestamp is None:
         errors["timestamp"] = "Enter a valid datetime."
     if errors:
+        _log_gateway_rejection(item, errors)
         return {"ok": False, "body": {"errors": errors, "log": _gateway_log_ref(item)}}
 
     # Preserve every other gateway field (gateway_id, status, verify_mode,
@@ -477,6 +501,7 @@ def _gateway_push_item(item: dict, attendance_log_create) -> dict:
         )
     except DjangoValidationError as exc:
         detail = exc.message_dict if hasattr(exc, "message_dict") else str(exc)
+        _log_gateway_rejection(item, detail)
         return {"ok": False, "body": {"errors": detail, "log": _gateway_log_ref(item)}}
     return {
         "ok": True,

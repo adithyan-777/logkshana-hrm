@@ -237,6 +237,11 @@ LOGGING = {
         "level": os.getenv("DJANGO_LOG_LEVEL", "WARNING"),
     },
     "loggers": {
+        "attendance.gateway": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
         "django.request": {
             "handlers": ["console"],
             "level": "INFO",

@@ -1,4 +1,5 @@
 import json
+from unittest.mock import patch
 
 from django.test import override_settings
 from django.urls import reverse
@@ -235,3 +236,61 @@ class GatewayViewTests(BaseTenantTestCase):
             self.url, HTTP_AUTHORIZATION=f"Bearer {TEST_GATEWAY_SECRET}"
         )
         self.assertEqual(response.status_code, 405)
+
+
+class GatewayRejectionLoggingTests(GatewayViewTests):
+    """Rejected pushes mark an ERROR log and raise a Sentry issue."""
+
+    def test_rejected_push_logs_error_and_triggers_sentry(self):
+        with (
+            self.assertLogs("attendance.gateway", level="ERROR") as logs,
+            patch("sentry_sdk.capture_message") as mock_capture,
+        ):
+            response = self.post_gateway(
+                self.gateway_payload(serial_number="UNKNOWN")
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(
+            any("Gateway push rejected" in output for output in logs.output)
+        )
+        self.assertTrue(any("UNKNOWN" in output for output in logs.output))
+        mock_capture.assert_called_once()
+        self.assertEqual(
+            mock_capture.call_args.kwargs.get("level"), "error"
+        )
+
+    def test_invalid_json_logs_error_and_triggers_sentry(self):
+        with (
+            self.assertLogs("attendance.gateway", level="ERROR") as logs,
+            patch("sentry_sdk.capture_message") as mock_capture,
+        ):
+            response = self.post_gateway("{not-json")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(
+            any("Gateway push rejected" in output for output in logs.output)
+        )
+        mock_capture.assert_called_once()
+
+    def test_batch_partial_failure_logs_each_rejection(self):
+        payload = [
+            self.gateway_payload(id=101, timestamp="2026-09-02T09:00:00Z"),
+            self.gateway_payload(id=102, user_id="MISSING"),
+        ]
+
+        with (
+            self.assertLogs("attendance.gateway", level="ERROR") as logs,
+            patch("sentry_sdk.capture_message") as mock_capture,
+        ):
+            response = self.post_gateway(payload)
+
+        self.assertEqual(response.status_code, 207)
+        self.assertEqual(len(logs.output), 1)
+        mock_capture.assert_called_once()
+
+    def test_accepted_push_does_not_log_rejection(self):
+        with self.assertNoLogs("attendance.gateway"):
+            response = self.post_gateway(self.gateway_payload())
+
+        self.assertEqual(response.status_code, 201)

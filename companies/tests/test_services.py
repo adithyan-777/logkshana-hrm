@@ -125,6 +125,25 @@ class AttendanceLogCreateTests(BaseTenantTestCase):
             1,
         )
 
+    def test_status_label_drives_direction_value(self):
+        device_factory(serial_number="ZK-001", company=self.tenant)
+        employee = employee_factory(first_name="Alice", emp_code="E001")
+
+        punch = attendance_log_create(
+            serial_number="ZK-001",
+            employee_id="E001",
+            timestamp=timezone.now(),
+            extra_raw_data={
+                "status": 1,
+                "status_label": "Check Out",
+                "verify_mode": 1,
+            },
+        )
+
+        # status_label resolves to the AttendanceActivity direction code.
+        self.assertEqual(punch.direction, AttendanceActivity.Direction.OUT)
+        self.assertEqual(punch.employee, employee)
+
     def test_rejects_unknown_serial(self):
         employee_factory(first_name="Alice", emp_code="E001")
 

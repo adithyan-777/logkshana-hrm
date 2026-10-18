@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django_tenants.utils import get_public_schema_name, schema_context
 
-from attendance.calculation import direction_from_gateway_status
+from attendance.calculation import direction_from_gateway_status_label
 from attendance.models import AttendanceActivity
 from attendance.services import activity_create
 from companies.models import Branch, Company, Device, DeviceType
@@ -210,7 +210,9 @@ def attendance_log_create(
         # open period; everything else pairs by alternating IN/OUT.
         # Recalculation runs inside activity_create, so the employee's
         # Attendance is current before we return.
-        direction = direction_from_gateway_status(raw_data.get("status"))
+        direction = direction_from_gateway_status_label(
+            raw_data.get("status_label")
+        )
 
         return activity_create(
             employee=employee,

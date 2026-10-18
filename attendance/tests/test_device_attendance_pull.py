@@ -14,6 +14,7 @@ SAMPLE_LOGS = [
         "user_id": "1001",
         "timestamp": "2026-09-02T09:00:00Z",
         "status": 0,
+        "status_label": "Check In",
         "verify_mode": 1,
         "work_code": "0",
         "serial_number": "TEST001",
@@ -23,6 +24,7 @@ SAMPLE_LOGS = [
         "user_id": "1001",
         "timestamp": "2026-09-02T17:30:00Z",
         "status": 0,
+        "status_label": "Check Out",
         "verify_mode": 1,
         "work_code": "0",
         "serial_number": "TEST001",
@@ -49,6 +51,10 @@ class DeviceAttendancePullTests(BaseTenantTestCase):
         self.assertTrue(
             AttendanceActivity.objects.filter(external_id="gateway:101").exists()
         )
+        self.assertEqual(
+            AttendanceActivity.objects.get(external_id="gateway:101").direction,
+            AttendanceActivity.Direction.IN,
+        )
 
         self.device.refresh_from_db()
         self.assertEqual(self.device.last_gateway_log_id, 102)
@@ -65,6 +71,7 @@ class DeviceAttendancePullTests(BaseTenantTestCase):
                 "user_id": "1001",
                 "timestamp": "2026-09-02T09:00:00Z",
                 "status": 0,
+                "status_label": "Check In",
                 "verify_mode": 1,
                 "work_code": "0",
                 "serial_number": "TEST001",

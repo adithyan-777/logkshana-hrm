@@ -49,6 +49,7 @@ class GatewayViewTests(BaseTenantTestCase):
             "user_id": "1001",
             "timestamp": "2026-09-02T09:00:00Z",
             "status": 0,
+            "status_label": "Check In",
             "verify_mode": 1,
             "work_code": "0",
         }
@@ -108,6 +109,31 @@ class GatewayViewTests(BaseTenantTestCase):
         self.assertEqual(punch.raw_data["work_code"], "0")
         self.assertEqual(punch.raw_data["id"], 101)
 
+    def test_direction_comes_from_status_label(self):
+        # status_label drives direction via GATEWAY_STATUS_MAPPING.
+        response = self.post_gateway(
+            self.gateway_payload(status_label="Check In")
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            AttendanceActivity.objects.get().direction,
+            AttendanceActivity.Direction.IN,
+        )
+
+        AttendanceActivity.objects.all().delete()
+        response = self.post_gateway(
+            self.gateway_payload(
+                id=102,
+                timestamp="2026-09-02T17:30:00Z",
+                status_label="Check Out",
+            )
+        )
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            AttendanceActivity.objects.get().direction,
+            AttendanceActivity.Direction.OUT,
+        )
+
     def test_single_push_with_gateway_log_id(self):
         """Exact shape the real gateway sends (gateway_log_id, not id)."""
         response = self.post_gateway(
@@ -118,6 +144,7 @@ class GatewayViewTests(BaseTenantTestCase):
                 "user_id": "1001",
                 "timestamp": "2026-09-11T09:00:00+03:00",
                 "status": 0,
+                "status_label": "Check In",
                 "verify_mode": 1,
                 "work_code": "0",
                 "some_future_field": "preserved-as-is",

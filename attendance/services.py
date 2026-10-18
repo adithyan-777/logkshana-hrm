@@ -6,9 +6,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django_tenants.utils import get_public_schema_name, schema_context
 
-from attendance.calculation import (
-    direction_from_gateway_status,
-)
+from attendance.calculation import direction_from_gateway_status_label
 from attendance.integrations.gateway import device_gateway_attendance_fetch
 from attendance.models import Attendance, AttendanceActivity
 from attendance.recalculation import (
@@ -355,7 +353,7 @@ def device_attendance_pull(
             activity_create(
                 employee=employee,
                 punch_time=timestamp,
-                direction=direction_from_gateway_status(log.get("status")),
+                direction=direction_from_gateway_status_label(log.get("status_label")),
                 method=AttendanceActivity.AttendanceActivityMethodType.BIOMETRIC,
                 external_id=external_id,
                 raw_data=log,

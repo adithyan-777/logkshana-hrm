@@ -5,8 +5,8 @@ from zoneinfo import ZoneInfo
 from django.test import SimpleTestCase
 from django.utils import timezone
 
-from attendance.calculation import direction_from_gateway_status
-from attendance.models import Attendance
+from attendance.calculation import direction_from_gateway_status_label
+from attendance.models import Attendance, AttendanceActivity
 from attendance.recalculation import recalculate_attendance
 from attendance.services import activity_delete, device_attendance_pull
 from common.tests.base import BaseTenantTestCase
@@ -40,16 +40,22 @@ def assign(*, schedule, employee):
 
 
 class DirectionMappingTests(SimpleTestCase):
-    def test_explicit_checkout_statuses_map_to_out(self):
-        for status in (1, 2, 5, "1"):
-            with self.subTest(status=status):
-                self.assertEqual(direction_from_gateway_status(status), "out")
+    def test_checkout_labels_map_to_out(self):
+        # Mapping value/label ("Check Out") and key ("checkout") spellings
+        # both resolve to the AttendanceActivity direction code "out".
+        for label in ("Checkout", "Check Out", "check-out", "check_out", "CHECK OUT"):
+            with self.subTest(label=label):
+                self.assertEqual(direction_from_gateway_status_label(label), "out")
 
-    def test_checkin_and_unknown_statuses_stay_unknown(self):
-        # Most devices report every punch as 0: keep UNKNOWN.
-        for status in (0, 3, 4, 99, None, "", "bogus"):
-            with self.subTest(status=status):
-                self.assertEqual(direction_from_gateway_status(status), "unknown")
+    def test_checkin_labels_map_to_in(self):
+        for label in ("IN", "Check In", "checkin", "check-in", "check_in"):
+            with self.subTest(label=label):
+                self.assertEqual(direction_from_gateway_status_label(label), "in")
+
+    def test_missing_or_unknown_labels_stay_unknown(self):
+        for label in (None, "", "bogus", "Break Out"):
+            with self.subTest(label=label):
+                self.assertEqual(direction_from_gateway_status_label(label), "unknown")
 
 
 class RecalculationTests(BaseTenantTestCase):
@@ -75,7 +81,11 @@ class RecalculationTests(BaseTenantTestCase):
             employee_id=emp_code,
             gateway_log_id=gateway_log_id,
             timestamp=at,
-            extra_raw_data={"status": status, "verify_mode": 1},
+            extra_raw_data={
+                "status": status,
+                "status_label": "Check Out" if status == 1 else "Check In",
+                "verify_mode": 1,
+            },
         )
 
     def daily(self):
@@ -116,12 +126,22 @@ class RecalculationTests(BaseTenantTestCase):
         self.assertEqual(daily.early_leave_minutes, 60)
 
     def test_single_punch_is_incomplete(self):
-        self.push(at=aware(2026, 9, 2, 9), gateway_log_id=31)
+        # Label-less payload: direction falls back to UNKNOWN, no crash.
+        attendance_log_create(
+            serial_number="ZK-001",
+            employee_id="RC001",
+            gateway_log_id=31,
+            timestamp=aware(2026, 9, 2, 9),
+            extra_raw_data={"status": 0, "verify_mode": 1},
+        )
 
         daily = self.daily()
         self.assertEqual(daily.status, Attendance.Status.INCOMPLETE)
         self.assertTrue(daily.has_check_in)
         self.assertFalse(daily.has_check_out)
+        self.assertEqual(
+            daily.activities.get().direction, AttendanceActivity.Direction.UNKNOWN
+        )
 
     def test_split_day_spans_break_first_to_last(self):
         self.push(at=aware(2026, 9, 2, 9), gateway_log_id=41)
@@ -220,14 +240,14 @@ class OvernightRecalculationTests(BaseTenantTestCase):
             employee_id="RC900",
             gateway_log_id=101,
             timestamp=aware(2026, 3, 9, 21, 55),
-            extra_raw_data={"status": 0},
+            extra_raw_data={"status": 0, "status_label": "Check In"},
         )
         attendance_log_create(
             serial_number="ZK-001",
             employee_id="RC900",
             gateway_log_id=102,
             timestamp=aware(2026, 3, 10, 6, 10),
-            extra_raw_data={"status": 1},
+            extra_raw_data={"status": 1, "status_label": "Check Out"},
         )
 
         daily = Attendance.objects.get(employee=self.employee, day=self.monday)
@@ -256,6 +276,7 @@ class PullRecalculationTests(BaseTenantTestCase):
                 "user_id": "1001",
                 "timestamp": "2026-09-02T06:00:00Z",  # 09:00 +03:00
                 "status": 0,
+                "status_label": "Check In",
                 "verify_mode": 1,
                 "work_code": "0",
             },
@@ -264,6 +285,7 @@ class PullRecalculationTests(BaseTenantTestCase):
                 "user_id": "1001",
                 "timestamp": "2026-09-02T15:00:00Z",  # 18:00 +03:00
                 "status": 1,
+                "status_label": "Check Out",
                 "verify_mode": 1,
                 "work_code": "0",
             },

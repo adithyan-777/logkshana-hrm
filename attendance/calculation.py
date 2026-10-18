@@ -17,6 +17,13 @@ _GATEWAY_OUT_STATUSES = {
     5,  # Overtime out
 }
 
+GATEWAY_STATUS_MAPPING ={
+    "in": "Check In",
+    "out": "Check Out",
+    "checkin": "Check In",
+    "checkout": "Check Out"
+}
+
 
 def direction_from_gateway_status(status) -> str:
     """Map a device-gateway punch ``status`` to a punch direction.
@@ -29,6 +36,23 @@ def direction_from_gateway_status(status) -> str:
     except (TypeError, ValueError):
         return "unknown"
     return "out" if code in _GATEWAY_OUT_STATUSES else "unknown"
+
+
+def _clean_status_label(value) -> str:
+    return (
+        str(value).strip().replace("-", " ").replace("_", "").replace(" ", "").lower()
+    )
+
+
+def direction_from_gateway_status_label(status_label) -> str:
+    status = "unknown"
+    if not status_label:
+        return status
+    cleaned_label = _clean_status_label(status_label)
+    for key, label in GATEWAY_STATUS_MAPPING.items():
+        if cleaned_label in (_clean_status_label(key), _clean_status_label(label)):
+            return "out" if "out" in key else "in"
+    return status
 
 
 def minutes_between(start: datetime, end: datetime) -> int:

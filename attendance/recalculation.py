@@ -575,13 +575,6 @@ def calculate_attendance(*, day: date | None = None) -> dict:
     ]
     incomplete = [row.employee for row in report.incomplete]
 
-    _print_report(
-        absentees=absentees,
-        late_arrivals=late_arrivals,
-        work_hours=work_hours,
-        created=created,
-    )
-
     return {
         "absentees": absentees,
         "late_arrivals": late_arrivals,
@@ -590,30 +583,3 @@ def calculate_attendance(*, day: date | None = None) -> dict:
         "incomplete": incomplete,
     }
 
-
-def _print_report(*, absentees, late_arrivals, work_hours, created) -> None:
-    separator = "-" * 50
-    print("Absentees:")
-    print(separator)
-    for employee in absentees:
-        print(employee.full_name)
-    print(separator)
-    print("Late arrivals:")
-    print(separator)
-    for employee, late_minutes in late_arrivals:
-        print(f"{employee.full_name} (+{late_minutes}m)")
-    print(separator)
-    print("Work hours:")
-    print(separator)
-    for employee, worked_minutes, check_in, check_out in work_hours:
-        hours, minutes = divmod(worked_minutes, 60)
-        print(
-            f"{employee.full_name}: {hours}h {minutes:02d}m "
-            f"(in {check_in:%H:%M} out {check_out:%H:%M})"
-        )
-    print(separator)
-    print("Created attendance:")
-    print(separator)
-    for row in created:
-        print(f"{row.employee.full_name} -> {row.status}")
-    print(separator)

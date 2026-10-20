@@ -23,7 +23,7 @@ from common.tests.factories import (
     schedule_factory,
     timetable_factory,
 )
-from schedule.models import EmployeeScheduleAssignment
+from schedule.models import EmployeeScheduleAssignment, TimetableBreak
 from schedule.services import (
     assignment_create,
     resolve_assignment_employees,
@@ -166,20 +166,20 @@ class PunchVariantTests(ScheduleBreaksE2EFixture):
         row = self._row(self.alice)
 
         self.assertEqual(row.status, Attendance.Status.PRESENT)
-        # First-in/last-out: the full 09:00 -> 18:00 span counts as
-        # worked; breaks only shrink the scheduled denominator
-        # (540 - 60 lunch - 15 tea = 465 scheduled).
-        self.assertEqual(row.worked_minutes, 540)
-        self.assertEqual(row.overtime_minutes, 75)
+        # Breaks are unpaid: they come out of the work span AND the
+        # scheduled denominator (540 - 60 lunch - 15 tea = 465 scheduled),
+        # so a straight-through day lands exactly on schedule.
+        self.assertEqual(row.worked_minutes, 465)
+        self.assertEqual(row.overtime_minutes, 0)
 
-    def test_straight_through_day_earns_overtime(self):
+    def test_straight_through_day_matches_scheduled(self):
         punch(self.bob, DAY, 9, 0, direction="in")
         punch(self.bob, DAY, 18, 0, direction="out")
         row = self._row(self.bob)
 
         self.assertEqual(row.status, Attendance.Status.PRESENT)
-        self.assertEqual(row.worked_minutes, 540)
-        self.assertEqual(row.overtime_minutes, 75)
+        self.assertEqual(row.worked_minutes, 465)
+        self.assertEqual(row.overtime_minutes, 0)
 
     def test_late_arrival(self):
         punch(self.alice, DAY, 9, 20, direction="in")
@@ -222,8 +222,8 @@ class PunchVariantTests(ScheduleBreaksE2EFixture):
         row = self._row(self.alice)
 
         # Mid-day extra punch no longer splits the day: first-in/
-        # last-out spans 09:00 -> 18:00.
-        self.assertEqual(row.worked_minutes, 540)
+        # last-out spans 09:00 -> 18:00, minus unpaid break windows.
+        self.assertEqual(row.worked_minutes, 465)
         self.assertEqual(row.status, Attendance.Status.PRESENT)
         self.assertEqual(timezone.localtime(row.last_out).time(), time(18, 0))
 
@@ -234,7 +234,51 @@ class PunchVariantTests(ScheduleBreaksE2EFixture):
 
         self.assertEqual(timezone.localtime(row.first_in).time(), time(9, 0))
         self.assertEqual(timezone.localtime(row.last_out).time(), time(18, 0))
+        self.assertEqual(row.worked_minutes, 465)
+
+
+class BreakDeductionTests(ScheduleBreaksE2EFixture):
+    """Break deduction from worked minutes, flag semantics and caps."""
+
+    def _row(self, employee, day=DAY):
+        return Attendance.objects.get(employee=employee, day=day)
+
+    def test_count_break_time_as_work_time_flag_prevents_deduction(self):
+        # Flag must be set before the shift row is materialized: the
+        # snapshot freezes it at first calculation.
+        self.timetable.count_break_time_as_work_time = True
+        self.timetable.save(update_fields=["count_break_time_as_work_time"])
+        punch(self.bob, DAY, 9, 0, direction="in")
+        punch(self.bob, DAY, 18, 0, direction="out")
+        row = self._row(self.bob)
+
         self.assertEqual(row.worked_minutes, 540)
+        self.assertEqual(row.overtime_minutes, 75)  # 540 - (540 - 75)
+
+    def test_flexible_break_deduction_is_capped(self):
+        lunch = self.timetable.breaks.get(name="Lunch")
+        lunch.break_time_type = TimetableBreak.BreakType.FLEXIBLE
+        lunch.break_time_minutes = 30
+        lunch.save()
+        self.timetable.breaks.filter(name="Tea").delete()
+        punch(self.bob, DAY, 9, 0, direction="in")
+        punch(self.bob, DAY, 19, 0, direction="out")
+        row = self._row(self.bob)
+
+        # 600 span - 30 (flex cap on the 60-min window) = 570 worked;
+        # scheduled 540 - 30 = 510 -> 60 overtime.
+        self.assertEqual(row.worked_minutes, 570)
+        self.assertEqual(row.overtime_minutes, 60)
+
+    def test_break_window_partially_inside_span_deducts_only_overlap(self):
+        self.timetable.breaks.filter(name="Tea").delete()
+        punch(self.bob, DAY, 9, 0, direction="in")
+        punch(self.bob, DAY, 13, 30, direction="out")
+        row = self._row(self.bob)
+
+        # 270 span covers half of the fixed 13:00-14:00 lunch -> 240.
+        self.assertEqual(row.worked_minutes, 240)
+        self.assertEqual(row.overtime_minutes, 0)
 
 
 class OvernightBreakTests(BaseTenantTestCase):
@@ -269,10 +313,10 @@ class OvernightBreakTests(BaseTenantTestCase):
         row = Attendance.objects.get(employee=owl, day=NIGHT_DAY)
 
         self.assertEqual(row.status, Attendance.Status.PRESENT)
-        # First-in/last-out across midnight: 22:00 -> 06:10 counts whole
-        # (scheduled 480 - 30 night break = 450).
-        self.assertEqual(row.worked_minutes, 490)
-        self.assertEqual(row.overtime_minutes, 40)
+        # First-in/last-out across midnight, minus the unpaid night
+        # break: 490 span - 30 = 460 worked (scheduled 450 -> 10 OT).
+        self.assertEqual(row.worked_minutes, 460)
+        self.assertEqual(row.overtime_minutes, 10)
 
     def test_overnight_straight_through_earns_overtime(self):
         night = timetable_factory(
@@ -303,8 +347,8 @@ class OvernightBreakTests(BaseTenantTestCase):
         row = Attendance.objects.get(employee=bat, day=NIGHT_DAY)
 
         self.assertEqual(row.status, Attendance.Status.PRESENT)
-        self.assertEqual(row.worked_minutes, 490)
-        self.assertEqual(row.overtime_minutes, 40)
+        self.assertEqual(row.worked_minutes, 460)
+        self.assertEqual(row.overtime_minutes, 10)
 
 
 class ReportsSurfaceTests(ScheduleBreaksE2EFixture):

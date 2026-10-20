@@ -2,11 +2,9 @@
 
 Covers the grouped comparison: scheduled employees with no activity
 punch are absentees; punched employees past expected check-in are
-late arrivals.
+late arrivals. Calculate returns values only — no console printing.
 """
 
-import io
-from contextlib import redirect_stdout
 from datetime import date, datetime
 
 from django.utils import timezone
@@ -63,12 +61,7 @@ class CalculateAttendanceGroupsTests(BaseTenantTestCase):
         _punch(employee=on_time, day=day, hour=17, minute=0)
         _punch(employee=late, day=day, hour=9, minute=30)
 
-        buf = io.StringIO()
-        with redirect_stdout(buf):
-            result = calculate_attendance(day=day)
-        printed = buf.getvalue().strip()
-
-        print(f"calculate_attendance printed: {printed!r}")
+        result = calculate_attendance(day=day)
 
         self.assertEqual(result["absentees"], [absent])
         self.assertEqual(
@@ -81,12 +74,6 @@ class CalculateAttendanceGroupsTests(BaseTenantTestCase):
             ],
             [(on_time, 480)],
         )
-        self.assertIn("Late arrivals:", printed)
-        self.assertIn("Work hours:", printed)
-        self.assertIn("Created attendance:", printed)
-        self.assertIn("Absent", printed)
-        self.assertIn("Late", printed)
-        self.assertIn("Ontime Doe: 8h 00m", printed)
 
         # Every scheduled employee gets an Attendance row:
         # complete pairs -> PRESENT/LATE/EARLY_OUT, single punch ->
@@ -118,9 +105,7 @@ class CalculateAttendanceGroupsTests(BaseTenantTestCase):
 
         _punch(employee=employee, day=day, hour=9, minute=0)
 
-        buf = io.StringIO()
-        with redirect_stdout(buf):
-            result = calculate_attendance(day=day)
+        result = calculate_attendance(day=day)
 
         self.assertEqual(
             {
@@ -136,6 +121,3 @@ class CalculateAttendanceGroupsTests(BaseTenantTestCase):
         self.assertEqual(
             result["created"][0].status, Attendance.Status.INCOMPLETE
         )
-        self.assertIn("Late arrivals:", buf.getvalue())
-        self.assertIn("Work hours:", buf.getvalue())
-        self.assertIn("Created attendance:", buf.getvalue())

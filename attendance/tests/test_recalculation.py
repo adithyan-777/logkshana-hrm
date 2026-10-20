@@ -152,7 +152,7 @@ class RecalculationTests(BaseTenantTestCase):
         daily = self.daily()
         self.assertEqual(daily.status, Attendance.Status.PRESENT)
         # First-in/last-out: the full 09:00 -> 18:00 span counts as
-        # worked (breaks only shrink the scheduled denominator).
+        # worked (this timetable defines no breaks to deduct).
         self.assertEqual(daily.worked_minutes, 540)
         self.assertEqual(daily.activities.count(), 4)
 

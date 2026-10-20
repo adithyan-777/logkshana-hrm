@@ -74,8 +74,10 @@ class RecalculationTests(BaseTenantTestCase):
         row = recalculate_attendance(employee=self.employee, day=self.day)
 
         self.assertEqual(row.status, Attendance.Status.PRESENT)
-        self.assertEqual(row.total_work_time, timedelta(minutes=540))
-        self.assertEqual(row.over_time, timedelta(minutes=60))  # 540 - 480
+        # 540 span - 60 unpaid lunch = 480 worked, matching the
+        # 480-minute schedule -> no overtime.
+        self.assertEqual(row.total_work_time, timedelta(minutes=480))
+        self.assertEqual(row.over_time, timedelta(minutes=0))
         self.assertTrue(row.is_calculated)
         self.assertEqual(row.activities.count(), 2)
         self.assertEqual(row.shift, self.timetable)
@@ -88,7 +90,7 @@ class RecalculationTests(BaseTenantTestCase):
         row = recalculate_attendance(employee=self.employee, day=self.day)
 
         self.assertEqual(row.status, Attendance.Status.LATE)
-        self.assertEqual(row.total_work_time, timedelta(minutes=520))
+        self.assertEqual(row.total_work_time, timedelta(minutes=460))
 
     def test_lone_check_in_is_incomplete(self):
         self._assign()

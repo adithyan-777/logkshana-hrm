@@ -11,7 +11,8 @@ Layers:
 * attribution   — ``link_punch_to_shift`` / ``shift_punches``: which
   punches belong to a row (window containment, nothing else).
 * calculation   — ``build_shift_result``: pure first-in/last-out math
-  against the row's own times. Writes nothing.
+  against the row's own times, with unpaid timetable breaks deducted
+  from work time. Writes nothing.
 * persistence   — ``recalculate_shift`` / ``recalculate_attendance``:
   the only writers.
 * reporting     — ``day_report``: read-only over persisted rows.
@@ -252,14 +253,22 @@ def build_shift_result(*, shift: ScheduledShiftDay) -> DayResult:
             ),
         )
 
+    breaks = _snapshot_breaks(shift=shift)
     worked_minutes = minutes_between(first_in, last_out)
+    # Unpaid breaks inside the punch span are deducted from work time
+    # unless the timetable says to count break time as work time.
+    count_breaks = _snapshot_value(
+        shift=shift, key="count_break_time_as_work_time", default=False
+    )
+    if not count_breaks:
+        worked_minutes -= _break_overlap_minutes(
+            start=first_in, end=last_out, breaks=breaks,
+        )
     scheduled_minutes = max(
         0,
         minutes_between(shift.shift_start, shift.shift_end)
         - _break_overlap_minutes(
-            start=shift.shift_start,
-            end=shift.shift_end,
-            breaks=_snapshot_breaks(shift=shift),
+            start=shift.shift_start, end=shift.shift_end, breaks=breaks,
         ),
     )
     grace = _snapshot_value(
@@ -554,12 +563,12 @@ def ensure_day(*, day: date) -> list:
 
 
 def calculate_attendance(*, day: date | None = None) -> dict:
-    """Ensure the day's rows, print the grouped report, return it.
+    """Ensure the day's rows, return the grouped result.
 
-    Two phases, so the numbers printed and returned are the rows that
-    were written — there is no second calculation that can disagree
-    with them. Prefer ``ensure_day`` + ``day_report`` when you don't
-    want the console output.
+    Two phases, so the numbers returned are the rows that were
+    written — there is no second calculation that can disagree with
+    them. Prefer ``ensure_day`` + ``day_report`` for tenant reporting
+    over persisted rows.
     """
     if day is None:
         day = timezone.localtime(timezone.now()).date()
@@ -568,7 +577,9 @@ def calculate_attendance(*, day: date | None = None) -> dict:
     report = day_report(day=day)
 
     absentees = [row.employee for row in report.absent]
-    late_arrivals = [(row.employee, row.late_minutes) for row in report.late_arrivals]
+    late_arrivals = [
+        (row.employee, row.late_minutes) for row in report.late_arrivals
+    ]
     work_hours = [
         (row.employee, row.worked_minutes, row.check_in, row.check_out)
         for row in report.work_hours

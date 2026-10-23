@@ -40,6 +40,7 @@ class EmployeeForm(forms.ModelForm):
         self.fields["department"].queryset = Department.objects.order_by("name")
         self.fields["position"].queryset = Position.objects.order_by("title")
         self.fields["first_name"].required = True
+        self.fields["emp_code"].required = True
         self.fields["mobile"].required = False
         # Password is required when creating, optional when editing.
         if self.instance is None or not self.instance.pk:

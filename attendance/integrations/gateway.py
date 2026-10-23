@@ -97,11 +97,14 @@ def device_gateway_attendance_fetch(
             {"device_gateway": "DEVICE_GATEWAY_BASE_URL is not configured."}
         )
 
-    params = {"serial_number": serial_number}
+    # Per-device endpoint on the gateway (django_adms_zkteco):
+    # serial goes in the path, the incremental cursor in the query.
+    path = f"{base_url.rstrip('/')}/api/devices/{serial_number}/attendance"
+    params: dict[str, str] = {}
     if after_id is not None:
-        params["after_id"] = after_id
+        params["after_id"] = str(after_id)
+    url = f"{path}?{urlencode(params)}" if params else path
 
-    url = f"{base_url.rstrip('/')}/api/attendance?{urlencode(params)}"
     headers = {"Accept": "application/json", **gateway_auth_headers()}
     request = Request(url, method="GET", headers=headers)
     try:

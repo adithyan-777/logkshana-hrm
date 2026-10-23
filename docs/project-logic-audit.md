@@ -36,8 +36,8 @@ Converge attendance and schedule toward the leave naming pattern.
 | Location | Apps |
 |---|---|
 | Project packages | `attendance`, `companies`, `common`, `config`, `dashboard`, `employees`, `leave`, `reports`, `schedule`, `users` (+ `nginx`, `docs`, `static`, `templates`) |
-| `SHARED_APPS` | django_tenants, contrib, tenant_users, DRF, **companies**, **users**, allauth, django-q2, waffle |
-| `TENANT_APPS` | contrib auth/contenttypes, tenant_users.permissions, **employees, schedule, leave, attendance, reports, dashboard** |
+| `SHARED_APPS` | django_tenants, contrib, tenant_users, DRF, **companies**, **users**, allauth, django-q2 |
+| `TENANT_APPS` | contrib auth/contenttypes, tenant_users.permissions, **waffle**, **employees, schedule, leave, attendance, reports, dashboard** |
 | `INSTALLED_APPS` | `SHARED_APPS` + non-overlapping `TENANT_APPS` |
 
 **Notes:** `common` is a shared library (abstract models/http/pagination) — **not** in `INSTALLED_APPS` (OK if abstract-only). `config` is the project package, not an installed app.

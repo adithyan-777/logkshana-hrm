@@ -12,6 +12,8 @@
     <li><a href="{% url 'report_exceptions' %}">Attendance Exceptions</a></li>
     <li><a href="{% url 'report_punch_log' %}">Punch Log</a></li>
     <li><a href="{% url 'report_overtime' %}">Overtime Summary</a></li>
+    {% if nav_can.leave %}
     <li><a href="{% url 'report_leave' %}">Leave Reports</a></li>
+    {% endif %}
 </ul>
 {% endblock %}

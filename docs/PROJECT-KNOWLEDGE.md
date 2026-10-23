@@ -27,8 +27,8 @@
 ## 3. Multi-tenancy architecture
 
 - Tenant model `companies.Company` (`TenantBase`, `auto_create_schema=True`); routing via `companies.Domain` + `TenantMainMiddleware` (first in `MIDDLEWARE`, `config/settings.py:79`), `TenantAccessMiddleware` after auth (`:89`)
-- `SHARED_APPS` (`config/settings.py:41`): tenants, admin/auth, `companies`, `users`, allauth, django-q2, waffle, DRF
-- `TENANT_APPS` (`:62`): `employees`, `schedule`, `leave`, `attendance`, `reports`, `dashboard`
+- `SHARED_APPS` (`config/settings.py:41`): tenants, admin/auth, `companies`, `users`, allauth, django-q2, DRF
+- `TENANT_APPS` (`:62`): `waffle`, `employees`, `schedule`, `leave`, `attendance`, `reports`, `dashboard` — waffle tables are per-tenant; module switches like `hide_leave` (on → Leave nav + notifications hidden for that tenant) are created per schema. Never use waffle's cached lookups (`switch_is_active`, `{% switch %}`) — their cache keys are not schema-prefixed; read `waffle.models` directly (`config/context_processors.py`)
 - Tenant models carry **no tenant FK** — isolation is by Postgres schema. Only shared models (`Branch`, `Device`) are cross-schema, referenced via `company__schema_name`
 - q2 tenancy discipline: pass `schema_name`, wrap work in `schema_context(public)` → `schema_context(tenant)` (see `attendance/q2_tasks.py`)
 - Public-schema guards: `seed_demo_data` refuses `--schema=public`, `dashboard/views.py:13` + `config/context_processors.py:60` guard public tenant

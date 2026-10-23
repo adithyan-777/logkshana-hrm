@@ -44,14 +44,3 @@ def attendance_list(
         )
 
     return queryset
-
-
-tenant = Company(schema_name='freshline',
-                name='FreshLine',
-                paid_until='2099-12-05',
-                on_trial=False)
-domain = Domain()
-domain.domain = 'freshline.ittisalhrm.com'
-domain.tenant = tenant
-domain.is_primary = True
-domain.save()

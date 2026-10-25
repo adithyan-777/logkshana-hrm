@@ -461,6 +461,20 @@ def _log_gateway_rejection(item, errors):
         sentry_sdk.capture_message("Gateway push rejected", level="error")
 
 
+def _parse_gateway_datetime(value):
+    """Parse a gateway timestamp with entry/error/result logging."""
+    logger.info("Parsing gateway timestamp: %r", value)
+    try:
+        parsed = parse_datetime(value)
+    except ValueError:
+        logger.error(
+            "ValueError parsing gateway timestamp: %r", value, exc_info=True
+        )
+        raise
+    logger.info("Gateway timestamp parsed: %r -> %s", value, parsed)
+    return parsed
+
+
 def _gateway_push_item(item: dict, attendance_log_create) -> dict:
     """Process one gateway push log. Returns {"ok": bool, "body": dict}."""
     serial_number = item.get("serial_number")
@@ -472,7 +486,14 @@ def _gateway_push_item(item: dict, attendance_log_create) -> dict:
         errors["serial_number"] = "This field is required."
     if not employee_id:
         errors["user_id"] = "This field is required (or provide employee_id)."
-    timestamp = parse_datetime(str(timestamp_raw)) if timestamp_raw else None
+    logger.info(
+        "Gateway push item timestamp raw: %r (serial=%s, user_id=%s)",
+        timestamp_raw,
+        serial_number,
+        employee_id,
+    )
+    timestamp = _parse_gateway_datetime(str(timestamp_raw)) if timestamp_raw else None
+    logger.info("Gateway push item timestamp result: %s", timestamp)
     if timestamp is None:
         errors["timestamp"] = "Enter a valid datetime."
     if errors:

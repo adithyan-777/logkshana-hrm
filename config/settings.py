@@ -244,7 +244,7 @@ LOGGING = {
     "loggers": {
         "attendance.gateway": {
             "handlers": ["console"],
-            "level": "ERROR",
+            "level": os.getenv("GATEWAY_LOG_LEVEL", "INFO"),
             "propagate": False,
         },
         "django.request": {

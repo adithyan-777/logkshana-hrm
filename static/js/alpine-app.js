@@ -10,6 +10,8 @@
     leave: { prefix: "/leave/" },
     schedule: { prefix: "/schedule/" },
     reports: { prefix: "/reports/" },
+    devices: { prefix: "/devices/" },
+    settings: { prefix: "/settings/" },
   };
 
   function pathMatches(path, rule) {
@@ -103,6 +105,12 @@
     const active = bestMatch(path);
     document.querySelectorAll("[data-nav-match]").forEach((el) => {
       el.classList.toggle("is-active", el.getAttribute("data-nav-match") === active);
+    });
+    document.querySelectorAll(".nav-group").forEach((group) => {
+      if (!group.querySelector("[data-nav-match].is-active")) return;
+      group.setAttribute("data-open", "");
+      const toggle = group.querySelector("[data-nav-group-toggle]");
+      if (toggle) toggle.setAttribute("aria-expanded", "true");
     });
   }
 
@@ -321,6 +329,15 @@
     ui.closeMenus();
     ui.closeCommand();
     closeMobileSidebar();
+  });
+
+  document.addEventListener("click", (event) => {
+    const toggle = event.target.closest("[data-nav-group-toggle]");
+    if (!toggle) return;
+    const group = toggle.closest(".nav-group");
+    if (!group) return;
+    const open = group.toggleAttribute("data-open");
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
   });
 
   document.body.addEventListener("htmx:afterOnLoad", (event) => {

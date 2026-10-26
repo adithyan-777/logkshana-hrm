@@ -8,3 +8,9 @@ from django.views.decorators.http import require_http_methods
 @require_http_methods(["GET"])
 def account_profile(request: HttpRequest) -> HttpResponse:
     return render(request, "account/profile.html")
+
+
+@login_required
+@require_http_methods(["GET"])
+def settings_page(request: HttpRequest) -> HttpResponse:
+    return render(request, "settings/index.html")

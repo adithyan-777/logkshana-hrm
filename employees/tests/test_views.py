@@ -635,12 +635,17 @@ class SidebarActiveStateTests(BaseTenantTestCase):
             ("permission_list", "permissions"),
         ):
             with self.subTest(url_name=url_name):
-                response = self.client.get(reverse(url_name))
+                html = self.client.get(reverse(url_name)).content.decode()
 
                 self.assertRegex(
-                    response.content.decode(),
-                    rf'class="quick-action is-active"\s+data-nav-match="{match}"',
+                    html,
+                    rf'class="nav-group__item is-active"\s+data-nav-match="{match}"',
                 )
+
+    def test_org_group_auto_opens_on_org_page(self):
+        html = self.client.get(reverse("department_list")).content.decode()
+
+        self.assertRegex(html, r'class="nav-group"\s+data-open>')
 
     def test_employee_directory_only_marks_employees_active(self):
         html = self.client.get(reverse("employee_list")).content.decode()
@@ -653,5 +658,5 @@ class SidebarActiveStateTests(BaseTenantTestCase):
             with self.subTest(match=match):
                 self.assertNotRegex(
                     html,
-                    rf'class="quick-action is-active"\s+data-nav-match="{match}"',
+                    rf'class="nav-group__item is-active"\s+data-nav-match="{match}"',
                 )

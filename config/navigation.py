@@ -5,6 +5,7 @@ SECTIONS = {
     "leave": "/leave/",
     "schedule": "/schedule/",
     "reports": "/reports/",
+    "settings": "/settings/",
 }
 
 BREADCRUMBS: dict[str, list[tuple[str, str | None]]] = {
@@ -228,6 +229,7 @@ BREADCRUMBS: dict[str, list[tuple[str, str | None]]] = {
         ("Reports", "report_hub"),
         ("Leave reports", None),
     ],
+    "settings": [("Dashboard", "dashboard"), ("Settings", None)],
 }
 
 LIST_ACTIONS: dict[str, tuple[str, str]] = {
@@ -301,6 +303,7 @@ PAGE_HEADINGS: dict[str, str] = {
     "report_punch_log": "Reports",
     "report_overtime": "Reports",
     "report_leave": "Reports",
+    "settings": "Settings",
 }
 
 PAGE_SUBTITLES: dict[str, str] = {
@@ -349,6 +352,7 @@ PAGE_SUBTITLES: dict[str, str] = {
     "report_punch_log": "Filtered analytics with CSV, Excel, and PDF export.",
     "report_overtime": "Filtered analytics with CSV, Excel, and PDF export.",
     "report_leave": "Filtered analytics with CSV, Excel, and PDF export.",
+    "settings": "Company settings.",
 }
 
 
@@ -598,6 +602,13 @@ COMMAND_PALETTE: list[dict[str, str]] = [
         "group": "Account",
         "icon": "bx-user",
     },
+    {
+        "title": "Settings",
+        "subtitle": "Company settings",
+        "url_name": "settings",
+        "group": "Account",
+        "icon": "bx-cog",
+    },
 ]
 
 
@@ -706,6 +717,7 @@ def command_palette_for(request: HttpRequest) -> list[dict[str, str]]:
         "report_overtime": PermissionCodename.REPORTS_VIEW,
         "report_leave": PermissionCodename.REPORTS_VIEW,
         "account_profile": None,
+        "settings": None,
     }
 
     allowed = None

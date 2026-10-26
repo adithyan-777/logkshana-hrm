@@ -59,9 +59,21 @@ def navigation(request):
             "attendance": True,
             "devices": True,
             "branches": True,
+            "settings": True,
         },
         "attendance_nav_url": "",
     }
+
+    # Sidebar "Organization" group auto-opens on any of its pages.
+    context["nav_org_open"] = request.path.startswith(
+        (
+            "/employees/departments/",
+            "/employees/positions/",
+            "/employees/roles/",
+            "/employees/permissions/",
+            "/devices/",
+        )
+    )
 
     try:
         context["topbar_action"] = topbar_action_for(request)
@@ -109,6 +121,7 @@ def navigation(request):
             or can(PermissionCodename.ATTENDANCE_OWN_VIEW),
             "devices": can(PermissionCodename.DEVICES_VIEW),
             "branches": can(PermissionCodename.BRANCHES_VIEW),
+            "settings": True,
         }
         if can(PermissionCodename.ATTENDANCE_VIEW):
             context["attendance_nav_url"] = reverse_url("daily_attendance_list")

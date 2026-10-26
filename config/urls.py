@@ -31,6 +31,7 @@ urlpatterns = [
     path("", include("dashboard.urls")),
     path("admin/", admin.site.urls),
     path("accounts/profile/", views.account_profile, name="account_profile"),
+    path("settings/", views.settings_page, name="settings"),
     path("accounts/", include("allauth.urls")),
     path("employees/", include("employees.urls")),
     path("schedule/", include("schedule.urls")),

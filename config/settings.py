@@ -70,6 +70,7 @@ TENANT_APPS = [
     "attendance",
     "reports",
     "dashboard",
+    "policies",
 ]
 
 INSTALLED_APPS = list(SHARED_APPS) + [

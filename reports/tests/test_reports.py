@@ -575,3 +575,30 @@ class ReportPaginationTests(BaseTenantTestCase):
             page_two.content.count(b"<tr>"), (two_end - two_start + 1) + thead
         )
         self.assertEqual(len(export_response.content.decode().splitlines()), 27)
+
+    def test_report_pagination_links_have_numeric_page_params(self):
+        for index in range(26):
+            employee = employee_factory(
+                first_name=f"Link{index:02d}",
+                emp_code=f"R-LN-{index:02d}",
+            )
+            attendance_record_factory(
+                employee=employee,
+                day=date(2026, 9, 1),
+            )
+
+        page_one = self.client.get(
+            reverse("report_attendance_summary"),
+            {"date_from": "2026-09-01", "date_to": "2026-09-30"},
+        )
+        next_url = page_one.context["next_page_url"]
+
+        self.assertIn("page=2", next_url)
+        self.assertNotIn("bound+method", next_url)
+        page_two = self.client.get(reverse("report_attendance_summary") + next_url)
+        self.assertEqual(page_two.status_code, 200)
+        self.assertContains(page_two, "Page 2 of 2")
+
+        prev_url = page_two.context["prev_page_url"]
+        self.assertIn("page=1", prev_url)
+        self.assertNotIn("bound+method", prev_url)

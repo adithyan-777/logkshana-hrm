@@ -37,10 +37,10 @@ def report_pagination_context(request: HttpRequest, page_obj) -> dict:
     }
     if page_obj.has_previous():
         context["prev_page_url"] = (
-            f"?{pagination_query_string(request, page_obj.previous_page_number)}"
+            f"?{pagination_query_string(request, page_obj.previous_page_number())}"
         )
     if page_obj.has_next():
         context["next_page_url"] = (
-            f"?{pagination_query_string(request, page_obj.next_page_number)}"
+            f"?{pagination_query_string(request, page_obj.next_page_number())}"
         )
     return context

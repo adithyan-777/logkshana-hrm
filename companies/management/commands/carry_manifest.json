@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Legacy carry-over selection: employees (+linked login users), punches, devices, schedules (+timetables, entries, assignments). Attendance rows are NOT carried (recalculated); shift-day/entry tables were empty at source.",
+  "description": "Legacy carry-over selection: employees (+linked login users), punches, devices, schedules (+timetables, entries, assignments). Attendance rows are NOT carried; shift-day/entry tables were empty at source.",
   "source_schema": "demo",
   "entities": [
     {

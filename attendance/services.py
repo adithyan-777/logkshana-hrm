@@ -2,51 +2,16 @@ from uuid import uuid4
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django_tenants.utils import get_public_schema_name, schema_context
 
 from attendance.calculation import direction_from_gateway_status_label
 from attendance.integrations.gateway import device_gateway_attendance_fetch
 from attendance.models import Attendance, AttendanceActivity
-from attendance.recalculation import (
-    recalculate_attendance,
-    recalculate_shift,
-)
 from companies.selectors import device_get_by_serial_number
 from employees.models import Employee
 from employees.selectors import employee_get_by_emp_code
 from employees.services import employee_create
-
-
-def resolve_punch_day(*, employee, timestamp):
-    """Return the ``(day, shift)`` a punch belongs to.
-
-    Attribution is window containment on the employee's materialized
-    shift rows; when no row exists yet one is materialized on demand
-    (or recorded UNSCHEDULED once punches exist).
-    """
-    from attendance.recalculation import _unscheduled_shift_if_punched
-    from schedule.services import find_shift_for_punch, get_or_materialize_shift
-
-    ts = timestamp
-    if timezone.is_naive(ts):
-        ts = timezone.make_aware(ts)
-    shift = find_shift_for_punch(employee=employee, timestamp=ts)
-    if shift is None:
-        day = timezone.localtime(ts).date()
-        shift, _ = get_or_materialize_shift(employee=employee, day=day)
-        if shift is None:
-            shift = _unscheduled_shift_if_punched(employee=employee, day=day)
-    return (shift.day, shift) if shift is not None else (None, None)
-
-
-def recalculate_attendance_for_punch(*, employee, timestamp):
-    """Recompute the attendance of the shift row a punch belongs to."""
-    _, shift = resolve_punch_day(employee=employee, timestamp=timestamp)
-    if shift is None:
-        return None
-    return recalculate_shift(shift=shift)
 
 
 @transaction.atomic
@@ -58,7 +23,6 @@ def activity_create(
     method: str = AttendanceActivity.AttendanceActivityMethodType.BIOMETRIC,
     external_id: str | None = None,
     raw_data=None,
-    recalculate: bool = True,
 ) -> AttendanceActivity:
     if not external_id:
         external_id = f"manual:{uuid4().hex}"
@@ -76,11 +40,6 @@ def activity_create(
     )
     activity.full_clean()
     activity.save()
-    if recalculate:
-        recalculate_attendance_for_punch(
-            employee=activity.employee,
-            timestamp=activity.punch_time,
-        )
     return activity
 
 
@@ -94,14 +53,8 @@ def activity_update(
     method: str,
     external_id: str | None = None,
     raw_data=None,
-    recalculate: bool = True,
 ) -> AttendanceActivity:
-    old_employee = activity.employee
-    old_punch_time = activity.punch_time
     activity.employee = employee
-    # Attribution is re-derived from the new time on recalc: drop the old
-    # shift link so a moved punch can't stay claimed by its previous row.
-    activity.scheduled_shift = None
     # external_id is a stable record identifier: keep the existing one
     # unless an explicit replacement is given.
     if external_id:
@@ -112,35 +65,13 @@ def activity_update(
     activity.raw_data = raw_data or {}
     activity.full_clean()
     activity.save()
-    if recalculate:
-        recalculate_attendance_for_punch(
-            employee=activity.employee,
-            timestamp=activity.punch_time,
-        )
-        if (
-            old_employee.pk != activity.employee.pk
-            or old_punch_time != activity.punch_time
-        ):
-            recalculate_attendance_for_punch(
-                employee=old_employee,
-                timestamp=old_punch_time,
-            )
     return activity
 
 
 @transaction.atomic
-def activity_delete(
-    *, activity: AttendanceActivity, recalculate: bool = True
-) -> AttendanceActivity:
-    """Deletes the punch and recalculates the affected day."""
-    employee = activity.employee
-    punch_time = activity.punch_time
+def activity_delete(*, activity: AttendanceActivity) -> AttendanceActivity:
+    """Deletes the punch."""
     activity.delete()
-    if recalculate:
-        recalculate_attendance_for_punch(
-            employee=employee,
-            timestamp=punch_time,
-        )
     return activity
 
 
@@ -151,7 +82,6 @@ def attendance_record_create(
     day,
     status: str,
     shift=None,
-    force: bool = False,
 ) -> Attendance:
     """Create a hand-made attendance row (never auto-overwritten)."""
     row = Attendance(
@@ -163,8 +93,6 @@ def attendance_record_create(
     )
     row.full_clean()
     row.save()
-    if force:
-        return recalculate_attendance(employee=employee, day=day, force=True)
     return row
 
 
@@ -191,9 +119,8 @@ def attendance_record_update(
 def attendance_record_delete(*, attendance: Attendance) -> Attendance:
     """Deletes a hand-made attendance record.
 
-    Calculated rows belong to the recalculation job: they are removed by
-    dropping the punches or the schedule, never by hand, otherwise the
-    next calculation silently recreates them.
+    Calculated rows are written by the daily calculation: they are
+    removed by dropping the punches, never by hand.
     """
     if attendance.is_calculated:
         raise ValidationError(
@@ -280,9 +207,6 @@ def device_attendance_pull(
     created = 0
     skipped = 0
     max_log_id = last_gateway_log_id
-    # (employee pk, attendance day) -> (employee, day), recalculated once per
-    # day after the bulk insert instead of once per punch.
-    affected_days: dict = {}
 
     with schema_context(tenant_schema):
         for log in logs:
@@ -357,16 +281,8 @@ def device_attendance_pull(
                 method=AttendanceActivity.AttendanceActivityMethodType.BIOMETRIC,
                 external_id=external_id,
                 raw_data=log,
-                recalculate=False,
             )
             created += 1
-            day, _ = resolve_punch_day(employee=employee, timestamp=timestamp)
-            affected_days[(employee.pk, day)] = (employee, day)
-
-    with schema_context(tenant_schema):
-        for employee_pk, day in sorted(affected_days):
-            employee, _ = affected_days[(employee_pk, day)]
-            recalculate_attendance(employee=employee, day=day)
 
     # Device state lives in public schema, so switch back before saving.
     with schema_context(get_public_schema_name()):

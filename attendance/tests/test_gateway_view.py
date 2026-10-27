@@ -290,7 +290,7 @@ class GatewayRejectionLoggingTests(GatewayViewTests):
         mock_capture.assert_called_once()
 
     def test_accepted_push_does_not_log_rejection(self):
-        with self.assertNoLogs("attendance.gateway"):
+        with self.assertNoLogs("attendance.gateway", level="ERROR"):
             response = self.post_gateway(self.gateway_payload())
 
         self.assertEqual(response.status_code, 201)

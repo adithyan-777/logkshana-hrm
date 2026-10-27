@@ -3,8 +3,6 @@ from zoneinfo import ZoneInfo
 
 from django.utils import timezone
 
-from attendance.models import AttendanceActivity
-from attendance.services import activity_create
 from common.tests.base import BaseTenantTestCase
 from common.tests.factories import employee_factory, schedule_factory, timetable_factory
 from schedule.calculation import expected_datetimes
@@ -18,9 +16,9 @@ class OvernightShiftScenarioTests(BaseTenantTestCase):
     """
     End-to-end overnight shift: Monday 22:00 -> Tuesday 06:00.
 
-    Ties together timetable resolution, expected datetimes, and punch
-    attribution, with punches stored and re-fetched through the
-    database to exercise the timestamptz round trip.
+    Ties together timetable resolution and expected datetimes through
+    the database (timestamptz round trip). Punch attribution lives in
+    the (future) daily calculation and is not exercised here.
     """
 
     def setUp(self):
@@ -50,15 +48,6 @@ class OvernightShiftScenarioTests(BaseTenantTestCase):
         )
         assignment.employees.add(self.employee)
 
-    def punch(self, *, at, direction=AttendanceActivity.Direction.IN):
-        return activity_create(
-            employee=self.employee,
-            external_id=f"E2E-{self.id()}-{at.isoformat()}",
-            punch_time=at,
-            direction=direction,
-            method=AttendanceActivity.AttendanceActivityMethodType.MANUAL,
-        )
-
     def test_both_days_resolve_to_night_shift(self):
         # The simplified schedule model has no per-weekday timetables:
         # an assigned weekly schedule covers every day in range.
@@ -84,31 +73,3 @@ class OvernightShiftScenarioTests(BaseTenantTestCase):
             timezone.localtime(expected_out),
             datetime(2026, 3, 10, 6, 0, tzinfo=QATAR),
         )
-
-    def test_both_overnight_punches_belong_to_shift_day(self):
-        self.punch(at=datetime(2026, 3, 9, 21, 55, tzinfo=QATAR))
-        self.punch(
-            at=datetime(2026, 3, 10, 6, 10, tzinfo=QATAR),
-            direction=AttendanceActivity.Direction.OUT,
-        )
-
-        punches = AttendanceActivity.objects.filter(employee=self.employee)
-        self.assertEqual(punches.count(), 2)
-
-        # Both punches fall inside Monday's attribution window
-        # (shift start minus margin through shift end plus margin),
-        # so both link to Monday's shift row.
-        for punch in punches:
-            with self.subTest(punch=punch.external_id):
-                punch.refresh_from_db()
-                self.assertIsNotNone(punch.scheduled_shift_id)
-                self.assertEqual(punch.scheduled_shift.day, self.monday)
-
-    def test_tuesday_evening_punch_belongs_to_tuesday(self):
-        # Monday's window ends Tuesday afternoon, so a Tuesday 18:00
-        # punch falls outside it and lands on Tuesday's own shift row.
-        punch = self.punch(at=datetime(2026, 3, 10, 18, 0, tzinfo=QATAR))
-
-        punch.refresh_from_db()
-        self.assertIsNotNone(punch.scheduled_shift_id)
-        self.assertEqual(punch.scheduled_shift.day, self.tuesday)

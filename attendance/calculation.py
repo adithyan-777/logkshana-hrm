@@ -1,9 +1,7 @@
 """Small pure helpers for attendance ingest and arithmetic.
 
-Shift-day math itself lives in ``attendance.recalculation`` (first-in /
-last-out over a materialized ``ScheduledShiftDay``); this module keeps
-only the pieces the request path still needs: gateway direction mapping
-and whole-minute arithmetic.
+Gateway direction mapping and whole-minute arithmetic live here; the
+daily Attendance calculation is being rewritten and does not exist yet.
 """
 
 from datetime import datetime

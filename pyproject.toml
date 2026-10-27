@@ -7,10 +7,11 @@ requires-python = ">=3.14"
 dependencies = [
     "django>=6.0,<6.1",
     "django-allauth[socialaccount]>=65.19.0",
-    "django-q2>=1.11.1",
     "django-tenants>=3.14.0",
     "django-waffle>=5.0.0",
     "djangorestframework>=3.18.0",
+    "dramatiq-crontab[redis,sentry]",
+    "dramatiq[redis]",
     "gunicorn>=26.2.0",
     "openpyxl>=3.1.5",
     "psycopg[binary]>=3.2",

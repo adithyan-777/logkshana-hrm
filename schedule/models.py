@@ -219,8 +219,9 @@ class EmployeeScheduleOverride(BaseModel):
             )
         ]
         indexes = [
-            # ensure_day looks overrides up by date alone, which the
-            # (employee, date) constraint above cannot serve.
+            # Day-wide lookups (schedules for a date) hit overrides by
+            # date alone, which the (employee, date) constraint cannot
+            # serve.
             models.Index(fields=["date"], name="sched_override_date_idx"),
         ]
 

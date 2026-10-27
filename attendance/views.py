@@ -12,6 +12,7 @@ from django.utils.dateparse import parse_datetime
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from attendance.calculation import direction_from_gateway_status_label
 from attendance.forms import AttendanceActivityForm, AttendanceForm
 from attendance.integrations.gateway import gateway_request_is_authorized
 from attendance.models import Attendance, AttendanceActivity
@@ -402,8 +403,6 @@ def gateway_view(request: HttpRequest) -> HttpResponse:
     ``user_id`` (gateway PIN) maps to pattika's ``employee_id``; extra
     gateway fields are preserved in the punch's ``raw_data``. Replays are
     idempotent (same ``device:<serial>:<emp>:<timestamp>`` external id).
-    Each accepted punch also recalculates the employee's Attendance
-    for the punch's attendance day (worked/overtime, status).
     """
     from companies.services import attendance_log_create
 
@@ -512,6 +511,16 @@ def _gateway_push_item(item: dict, attendance_log_create) -> dict:
     # ``id``). Passing it through lets push and pull share one external id
     # (``gateway:<id>``), so a log both pushed and pulled never duplicates.
     gateway_log_id = item.get("gateway_log_id", item.get("id"))
+    label = item.get("status_label")
+    if direction_from_gateway_status_label(label) == "in":
+        logger.info(
+            "Gateway push item check-in punch (serial=%s, user_id=%s, "
+            "status_label=%r, timestamp=%s)",
+            serial_number,
+            employee_id,
+            label,
+            timestamp,
+        )
     try:
         punch = attendance_log_create(
             serial_number=serial_number,

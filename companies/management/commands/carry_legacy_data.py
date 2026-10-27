@@ -7,8 +7,8 @@ Two steps, driven by ``carry_manifest.json`` in this directory:
   under OUT_DIR (default ``./carry_data``) — inspectable, committable
   nowhere (git-ignored), re-loadable offline.
 * ``load`` reads those JSON files and recreates the rows in the target
-  tenant through the current services (validation applies), then heals
-  attendance (materialize + recalc affected days) and prints a report.
+  tenant through the current services (validation applies), then prints
+  a report.
 
 Both steps are idempotent: every entity matches by natural key first
 (username / emp_code / code / name / serial / external_id).
@@ -254,7 +254,6 @@ class Command(BaseCommand):
                 report.update(self._load_schedules(data, tt_map))
                 report.update(self._load_devices(data, company))
                 report["punches"] = self._load_punches(data)
-                report.update(self._heal_attendance(data))
 
         if dry_run:
             try:
@@ -596,36 +595,6 @@ class Command(BaseCommand):
             punch.save()
             made += 1
         return made
-
-    # -- heal + verify -------------------------------------------------
-    def _heal_attendance(self, data):
-        from attendance.recalculation import recalculate_attendance
-
-        days = {}
-        for row in data.get("punches", []):
-            employee = self._emp_map.get(row["employee_id"])
-            if employee is None:
-                continue
-            day = _parse_datetime(row["punch_time"])
-            if day is None:
-                continue
-            days.setdefault(employee.pk, set()).add(timezone.localtime(day).date())
-        healed = 0
-        from employees.models import Employee
-
-        for employee_pk, day_set in days.items():
-            employee = Employee.objects.filter(pk=employee_pk).first()
-            if employee is None:
-                continue
-            for day in sorted(day_set):
-                if recalculate_attendance(employee=employee, day=day) is not None:
-                    healed += 1
-        from attendance.models import AttendanceActivity
-
-        unlinked = AttendanceActivity.objects.filter(scheduled_shift__isnull=True).count()
-        self.stdout.write(f"  days recalculated: {healed}")
-        self.stdout.write(f"  unlinked punches: {unlinked}")
-        return {"days_healed": healed, "unlinked_punches": unlinked}
 
 
 class _Rollback(Exception):

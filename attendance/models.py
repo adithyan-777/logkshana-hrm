@@ -152,8 +152,8 @@ class Attendance(BaseModel):
         choices=Status.choices,
         default=Status.INCOMPLETE,
     )
-    # True once the calc job has written this row; hand-made corrections
-    # stay False so recalculation never overwrites them.
+    # True once the daily calculation has written this row; hand-made
+    # corrections stay False.
     is_calculated = models.BooleanField(default=False)
     calculated_at = models.DateTimeField(null=True, blank=True)
 

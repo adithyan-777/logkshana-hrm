@@ -1,5 +1,5 @@
 #!/bin/sh
-# Shared entrypoint for web / qcluster.
+# Shared entrypoint for web / worker / crontab.
 # Waits for Postgres + Redis, optionally runs tenant migrations + collectstatic
 # (only when RUN_MIGRATIONS=1, i.e. the web service), then execs the CMD.
 set -e
@@ -62,7 +62,7 @@ if [ "${RUN_MIGRATIONS:-}" = "1" ]; then
 fi
 
 # Optional: block until the given public-schema tables exist.
-# Used by qcluster so it never starts before web has migrated.
+# Used by worker/crontab so they never start before web has migrated.
 python - <<'EOF'
 import os
 import sys

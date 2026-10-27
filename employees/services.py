@@ -153,9 +153,7 @@ def employee_create(
     employee.save()
 
     if sync_to_device and employee.emp_code:
-        from django_q.tasks import async_task
-
-        from employees.q2_tasks import DEVICE_USER_GROUP, DEVICE_USER_TIMEOUT
+        from employees.tasks import create_device_user
 
         employee_id = employee.id
         schema_name = connection.schema_name
@@ -167,14 +165,7 @@ def employee_create(
         )
         transaction.on_commit(
             lambda: [
-                async_task(
-                    "employees.q2_tasks.create_device_user",
-                    schema_name,
-                    employee_id,
-                    serial,
-                    group=DEVICE_USER_GROUP,
-                    timeout=DEVICE_USER_TIMEOUT,
-                )
+                create_device_user.send(schema_name, employee_id, serial)
                 for serial in serials
             ]
         )
@@ -236,9 +227,7 @@ def employee_update(
                 user.save(update_fields=user_updates)
 
     if sync_to_device and employee.emp_code and employee.emp_code != old_emp_code:
-        from django_q.tasks import async_task
-
-        from employees.q2_tasks import DEVICE_USER_GROUP, DEVICE_USER_TIMEOUT
+        from employees.tasks import create_device_user
 
         employee_id = employee.id
         schema_name = connection.schema_name
@@ -250,14 +239,7 @@ def employee_update(
         )
         transaction.on_commit(
             lambda: [
-                async_task(
-                    "employees.q2_tasks.create_device_user",
-                    schema_name,
-                    employee_id,
-                    serial,
-                    group=DEVICE_USER_GROUP,
-                    timeout=DEVICE_USER_TIMEOUT,
-                )
+                create_device_user.send(schema_name, employee_id, serial)
                 for serial in serials
             ]
         )
@@ -272,9 +254,7 @@ def employee_delete(*, employee: Employee) -> Employee:
     Device unenrollment is queued per active device (PIN captured before
     the row is gone); employees without an emp_code were never enrolled.
     """
-    from django_q.tasks import async_task
-
-    from employees.q2_tasks import DEVICE_USER_GROUP, DEVICE_USER_TIMEOUT
+    from employees.tasks import delete_device_user
 
     user = employee.user
     emp_code = employee.emp_code
@@ -295,14 +275,7 @@ def employee_delete(*, employee: Employee) -> Employee:
     if serials:
         transaction.on_commit(
             lambda: [
-                async_task(
-                    "employees.q2_tasks.delete_device_user",
-                    schema_name,
-                    emp_code,
-                    serial,
-                    group=DEVICE_USER_GROUP,
-                    timeout=DEVICE_USER_TIMEOUT,
-                )
+                delete_device_user.send(schema_name, emp_code, serial)
                 for serial in serials
             ]
         )

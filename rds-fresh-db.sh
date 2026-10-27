@@ -272,7 +272,7 @@ DONE. Summary:
 
 Manual cutover when ready (NOT done by this script):
   1. Optional seed:  DB_NAME=$NEW_DB docker compose run --rm web bash seed-demo-tenant.sh demo demo.owner@example.com 'ChangeMe123!'
-  2. In the server .env set DB_NAME=$NEW_DB, then: docker compose up -d web qcluster
+  2. In the server .env set DB_NAME=$NEW_DB, then: docker compose up -d web worker crontab
   3. Smoke-test login + one attendance calc.
   Rollback: set DB_NAME back to $OLD_DB (or restore $DUMP_FILE).
 ================================================================

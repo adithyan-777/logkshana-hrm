@@ -46,7 +46,7 @@ SHARED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "django_q",
+    "dramatiq_crontab",
     "rest_framework",
     "companies",
     "users",
@@ -190,22 +190,16 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-## django-q2 settings (device sync + attendance calc).
-# Redis broker (service `redis` in docker-compose, localhost locally).
-# Schedules live in the public schema via SHARED_APPS; every task carries
-# its tenant schema_name explicitly and switches schema itself.
-Q_CLUSTER = {
-    "name": "pattika",
-    "workers": int(os.getenv("Q2_WORKERS", "2")),
-    "recycle": int(os.getenv("Q2_RECYCLE", "500")),
-    "timeout": int(os.getenv("Q2_TIMEOUT", "300")),
-    "retry": int(os.getenv("Q2_RETRY", "300")),
-    "redis": {
-        "host": os.getenv("REDIS_HOST", "localhost"),
-        "port": int(os.getenv("REDIS_PORT", "6379")),
-        "db": int(os.getenv("REDIS_DB", "0")),
-    },
-    "catch_up": False,
+## dramatiq settings (device-user pushes; scheduler via dramatiq-crontab).
+# Broker itself is bootstrapped by config.broker (imported below) from the
+# REDIS_* / DRAMATIQ_BROKER env vars. The crontab scheduler process uses
+# Redis as its singleton lock backend.
+DRAMATIQ_BROKER = os.getenv("DRAMATIQ_BROKER", "redis")
+DRAMATIQ_CRONTAB = {
+    "REDIS_URL": os.getenv(
+        "DRAMATIQ_CRONTAB_REDIS_URL",
+        f"redis://{os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', '6379')}/{os.getenv('REDIS_DB', '0')}",
+    ),
 }
 
 
@@ -325,6 +319,9 @@ if SENTRY_DSN:
         # of profile sessions.
         profile_session_sample_rate=1.0,
         # Set profile_lifecycle to "trace" to automatically
-        # run the profiler on when there is an active transaction
+        # run the profiler on when there is an active transaction.
         profile_lifecycle="trace",
     )
+
+# Dramatiq broker bootstrap — must run before any actor module loads.
+from config import broker  # noqa: E402,F401  (side effect: set_broker)

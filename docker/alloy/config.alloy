@@ -7,8 +7,8 @@
 // with ALLOY_ENV (compose sets "local" vs "prod"). All secrets come from the
 // environment — never hardcode tokens in this file.
 //
-// Sources: web / qcluster / nginx containers only (redis, db, etc. dropped
-// by the keep rule) plus /var/log/*.log from the host (mount required).
+// Sources: web / worker / crontab / nginx containers only (redis, db, etc.
+// dropped by the keep rule) plus /var/log/*.log from the host (mount required).
 
 loki.write "grafanacloud" {
 	endpoint {
@@ -38,17 +38,18 @@ discovery.docker "containers" {
 discovery.relabel "app_containers" {
 	targets = discovery.docker.containers.targets
 
-	// Keep app containers only: <project>-web-1, <project>-qcluster-1,
-	// <project>-nginx-1 (matches both pattika-* and pattika-local-*).
+	// Keep app containers only: <project>-web-1, <project>-worker-1,
+	// <project>-crontab-1, <project>-nginx-1 (matches both pattika-* and
+	// pattika-local-*).
 	rule {
 		source_labels = ["__meta_docker_container_name"]
-		regex         = "/.*-(web|qcluster|nginx)-1"
+		regex         = "/.*-(web|worker|crontab|nginx)-1"
 		action        = "keep"
 	}
 
 	rule {
 		source_labels = ["__meta_docker_container_name"]
-		regex         = "/.*-(web|qcluster|nginx)-1"
+		regex         = "/.*-(web|worker|crontab|nginx)-1"
 		target_label  = "compose_service"
 		replacement   = "$1"
 	}

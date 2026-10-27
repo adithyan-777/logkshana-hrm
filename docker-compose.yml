@@ -1,19 +1,13 @@
-# Pattika stack (local-Postgres dev): Redis + Django/Gunicorn + django-q2 cluster.
+# Pattika stack (local-Postgres dev): Redis + Django/Gunicorn + dramatiq worker
+# + dramatiq-crontab scheduler.
 #
 # Postgres runs on the HOST (local install), not in Docker.
 # Usage:
 #   cp .env.example .env   # then fill in secrets
 #   docker compose up --build redis          # phase 1: broker only, Django runs locally
-#   docker compose up --build                # full stack (web/qcluster + redis)
+#   docker compose up --build                # full stack (web/worker/crontab + redis)
 #
-# django-q2 schedules live in the public schema; register them once per deploy:
-#   docker compose exec web python manage.py ensure_q2_schedules
-#   docker compose exec web python manage.py ensure_device_sync_schedule
-#
-# WARNING: never scale qcluster past 1 replica (duplicate task pickup).
-# Scale via Q2_WORKERS instead.
-#
-# NOTE: web/qcluster reach host Postgres via host.docker.internal.
+# NOTE: web/worker/crontab reach host Postgres via host.docker.internal.
 #   Postgres must listen on the docker bridge: set listen_addresses='*'
 #   in postgresql.conf and add a pg_hba line for 172.0.0.0/8, then restart.
 #   Phase 1 (redis only + local Django) needs none of that.
@@ -47,8 +41,9 @@ services:
       retries: 10
     restart: unless-stopped
 
-  # q2 broker (Redis). web enqueues from the request path; qcluster works
-  # the queue. Tasks are ephemeral; appendonly is just crash hygiene.
+  # Dramatiq broker (Redis). web enqueues from the request path; the worker
+  # runs the queue; the crontab scheduler enqueues periodic tasks. Messages
+  # are ephemeral; appendonly is just crash hygiene.
   redis:
     image: redis:8-alpine
     command: ["redis-server", "--appendonly", "yes"]
@@ -75,7 +70,7 @@ services:
       # Server .env: DB_HOST=<rds-endpoint> alone is enough.
       DB_HOST: ${CONTAINER_DB_HOST:-${DB_HOST:-host.docker.internal}}
       DB_PORT: ${DB_PORT:-5432}
-      # q2 Redis broker (web enqueues from the request path).
+      # Dramatiq Redis broker (web enqueues from the request path).
       REDIS_HOST: redis
       REDIS_PORT: ${REDIS_PORT:-6379}
       REDIS_DB: ${REDIS_DB:-0}
@@ -100,10 +95,12 @@ services:
       retries: 5
     restart: unless-stopped
 
-  qcluster:
+  # Dramatiq worker: consumes the broker queue. Scaling replicas is safe —
+  # messages are claimed via Redis; scale via WORKER_PROCESSES/THREADS too.
+  worker:
     build: .
     entrypoint: ["/app/entrypoint.sh"]
-    command: ["python", "manage.py", "qcluster"]
+    command: ["dramatiq", "config.dramatiq", "--processes", "${WORKER_PROCESSES:-1}", "--threads", "${WORKER_THREADS:-4}"]
     env_file:
       - .env
     environment:
@@ -112,13 +109,12 @@ services:
       # Server .env: DB_HOST=<rds-endpoint> alone is enough.
       DB_HOST: ${CONTAINER_DB_HOST:-${DB_HOST:-host.docker.internal}}
       DB_PORT: ${DB_PORT:-5432}
-      # q2 Redis broker.
+      # Dramatiq Redis broker.
       REDIS_HOST: redis
       REDIS_PORT: ${REDIS_PORT:-6379}
       REDIS_DB: ${REDIS_DB:-0}
       DEBUG: ${DEBUG:-False}
-      Q2_WORKERS: ${Q2_WORKERS:-2}
-      WAIT_FOR_TABLES: "django_q_task,companies_company"
+      WAIT_FOR_TABLES: "companies_company"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -127,8 +123,32 @@ services:
       web:
         condition: service_started
     restart: unless-stopped
-    # NEVER: docker compose up --scale qcluster=2 (duplicate task pickup).
-    # Scale via Q2_WORKERS instead.
+
+  # dramatiq-crontab scheduler: enqueues periodic (cron) actors to the
+  # broker. Runs the tasks' enqueue side only — the worker executes them.
+  # SINGLE instance: the Redis lock guards against accidental doubles.
+  crontab:
+    build: .
+    entrypoint: ["/app/entrypoint.sh"]
+    command: ["python", "manage.py", "crontab"]
+    env_file:
+      - .env
+    environment:
+      DB_HOST: ${CONTAINER_DB_HOST:-${DB_HOST:-host.docker.internal}}
+      DB_PORT: ${DB_PORT:-5432}
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_DB: ${REDIS_DB:-0}
+      DEBUG: ${DEBUG:-False}
+      WAIT_FOR_TABLES: "companies_company"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started
+    restart: unless-stopped
 
   nginx:
     image: nginx:1.29-alpine
@@ -165,7 +185,7 @@ services:
       retries: 5
     restart: unless-stopped
 
-  # Alloy: ships web/qcluster/nginx container logs + host /var/log to
+  # Alloy: ships web/worker/crontab/nginx container logs + host /var/log to
   # Grafana Cloud Loki (basic_auth from env) or, when LOKI_DOCS_URL is set,
   # to the docs server (no auth). Secrets from .env (git-ignored).
   # Start it explicitly with `docker compose --profile logging up -d alloy`.

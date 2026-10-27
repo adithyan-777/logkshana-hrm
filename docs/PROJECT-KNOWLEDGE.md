@@ -18,7 +18,7 @@
 
 - Python 3.14+, Django 6.1, PostgreSQL 14+ (per-tenant schemas via `django-tenants`)
 - Auth: `django-tenant-users` (`TenantUser`), `django-allauth` (email+username login, optional verification)
-- Async: django-q2 + Redis broker (device sync, device push, attendance calc)
+- Async: dramatiq + dramatiq-crontab on Redis broker (device-user push/delete; cron actors in `<app>/tasks.py`)
 - API surface: HTML fragments via HTMX (DRF installed but **unused** — zero serializers; `REST_FRAMEWORK` config in `config/settings.py:242` is JSON-only dead config)
 - Frontend: HTMX (boosted SPA shell), Alpine.js (3 stores), Chart.js, flatpickr, BoxIcons, Geist Variable font
 - Infra: Gunicorn, WhiteNoise (`CompressedStaticFilesStorage`), nginx, Docker Compose, Sentry
@@ -27,10 +27,10 @@
 ## 3. Multi-tenancy architecture
 
 - Tenant model `companies.Company` (`TenantBase`, `auto_create_schema=True`); routing via `companies.Domain` + `TenantMainMiddleware` (first in `MIDDLEWARE`, `config/settings.py:79`), `TenantAccessMiddleware` after auth (`:89`)
-- `SHARED_APPS` (`config/settings.py:41`): tenants, admin/auth, `companies`, `users`, allauth, django-q2, DRF
+- `SHARED_APPS` (`config/settings.py:41`): tenants, admin/auth, `companies`, `users`, allauth, dramatiq_crontab, DRF
 - `TENANT_APPS` (`:62`): `waffle`, `employees`, `schedule`, `leave`, `attendance`, `reports`, `dashboard` — waffle tables are per-tenant; module switches like `hide_leave` (on → Leave nav + notifications hidden for that tenant) are created per schema. Never use waffle's cached lookups (`switch_is_active`, `{% switch %}`) — their cache keys are not schema-prefixed; read `waffle.models` directly (`config/context_processors.py`)
 - Tenant models carry **no tenant FK** — isolation is by Postgres schema. Only shared models (`Branch`, `Device`) are cross-schema, referenced via `company__schema_name`
-- q2 tenancy discipline: pass `schema_name`, wrap work in `schema_context(public)` → `schema_context(tenant)` (see `attendance/q2_tasks.py`)
+- Dramatiq tenancy discipline: pass `schema_name` into every actor, wrap work in `schema_context(tenant)` inside the actor (see `employees/tasks.py`); broker is bootstrapped in `config/broker.py` at settings import, worker entry module is `config/dramatiq.py`, the cron scheduler runs `manage.py crontab` (dramatiq-crontab, Redis lock)
 - Public-schema guards: `seed_demo_data` refuses `--schema=public`, `dashboard/views.py:13` + `config/context_processors.py:60` guard public tenant
 - `common` app (abstract models + helpers) is **not** in `INSTALLED_APPS` — works only because all its models are abstract today
 
@@ -52,7 +52,7 @@
 ## 5. Backend conventions (HackSoft-style, enforced by `.cursor/skills/django-styleguide/`)
 
 - **Views** parse input → call service/selector → render. No business logic in views. All HTML views: `login_required` + `require_permission(codename)`
-- **Services** (`services.py` per app): writes only, `entity_action` naming, keyword-only args, `full_clean()` before `save()`, `@transaction.atomic`, `transaction.on_commit(async_task(...))` for q2
+- **Services** (`services.py` per app): writes only, `entity_action` naming, keyword-only args, `full_clean()` before `save()`, `@transaction.atomic`, `transaction.on_commit(actor.send(...))` for dramatiq
 - **Selectors** (`selectors.py`): reads only, own `select_related`/`prefetch_related`; reports has a `selectors/` package (`attendance.py`, `punch_log.py`, `leave.py`, `overtime.py`, `exceptions.py`)
 - **Forms**: `form.is_valid()` → `service(**form.cleaned_data)`. Date widgets: `forms.DateInput(attrs={"type": "date"})` (`DATE_INPUT` in attendance/leave/schedule forms), `datetime-local` for punches
 - **HTMX helpers** (`common/http.py`): `is_htmx_partial()` (excludes `HX-Boosted` + history-restore — prevents fragment-on-back-button bug), `set_hx_trigger(response, event, toast, close_modal)` emits JSON `HX-Trigger`. Known drift: most CRUD views still emit bare-string `HX-Trigger` (audit issue; tests assert the old strings)
@@ -105,8 +105,8 @@ Hub + attendance summary, punch log, overtime, leave, exceptions, department, in
 ## 9. DevOps & env
 
 - `Dockerfile`: single-stage `python:3.14-slim`, non-root `app` user, gunicorn 3 workers; `collectstatic` at entrypoint (not bake)
-- `docker-compose.yml` (`name: pattika`): `redis` (healthchecked, q2 broker), `web`/`qcluster` (one image, role CMDs; `DB_HOST: ${CONTAINER_DB_HOST:-${DB_HOST:-host.docker.internal}}` RDS-ready fallback), test-only `db` profile (`:5433`), `nginx` + `certbot` (tools profile), `proxy-net` external network. Never scale qcluster past 1 (scale via `Q2_WORKERS`)
-- `entrypoint.sh`: TCP-waits Postgres+Redis, `migrate_schemas` + `collectstatic` only when `RUN_MIGRATIONS=1` (web), `WAIT_FOR_TABLES` gate for qcluster
+- `docker-compose.yml` (`name: pattika`): `redis` (healthchecked, dramatiq broker), `web`/`worker`/`crontab` (one image, role CMDs; `DB_HOST: ${CONTAINER_DB_HOST:-${DB_HOST:-host.docker.internal}}` RDS-ready fallback), test-only `db` profile (`:5433`), `nginx` + `certbot` (tools profile), `proxy-net` external network. Worker replicas scale safely (Redis claims); `crontab` scheduler is single-instance (Redis lock)
+- `entrypoint.sh`: TCP-waits Postgres+Redis, `migrate_schemas` + `collectstatic` only when `RUN_MIGRATIONS=1` (web), `WAIT_FOR_TABLES` gate for worker/crontab
 - `nginx/conf.d/pattika.conf`: HTTP default, `client_max_body_size 20m`, static 30d immutable; TLS via manual `pattika-ssl.conf.example`
 - Env (`.env.example`): `DB_*`, `CONTAINER_DB_HOST`, `REDIS_HOST/PORT/DB`, `TIME_ZONE`, `DEVICE_GATEWAY_BASE_URL`, `GATEWAY_SECRET_KEY`, `TENANT_USERS_DOMAIN`, `DEBUG`, `SECURE_COOKIES`. Missing: `SECRET_KEY`, `SENTRY_DSN` (both hardcoded in settings — known issue)
 - Timezone default `Asia/Qatar`

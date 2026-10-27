@@ -1,7 +1,10 @@
+from datetime import date, datetime, time, timedelta
 from uuid import uuid4
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import OuterRef, Q, Subquery
+from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django_tenants.utils import get_public_schema_name, schema_context
 
@@ -131,9 +134,68 @@ def attendance_record_delete(*, attendance: Attendance) -> Attendance:
     return attendance
 
 
-# Short aliases matching the "<entity>_<action>" naming used by URLs/views.
-record_update = attendance_record_update
-record_delete = attendance_record_delete
+# -- Auto-ABSENT midnight job -------------------------------------------
+
+
+def employees_absent_condition(*, day: date):
+    """Employees eligible for an auto-ABSENT row on ``day``.
+
+    Single pluggable rule for the midnight job. An employee is
+    eligible when they are active, hold no Attendance row for the
+    day, have no punches already recorded that day, and were punched
+    OUT before the day started (their last punch is a check-out — or
+    they never punched at all).
+
+    An employee whose last punch is a check-in might still be in the
+    building (overnight shift, missed check-out), so they are skipped.
+    Tweak the query here to change who gets marked absent (branch,
+    employee_type, schedule coverage, ...).
+    """
+    day_start = timezone.make_aware(datetime.combine(day, time.min))
+    last_direction = AttendanceActivity.objects.filter(
+        employee=OuterRef("pk"),
+        punch_time__lt=day_start,
+    ).order_by("-punch_time", "-id").values("direction")[:1]
+    return (
+        Employee.objects.filter(is_active=True)
+        .exclude(
+            attendances__day=day,
+        )
+        .exclude(
+            attendance_activities__punch_time__gte=day_start,
+            attendance_activities__punch_time__lt=day_start + timedelta(days=1),
+        )
+        .annotate(last_direction=Subquery(last_direction))
+        .filter(
+            Q(last_direction=AttendanceActivity.Direction.OUT)
+            | Q(last_direction__isnull=True)
+        )
+    )
+
+
+@transaction.atomic
+def attendance_absent_rows_ensure(*, day: date) -> list[Attendance]:
+    """Create auto-ABSENT Attendance rows for every eligible employee.
+
+    Idempotent: employees already holding a row for ``day`` are
+    excluded by the condition, and ``get_or_create`` absorbs races.
+    Rows are written with ``is_calculated=False`` (machine-generated
+    today, but treated like hand-made rows — the future daily
+    calculation never overwrites them).
+    """
+    created = []
+    for employee in employees_absent_condition(day=day).iterator():
+        row, was_created = Attendance.objects.get_or_create(
+            employee=employee,
+            day=day,
+            defaults={
+                "status": Attendance.Status.ABSENT,
+                "is_calculated": False,
+            },
+        )
+        if was_created:
+            created.append(row)
+    return created
 
 
 def _employee_get_or_create_for_device(*, emp_code: str, branch=None) -> Employee:

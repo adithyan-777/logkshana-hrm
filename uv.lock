@@ -7,6 +7,18 @@ resolution-markers = [
 ]
 
 [[package]]
+name = "apscheduler"
+version = "3.11.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "tzlocal" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8c/6b/eeff360196bb20b312c9e762a820fd1b2c6d809466c755ef57863478e454/apscheduler-3.11.3.tar.gz", hash = "sha256:cd2fcc9330039a81a5893472ad49facf23a6d5604cbe1d918c835c6de7834d5a", size = 110312, upload-time = "2026-06-28T19:39:22.493Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/42/c9/8638db32514dbb9157b3d82680c6faea89283523edf9ed2415ea3884f2ae/apscheduler-3.11.3-py3-none-any.whl", hash = "sha256:bbeb2ec02d23d3c06a6c07ed7f0f3939ada6680eb121fae809a69bb42c537a30", size = 66024, upload-time = "2026-06-28T19:39:20.982Z" },
+]
+
+[[package]]
 name = "asgiref"
 version = "3.12.1"
 source = { registry = "https://pypi.org/simple" }
@@ -395,6 +407,42 @@ wheels = [
 ]
 
 [[package]]
+name = "dramatiq"
+version = "2.2.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/14/6d/d056a8ba251c216da054fc5db9ad7931bfb9ab28851e8b86acd770ce8867/dramatiq-2.2.1.tar.gz", hash = "sha256:f9fbbd2feea27b3fa4085446242a24d86f78288b20c78a93f9f0bdbd7d908cd5", size = 109994, upload-time = "2026-09-02T07:55:09.979Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8c/13/0550ff585ade7b423e2ecaac29c4ab88673a58ae92ef25b6629089a2b92c/dramatiq-2.2.1-py3-none-any.whl", hash = "sha256:4e2466d07d5a1c4910b49944e5b45704c123b82325384e1319f6d08d94559c46", size = 127754, upload-time = "2026-09-02T07:55:08.423Z" },
+]
+
+[package.optional-dependencies]
+redis = [
+    { name = "redis" },
+]
+
+[[package]]
+name = "dramatiq-crontab"
+version = "1.2.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "apscheduler" },
+    { name = "django" },
+    { name = "dramatiq" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/84/cd/5d766cb58d9166e0513050e072ec05e0a9b5921d84476538de0af19ad11f/dramatiq_crontab-1.2.1.tar.gz", hash = "sha256:6f3b96cd04af2beeddc3cc7f1d3dc303c9b452fe0760d14e132436801ee79320", size = 8362, upload-time = "2026-10-26T15:04:43.669Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/27/c9/5f8cbd88b36bb413ce6e377e7e5545333d8aa73a889df61de6bd827a4fff/dramatiq_crontab-1.2.1-py3-none-any.whl", hash = "sha256:dd1bb0eb95156f248bd73d65056ce39f43a5615f4029d7056381f3845081e132", size = 8914, upload-time = "2026-10-26T15:04:42.308Z" },
+]
+
+[package.optional-dependencies]
+redis = [
+    { name = "redis" },
+]
+sentry = [
+    { name = "sentry-sdk" },
+]
+
+[[package]]
 name = "et-xmlfile"
 version = "2.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -582,6 +630,8 @@ dependencies = [
     { name = "django-tenants" },
     { name = "django-waffle" },
     { name = "djangorestframework" },
+    { name = "dramatiq", extra = ["redis"] },
+    { name = "dramatiq-crontab", extra = ["redis", "sentry"] },
     { name = "gunicorn" },
     { name = "openpyxl" },
     { name = "psycopg", extra = ["binary"] },
@@ -605,6 +655,8 @@ requires-dist = [
     { name = "django-tenants", specifier = ">=3.14.0" },
     { name = "django-waffle", specifier = ">=5.0.0" },
     { name = "djangorestframework", specifier = ">=3.18.0" },
+    { name = "dramatiq", extras = ["redis"] },
+    { name = "dramatiq-crontab", extras = ["redis", "sentry"] },
     { name = "gunicorn", specifier = ">=26.2.0" },
     { name = "openpyxl", specifier = ">=3.1.5" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
@@ -845,6 +897,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/92/ff/5a28bdfd8c3ebec42564ac7d0e54ca3db65044a9314a97f9564fa7a1e926/tzdata-2026.3.tar.gz", hash = "sha256:4a1518b8993086a7982523e071643f3c0e5f213e75b21318e78bcabfff9d1415", size = 198674, upload-time = "2026-07-10T08:50:37.887Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e5/6d/b53b99a9f2766d095985947a5782f1702cabb129a34f7a802d7197af832f/tzdata-2026.3-py2.py3-none-any.whl", hash = "sha256:dc096730c87af6cab1b171c9d532be840741ff5d459015e7f6947bd7d7e54931", size = 348168, upload-time = "2026-07-10T08:50:36.46Z" },
+]
+
+[[package]]
+name = "tzlocal"
+version = "5.4.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "tzdata", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d8/89/2bd035df331499589fc92e59375c17c6cea6a500453b2c5f6a6ec9572825/tzlocal-5.4.5.tar.gz", hash = "sha256:ba976898bad27945178c9ca25c222c19e322b30c10342b9f40b46714f70d2d5f", size = 31483, upload-time = "2026-10-22T09:09:26.38Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7b/c1/9be4e1a8a30db8729a86628073910e56f85aaf8a659e053f376a2e6ea5a8/tzlocal-5.4.5-py3-none-any.whl", hash = "sha256:ecab534f6d65d9deb4c4ea52c121ab6dd5958e9b878e71dcb102578269752454", size = 18215, upload-time = "2026-10-22T09:09:24.447Z" },
 ]
 
 [[package]]

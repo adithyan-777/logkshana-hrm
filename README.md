@@ -13,7 +13,7 @@ Multi-tenant HR and attendance system built with Django. Each company gets its o
 | API | Django REST Framework (gateway / integrations) |
 | Database | PostgreSQL 14+ (`django-tenants` schemas) |
 | Auth | django-allauth + `django-tenant-users` |
-| Jobs | django-q2 + Redis |
+| Jobs | dramatiq + dramatiq-crontab (Redis) |
 | Feature flags | django-waffle |
 | Frontend | Django templates, HTMX, Alpine.js, Chart.js, Flatpickr, DataTables |
 | Deploy | Docker, Gunicorn, WhiteNoise, nginx |
@@ -59,7 +59,7 @@ More detail: [docs/README.md](docs/README.md).
 
 - Python 3.14+
 - PostgreSQL 14+
-- Redis (django-q2 broker)
+- Redis (dramatiq broker)
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
 ## Setup
@@ -120,18 +120,17 @@ uv run manage.py runserver
 For background jobs (optional locally — needs Redis running):
 
 ```bash
-uv run manage.py qcluster
+uv run dramatiq config.dramatiq
 ```
 
-Register the q2 schedules once per deploy (device sync every 5 min +
-nightly attendance fanout):
+For periodic (cron) tasks, run the dramatiq-crontab scheduler in a
+second terminal:
 
 ```bash
-uv run manage.py ensure_device_sync_schedule
-uv run manage.py ensure_q2_schedules
+uv run manage.py crontab
 ```
 
-Or use Docker Compose (web + qcluster + redis):
+Or use Docker Compose (web + worker + crontab + redis):
 
 ```bash
 docker compose up --build
@@ -151,7 +150,7 @@ docker compose up --build
 
 ## Multi-tenancy
 
-- **Public schema:** companies, domains, users, auth/admin, shared django-q2/waffle tables
+- **Public schema:** companies, domains, users, auth/admin, waffle
 - **Tenant schemas:** created when a `Company` is saved (`auto_create_schema = True`)
 - **Routing:** `Domain` + `TenantMainMiddleware`
 - **Access:** `TenantAccessMiddleware` (django-tenant-users)

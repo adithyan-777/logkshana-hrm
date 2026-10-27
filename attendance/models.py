@@ -48,7 +48,7 @@ class AttendanceActivity(BaseModel):
     )
     punch_time = models.DateTimeField()
     direction = models.CharField(
-        max_length=10,
+        max_length=12,
         choices=Direction.choices,
         default=Direction.UNKNOWN,
     )

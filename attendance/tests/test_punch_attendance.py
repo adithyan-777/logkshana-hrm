@@ -5,10 +5,11 @@ from datetime import date, datetime, timedelta
 from django.utils import timezone
 
 from attendance.models import Attendance, AttendanceActivity
-from attendance.services import attendance_update_for_punch, activity_create
-from companies.services import attendance_log_create
+from attendance.services import activity_create, attendance_update_for_punch
 from common.tests.base import BaseTenantTestCase
 from common.tests.factories import device_factory, employee_factory
+from companies.services import attendance_log_create
+from policies.models import AttendancePolicy
 
 DAY = date(2026, 11, 2)
 
@@ -16,6 +17,13 @@ DAY = date(2026, 11, 2)
 def _dt(day, hour, minute=0):
     return datetime(day.year, day.month, day.day, hour, minute,
                     tzinfo=timezone.get_current_timezone())
+
+
+def _unschedule_tenant():
+    """Flip the tenant policy to unscheduled (punch calculation on)."""
+    AttendancePolicy.objects.create(
+        schedule_mode=AttendancePolicy.ScheduleMode.UNSCHEDULED
+    )
 
 
 class PunchInTests(BaseTenantTestCase):
@@ -149,6 +157,7 @@ class PunchOutTests(BaseTenantTestCase):
 
 class UnknownDirectionTests(BaseTenantTestCase):
     def test_unknown_direction_leaves_rows_alone(self):
+        _unschedule_tenant()
         employee = employee_factory(first_name="Unk", emp_code="PU009")
         activity_create(
             employee=employee,
@@ -159,9 +168,53 @@ class UnknownDirectionTests(BaseTenantTestCase):
         self.assertFalse(Attendance.objects.filter(employee=employee).exists())
 
 
+class PunchPolicyGatingTests(BaseTenantTestCase):
+    """Punch calculation only runs when the tenant policy is unscheduled."""
+
+    def test_scheduled_mode_records_punch_without_attendance_row(self):
+        employee = employee_factory(first_name="Sched", emp_code="PU010")
+
+        activity_create(
+            employee=employee,
+            punch_time=_dt(DAY, 8),
+            direction=AttendanceActivity.Direction.IN,
+        )
+
+        self.assertTrue(
+            AttendanceActivity.objects.filter(employee=employee).exists()
+        )
+        self.assertFalse(Attendance.objects.filter(employee=employee).exists())
+
+    def test_unscheduled_mode_updates_attendance_row(self):
+        _unschedule_tenant()
+        employee = employee_factory(first_name="Unsch", emp_code="PU011")
+
+        activity_create(
+            employee=employee,
+            punch_time=_dt(DAY, 8),
+            direction=AttendanceActivity.Direction.IN,
+        )
+
+        row = Attendance.objects.get(employee=employee, day=DAY)
+        self.assertEqual(row.check_in, _dt(DAY, 8))
+        self.assertEqual(row.status, Attendance.Status.PRESENT)
+
+    def test_direct_call_ignores_policy(self):
+        # attendance_update_for_punch is the calculation primitive:
+        # callers (gateway push views) may invoke it regardless of mode.
+        employee = employee_factory(first_name="Direct", emp_code="PU012")
+
+        row = attendance_update_for_punch(
+            employee=employee, punch_time=_dt(DAY, 8), direction="in"
+        )
+
+        self.assertEqual(row.check_in, _dt(DAY, 8))
+
+
 class GatewayEndToEndTests(BaseTenantTestCase):
     def test_gateway_push_updates_attendance_row(self):
-        device = device_factory(serial_number="PU-GW1", company=self.tenant)
+        _unschedule_tenant()
+        device_factory(serial_number="PU-GW1", company=self.tenant)
         employee = employee_factory(first_name="Gw", emp_code="1001")
 
         attendance_log_create(

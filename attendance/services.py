@@ -15,6 +15,7 @@ from companies.selectors import device_get_by_serial_number
 from employees.models import Employee
 from employees.selectors import employee_get_by_emp_code
 from employees.services import employee_create
+from policies.selectors import attendance_policy_is_unscheduled
 
 
 @transaction.atomic
@@ -43,11 +44,16 @@ def activity_create(
     )
     activity.full_clean()
     activity.save()
-    attendance_update_for_punch(
-        employee=activity.employee,
-        punch_time=activity.punch_time,
-        direction=activity.direction,
-    )
+    # Punch-based Attendance calculation only runs when the tenant
+    # policy is "unscheduled". In "scheduled" mode the punch is just
+    # recorded; Attendance rows come from the (schedule-driven)
+    # calculation instead.
+    if attendance_policy_is_unscheduled():
+        attendance_update_for_punch(
+            employee=activity.employee,
+            punch_time=activity.punch_time,
+            direction=activity.direction,
+        )
     return activity
 
 

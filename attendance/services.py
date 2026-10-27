@@ -43,6 +43,11 @@ def activity_create(
     )
     activity.full_clean()
     activity.save()
+    attendance_update_for_punch(
+        employee=activity.employee,
+        punch_time=activity.punch_time,
+        direction=activity.direction,
+    )
     return activity
 
 
@@ -196,6 +201,73 @@ def attendance_absent_rows_ensure(*, day: date) -> list[Attendance]:
         if was_created:
             created.append(row)
     return created
+
+
+@transaction.atomic
+def attendance_update_for_punch(
+    *, employee, punch_time, direction: str
+) -> Attendance | None:
+    """Apply one punch to the employee's Attendance rows.
+
+    An IN punch stamps ``check_in`` on the day's row and flips it to
+    PRESENT (first-in wins: a second IN is ignored). An OUT punch
+    closes the most recent open row — even when it belongs to a
+    previous day (overnight shift) — and computes ``total_work_time``
+    as the first-in/last-out span. Punches with an unknown direction
+    (devices sending no status label) leave rows untouched.
+    """
+    if direction == AttendanceActivity.Direction.IN:
+        day = timezone.localtime(punch_time).date()
+        row, _ = Attendance.objects.get_or_create(
+            employee=employee,
+            day=day,
+            defaults={
+                "status": Attendance.Status.ABSENT,
+                "is_calculated": False,
+            },
+        )
+        if row.check_in is None:
+            row.check_in = punch_time
+            if row.status in (
+                Attendance.Status.ABSENT,
+                Attendance.Status.INCOMPLETE,
+            ):
+                row.status = Attendance.Status.PRESENT
+            row.save(update_fields=["check_in", "status", "updated_at"])
+        return row
+    if direction == AttendanceActivity.Direction.OUT:
+        open_row = (
+            Attendance.objects.filter(
+                employee=employee,
+                check_in__isnull=False,
+                check_out__isnull=True,
+            )
+            .order_by("-day")
+            .first()
+        )
+        if open_row is not None:
+            open_row.check_out = punch_time
+            open_row.total_work_time = punch_time - open_row.check_in
+            open_row.save(
+                update_fields=["check_out", "total_work_time", "updated_at"]
+            )
+            return open_row
+        # Check-out with no open row: record the boundary on today's
+        # row, but there is no check-in to compute work time from.
+        day = timezone.localtime(punch_time).date()
+        row, _ = Attendance.objects.get_or_create(
+            employee=employee,
+            day=day,
+            defaults={
+                "status": Attendance.Status.INCOMPLETE,
+                "is_calculated": False,
+            },
+        )
+        if row.check_out is None:
+            row.check_out = punch_time
+            row.save(update_fields=["check_out", "updated_at"])
+        return row
+    return None
 
 
 def _employee_get_or_create_for_device(*, emp_code: str, branch=None) -> Employee:

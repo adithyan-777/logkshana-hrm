@@ -28,6 +28,10 @@ class AttendanceActivity(BaseModel):
     class Direction(models.TextChoices):
         IN = 'in', 'Check In'
         OUT = 'out', 'Check Out'
+        BREAK_IN = 'break_in', 'BREAK IN'
+        BREAK_OUT = 'break_out', 'BREAK OUT'
+        OVERTIME_IN = 'overtime_in', 'OVERTIME IN'
+        OVERTIME_OUT = 'overtime_out', 'OVERTIME OUT'
         UNKNOWN = 'unknown', 'Unknown'
 
     employee = models.ForeignKey(

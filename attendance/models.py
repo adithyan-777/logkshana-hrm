@@ -104,6 +104,138 @@ class AttendanceActivity(BaseModel):
     def __str__(self):
         return f"{self.employee_id} {self.punch_time:%Y-%m-%d %H:%M}"
 
+class WorkSession(BaseModel):
+    """One IN/OUT punch pair: a single work visit within a day.
+
+    Derived from AttendanceActivity punches at recalculation time;
+    the punch log stays the source of truth. ``check_in``/``check_out``
+    are frozen copies of the punch times (they survive punch deletion,
+    hence SET_NULL on both punch FKs). ``check_out`` is null while the
+    session is still open.
+    """
+
+    employee = models.ForeignKey(
+        "employees.Employee",
+        on_delete=models.CASCADE,
+        related_name="work_sessions",
+    )
+    attendance = models.ForeignKey(
+        "Attendance",
+        on_delete=models.CASCADE,
+        related_name="work_sessions",
+    )
+    # Local-accrual day the session belongs to (day of the IN punch).
+    day = models.DateField()
+    in_punch = models.ForeignKey(
+        "AttendanceActivity",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="in_puch",
+    )
+    out_punch = models.ForeignKey(
+        "AttendanceActivity",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="out_puch",
+    )
+    check_in = models.DateTimeField()
+    check_out = models.DateTimeField(null=True, blank=True)
+    total_time = models.DurationField(blank=True, default=timedelta(0))
+
+    class Meta:
+        constraints = [
+            # An IN punch can only ever open one work session
+            # (re-pairing is idempotent; Postgres allows many NULLs).
+            models.UniqueConstraint(
+                fields=("in_punch",),
+                name="uniq_worksession_in_punch",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["employee", "day"],
+                name="ws_emp_day_idx",
+            ),
+            models.Index(fields=["day"], name="ws_day_idx"),
+        ]
+
+    def __str__(self):
+        end = (
+            f"{self.check_out:%H:%M}" if self.check_out else "open"
+        )
+        return f"{self.employee_id} {self.day} {self.check_in:%H:%M}-{end}"
+
+
+class BreakSession(BaseModel):
+    """One BREAK_IN/BREAK_OUT punch pair inside a work session.
+
+    Breaks only open while a work session is open; the enclosing
+    work session may be split by the break. Same semantics as
+    WorkSession otherwise: frozen time copies, SET_NULL punch FKs,
+    null ``break_out`` while the break is still open.
+    """
+
+    employee = models.ForeignKey(
+        "employees.Employee",
+        on_delete=models.CASCADE,
+        related_name="break_sessions",
+    )
+    attendance = models.ForeignKey(
+        "Attendance",
+        on_delete=models.CASCADE,
+        related_name="break_sessions",
+    )
+    work_session = models.ForeignKey(
+        "WorkSession",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="break_sessions",
+    )
+    # Local-accrual day the break belongs to (day of the BREAK_IN).
+    day = models.DateField()
+    in_punch = models.ForeignKey(
+        "AttendanceActivity",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    out_punch = models.ForeignKey(
+        "AttendanceActivity",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    break_in = models.DateTimeField()
+    break_out = models.DateTimeField(null=True, blank=True)
+    total_time = models.DurationField(blank=True, default=timedelta(0))
+
+    class Meta:
+        constraints = [
+            # A BREAK_IN punch can only ever open one break session.
+            models.UniqueConstraint(
+                fields=("in_punch",),
+                name="uniq_breaksession_in_punch",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["employee", "day"],
+                name="bs_emp_day_idx",
+            ),
+            models.Index(fields=["day"], name="bs_day_idx"),
+        ]
+
+    def __str__(self):
+        end = (
+            f"{self.break_out:%H:%M}" if self.break_out else "open"
+        )
+        return f"{self.employee_id} {self.day} {self.break_in:%H:%M}-{end}"
+
 
 class Attendance(BaseModel):
     """Derived daily summary row for one (employee, day).
@@ -148,6 +280,7 @@ class Attendance(BaseModel):
 
     over_time = models.DurationField(blank=True, default=timedelta(0))
     total_work_time = models.DurationField(blank=True, default=timedelta(0))
+    total_break_time = models.DurationField(blank=True, default=timedelta(0))
     late_time = models.DurationField(blank=True, default=timedelta(0))
     early_leave_time = models.DurationField(blank=True, default=timedelta(0))
 

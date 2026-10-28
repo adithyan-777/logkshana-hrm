@@ -3,14 +3,18 @@ from uuid import uuid4
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import OuterRef, Q, Subquery
+from django.db.models import OuterRef, Q, Subquery, Sum
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django_tenants.utils import get_public_schema_name, schema_context
 
 from attendance.calculation import direction_from_gateway_status_label
 from attendance.integrations.gateway import device_gateway_attendance_fetch
-from attendance.models import Attendance, AttendanceActivity
+from attendance.models import (
+    Attendance,
+    AttendanceActivity,
+    WorkSession,
+)
 from companies.selectors import device_get_by_serial_number
 from employees.models import Employee
 from employees.selectors import employee_get_by_emp_code
@@ -53,6 +57,7 @@ def activity_create(
             employee=activity.employee,
             punch_time=activity.punch_time,
             direction=activity.direction,
+            activity=activity,
         )
     return activity
 
@@ -207,30 +212,88 @@ def attendance_absent_rows_ensure(*, day: date) -> list[Attendance]:
         if was_created:
             created.append(row)
     return created
+# -- Punch -> WorkSession pairing ----------------------------------------
+
+
+def _attendance_row_ensure(*, employee, day) -> Attendance:
+    row, _ = Attendance.objects.get_or_create(
+        employee=employee,
+        day=day,
+        defaults={
+            "status": Attendance.Status.ABSENT,
+            "is_calculated": False,
+        },
+    )
+    return row
+
+
+def _open_work_session_get(*, employee) -> WorkSession | None:
+    """The employee's most recent open (unclosed) work session.
+
+    Only one open session can exist at a time; ordering covers the
+    overnight case, where the open session belongs to an earlier day.
+    """
+    return (
+        WorkSession.objects.filter(
+            employee=employee,
+            check_out__isnull=True,
+        )
+        .order_by("-day", "-check_in")
+        .first()
+    )
+
+
+def _activity_attendance_link(activity, attendance):
+    """Link a consumed punch to the day row it was processed into.
+
+    Powers the punch-log view (``is_attendance_processed``); punch
+    rows ingested without an activity (direct primitive calls, tests)
+    skip the link.
+    """
+    if activity is not None and activity.attendance_id is None:
+        activity.attendance = attendance
+        activity.save(update_fields=["attendance", "updated_at"])
 
 
 @transaction.atomic
 def attendance_update_for_punch(
-    *, employee, punch_time, direction: str
+    *,
+    employee,
+    punch_time,
+    direction: str,
+    activity: AttendanceActivity | None = None,
 ) -> Attendance | None:
-    """Apply one punch to the employee's Attendance rows.
+    """Apply one punch to the employee's attendance via work sessions.
 
-    An IN punch stamps ``check_in`` on the day's row and flips it to
-    PRESENT (first-in wins: a second IN is ignored). An OUT punch
-    closes the most recent open row — even when it belongs to a
-    previous day (overnight shift) — and computes ``total_work_time``
-    as the first-in/last-out span. Punches with an unknown direction
-    (devices sending no status label) leave rows untouched.
+    An IN punch opens a ``WorkSession`` under the punch day's daily
+    row (created on demand) unless one is already open — a second IN
+    while a session is still open is ignored. The daily ``check_in``
+    stamps only the day's first session.
+
+    An OUT punch closes the most recent open session — today first,
+    then an earlier day's (overnight shift) — records ``total_time``
+    on the session, moves the daily ``check_out`` to that session's
+    out time, and refreshes ``total_work_time`` as the sum of the
+    closed sessions. An OUT with no open session and an OUT earlier
+    than the open session's ``check_in`` stay punch-log-only and
+    touch no rows.
+
+    Punches with an unknown direction (devices sending no status
+    label) leave rows untouched.
     """
     if direction == AttendanceActivity.Direction.IN:
+        open_session = _open_work_session_get(employee=employee)
+        if open_session is not None:
+            _activity_attendance_link(activity, open_session.attendance)
+            return open_session.attendance
         day = timezone.localtime(punch_time).date()
-        row, _ = Attendance.objects.get_or_create(
+        row = _attendance_row_ensure(employee=employee, day=day)
+        WorkSession.objects.create(
             employee=employee,
+            attendance=row,
             day=day,
-            defaults={
-                "status": Attendance.Status.ABSENT,
-                "is_calculated": False,
-            },
+            in_punch=activity,
+            check_in=punch_time,
         )
         if row.check_in is None:
             row.check_in = punch_time
@@ -239,42 +302,38 @@ def attendance_update_for_punch(
                 Attendance.Status.INCOMPLETE,
             ):
                 row.status = Attendance.Status.PRESENT
-            row.save(update_fields=["check_in", "status", "updated_at"])
+        row.save(update_fields=["check_in", "status", "updated_at"])
+        _activity_attendance_link(activity, row)
         return row
     if direction == AttendanceActivity.Direction.OUT:
-        open_row = (
-            Attendance.objects.filter(
-                employee=employee,
-                check_in__isnull=False,
-                check_out__isnull=True,
-            )
-            .order_by("-day")
-            .first()
+        session = _open_work_session_get(employee=employee)
+        if session is None:
+            # Stray OUT: record it in the punch log only; daily rows
+            # are not created or stamped for unpaired check-outs.
+            return None
+        if punch_time <= session.check_in:
+            # Stale or replayed punch — never pair backwards in time.
+            return None
+        session.out_punch = activity
+        session.check_out = punch_time
+        session.total_time = punch_time - session.check_in
+        session.save(
+            update_fields=["out_punch", "check_out", "total_time", "updated_at"]
         )
-        if open_row is not None:
-            open_row.check_out = punch_time
-            open_row.total_work_time = punch_time - open_row.check_in
-            open_row.save(
-                update_fields=["check_out", "total_work_time", "updated_at"]
+        row = session.attendance
+        row.check_out = session.check_out
+        row.total_work_time = (
+            WorkSession.objects.filter(
+                attendance=row,
+                check_out__isnull=False,
             )
-            return open_row
-        # Check-out with no open row: record the boundary on today's
-        # row, but there is no check-in to compute work time from.
-        day = timezone.localtime(punch_time).date()
-        row, _ = Attendance.objects.get_or_create(
-            employee=employee,
-            day=day,
-            defaults={
-                "status": Attendance.Status.INCOMPLETE,
-                "is_calculated": False,
-            },
+            .aggregate(total=Sum("total_time"))["total"]
+            or timedelta(0)
         )
-        if row.check_out is None:
-            row.check_out = punch_time
-            row.save(update_fields=["check_out", "updated_at"])
+        row.save(update_fields=["check_out", "total_work_time", "updated_at"])
+        _activity_attendance_link(activity, row)
         return row
     return None
-
 
 def _employee_get_or_create_for_device(*, emp_code: str, branch=None) -> Employee:
     employee = employee_get_by_emp_code(emp_code=emp_code)

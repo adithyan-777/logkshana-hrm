@@ -1,7 +1,12 @@
 from django.contrib import admin
 from django.core.exceptions import PermissionDenied
 
-from attendance.models import Attendance, AttendanceActivity
+from attendance.models import (
+    Attendance,
+    AttendanceActivity,
+    BreakSession,
+    WorkSession,
+)
 
 
 @admin.register(AttendanceActivity)
@@ -57,3 +62,62 @@ class AttendanceAdmin(admin.ModelAdmin):
                 "Calculated attendance rows cannot be deleted in bulk."
             )
         super().delete_queryset(request, queryset)
+
+
+@admin.register(WorkSession)
+class WorkSessionAdmin(admin.ModelAdmin):
+    list_display = (
+        "employee",
+        "day",
+        "is_open",
+        "check_in",
+        "check_out",
+        "total_time",
+    )
+    search_fields = (
+        "employee__emp_code",
+        "employee__first_name",
+        "employee__last_name",
+    )
+    autocomplete_fields = ("employee", "in_punch", "out_punch")
+    list_select_related = ("employee", "in_punch", "out_punch", "attendance")
+    date_hierarchy = "day"
+
+    @admin.display(boolean=True, description="Open")
+    def is_open(self, obj) -> bool:
+        return obj.check_out is None
+
+
+@admin.register(BreakSession)
+class BreakSessionAdmin(admin.ModelAdmin):
+    list_display = (
+        "employee",
+        "day",
+        "is_open",
+        "break_in",
+        "break_out",
+        "total_time",
+        "work_session",
+    )
+    search_fields = (
+        "employee__emp_code",
+        "employee__first_name",
+        "employee__last_name",
+    )
+    autocomplete_fields = (
+        "employee",
+        "work_session",
+        "in_punch",
+        "out_punch",
+    )
+    list_select_related = (
+        "employee",
+        "work_session",
+        "in_punch",
+        "out_punch",
+    )
+    date_hierarchy = "day"
+
+    @admin.display(boolean=True, description="Open")
+    def is_open(self, obj) -> bool:
+        return obj.break_out is None

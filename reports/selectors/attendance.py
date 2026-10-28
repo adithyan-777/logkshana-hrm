@@ -75,7 +75,7 @@ def individual_attendance_list(
         )
         .select_related("shift", "employee__department")
         .prefetch_related("activities")
-        .order_by("employee__first_name", "employee__last_name", "day")
+        .order_by("-id")
     )
 
 

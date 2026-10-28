@@ -31,6 +31,28 @@ class AttendanceActivityAdmin(admin.ModelAdmin):
     date_hierarchy = "punch_time"
 
 
+class WorkSessionInline(admin.StackedInline):
+    model = WorkSession
+    fk_name = "attendance"
+    extra = 0
+    fields = ("day", "check_in", "check_out", "total_time")
+    show_change_link = True
+
+
+class BreakSessionInline(admin.TabularInline):
+    model = BreakSession
+    fk_name = "attendance"
+    extra = 0
+    fields = (
+        "day",
+        "work_session",
+        "break_in",
+        "break_out",
+        "total_time",
+    )
+    show_change_link = True
+
+
 @admin.register(Attendance)
 class AttendanceAdmin(admin.ModelAdmin):
     list_display = (
@@ -50,6 +72,7 @@ class AttendanceAdmin(admin.ModelAdmin):
     autocomplete_fields = ("employee", "shift")
     list_select_related = ("employee", "shift")
     date_hierarchy = "day"
+    inlines = [WorkSessionInline, BreakSessionInline]
 
     def has_delete_permission(self, request, obj=None):
         if obj is not None and obj.is_calculated:

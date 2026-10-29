@@ -20,7 +20,7 @@ def format_minutes(minutes: int | None) -> str:
 def format_datetime(value) -> str:
     if value is None:
         return ""
-    return value.strftime("%Y-%m-%d %H:%M")
+    return timezone.localtime(value).strftime("%Y-%m-%d %H:%M")
 
 
 def pagination_query_string(request: HttpRequest, page: int) -> str:

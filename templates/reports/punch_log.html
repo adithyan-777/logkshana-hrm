@@ -29,7 +29,6 @@
             <th>Department</th>
             <th>Direction</th>
             <th>Source</th>
-            <th>External ID</th>
         </tr>
     </thead>
     <tbody>
@@ -40,7 +39,6 @@
             <td>{{ transaction.employee.department|default:"—" }}</td>
             <td>{{ transaction.get_direction_display }}</td>
             <td>{{ transaction.get_method_display }}</td>
-            <td>{{ transaction.external_id }}</td>
         </tr>
         {% endfor %}
     </tbody>

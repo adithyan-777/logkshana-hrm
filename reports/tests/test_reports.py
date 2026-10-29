@@ -465,8 +465,8 @@ class ReportSelfServiceTests(BaseTenantTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "only your own punches")
-        self.assertContains(response, own_punch.external_id)
-        self.assertNotContains(response, other_punch.external_id)
+        rendered = [t.pk for t in response.context["page_obj"].object_list]
+        self.assertEqual(rendered, [own_punch.pk])
 
     def test_punch_log_ignores_employee_spoof_param(self):
         employee, client = self._employee_client(emp_code="RS-002")
@@ -490,8 +490,8 @@ class ReportSelfServiceTests(BaseTenantTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, own_punch.external_id)
-        self.assertNotContains(response, other_punch.external_id)
+        rendered = [t.pk for t in response.context["page_obj"].object_list]
+        self.assertEqual(rendered, [own_punch.pk])
 
     def test_individual_auto_selects_own_employee(self):
         employee, client = self._employee_client(emp_code="RS-003")

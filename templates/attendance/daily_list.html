@@ -39,8 +39,8 @@
             <th>Employee</th>
             <th>Status</th>
             <th>Worked</th>
-            <th>Late</th>
-            <th>OT</th>
+            <th>First In</th>
+            <th>Last Out</th>
             <th></th>
         </tr>
     </thead>
@@ -50,9 +50,18 @@
             <td>{{ record.day }}</td>
             <td>{% include "partials/emp_cell.html" with employee=record.employee %}</td>
             <td><span class="badge status-{{ record.status }}">{{ record.get_status_display }}</span></td>
-            <td>{{ record.worked_hours }}</td>
-            <td>{{ record.late_minutes }}m</td>
-            <td>{{ record.overtime_minutes }}m</td>
+            <td>
+                {% if record.worked_minutes == 0 and record.has_check_in and not record.has_check_out %}
+                <span class="badge status-pending" title="Worked time is calculated once the check-out punch is recorded">
+                    <i class="bx bx-time-five admin-icon admin-icon--18" aria-hidden="true"></i>
+                    Calculated after check-out
+                </span>
+                {% else %}
+                {{ record.worked_hours }}
+                {% endif %}
+            </td>
+            <td>{{ record.first_in|time:"H:i"|default:"—" }}</td>
+            <td>{{ record.last_out|time:"H:i"|default:"—" }}</td>
             <td class="table-actions">
                 {% if can_edit %}
                 {% url 'daily_edit' record.pk as daily_edit_url %}

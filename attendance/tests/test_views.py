@@ -49,7 +49,6 @@ class AttendanceActivityViewTests(BaseTenantTestCase):
         )
 
         self.assertContains(response, "Visible")
-        self.assertContains(response, "SEARCH-VIS")
 
     def test_list_pagination(self):
         for index in range(26):

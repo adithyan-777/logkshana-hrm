@@ -156,7 +156,6 @@ def punch_log_report_data(activities) -> ReportData:
             "Department",
             "Direction",
             "Source",
-            "External ID",
         ],
         rows=[
             [
@@ -167,7 +166,6 @@ def punch_log_report_data(activities) -> ReportData:
                 else "",
                 activity.get_direction_display(),
                 activity.get_method_display(),
-                activity.external_id,
             ]
             for activity in activities
         ],

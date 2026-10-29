@@ -304,6 +304,19 @@ GATEWAY_SECRET_KEY = os.getenv("GATEWAY_SECRET_KEY")
 
 # Sentry settings (DSN comes from .env; empty/unset = Sentry disabled, e.g. local dev/tests)
 SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+
+
+def _is_dramatiq_consumer_connection_error(event, hint):
+    """True only for dramatiq's self-healing "Consumer encountered a
+    connection error" log (no exception is attached to it)."""
+    logger = str(event.get("logger", ""))
+    message = str(event.get("logentry", {}).get("message", ""))
+    return (
+        logger.startswith("dramatiq.worker.ConsumerThread")
+        and message.startswith("Consumer encountered a connection error")
+    )
+
+
 if SENTRY_DSN:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
@@ -321,6 +334,13 @@ if SENTRY_DSN:
         # Set profile_lifecycle to "trace" to automatically
         # run the profiler on when there is an active transaction.
         profile_lifecycle="trace",
+        # dramatiq's ConsumerThread logs CRITICAL (→ Sentry "fatal") whenever it
+        # briefly loses the broker — e.g. DNS blips (EAI_AGAIN) while the redis
+        # container is being recreated during a `docker compose` restart.
+        # dramatiq retries the connection on its own, so that specific log line
+        # is expected noise during stack restarts, not a page-worthy incident.
+        # Real outages still surface via web/healthcheck, actor failures, etc.
+        ignore_errors=[_is_dramatiq_consumer_connection_error],
     )
 
 # Dramatiq broker bootstrap — must run before any actor module loads.

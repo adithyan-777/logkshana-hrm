@@ -130,7 +130,10 @@ services:
   crontab:
     build: .
     entrypoint: ["/app/entrypoint.sh"]
-    command: ["python", "manage.py", "crontab"]
+    # --no-heartbeat: dramatiq-crontab's built-in heartbeat actor is imported
+    # only in the scheduler process, so workers never see its actor definition
+    # and DLQ one "undefined actor 'heartbeat'" message per minute forever.
+    command: ["python", "manage.py", "crontab", "--no-heartbeat"]
     env_file:
       - .env
     environment:

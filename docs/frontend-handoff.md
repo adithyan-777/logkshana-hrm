@@ -1309,20 +1309,18 @@ Column headers match template `<th>` text. **DataTables ID** and per-column sort
 | **Table class** | `.data-table.datatable` |
 | **Default sort** | `[[0, 'desc']]` (Date) |
 | **Note** | Init DT only after employee selected and table rendered |
-| **Extensions** | FixedHeader recommended (10 columns) |
+| **Extensions** | FixedHeader recommended (8 columns) |
 
 | # | Column header | Cell content | Sort type | Searchable | DT notes |
 |---|---------------|--------------|-----------|------------|----------|
 | 1 | Date | Date | date | Yes | |
 | 2 | Status | Badge | html | Yes | `data-order` = status key |
-| 3 | Expected In | Time or `—` | string | Yes | |
-| 4 | Expected Out | Time or `—` | string | Yes | |
-| 5 | First In | Time or `—` | string | Yes | |
-| 6 | Last Out | Time or `—` | string | Yes | |
-| 7 | Worked | Minutes + `m` | num | Yes | `data-order` = integer |
-| 8 | Late | Minutes + `m` | num | Yes | |
-| 9 | Early Leave | Minutes + `m` | num | Yes | |
-| 10 | OT | Minutes + `m` | num | Yes | |
+| 3 | First In | Time or `—` | string | Yes | |
+| 4 | Last Out | Time or `—` | string | Yes | |
+| 5 | Worked | Minutes + `m` | num | Yes | `data-order` = integer |
+| 6 | Late | Minutes + `m` | num | Yes | |
+| 7 | Early Leave | Minutes + `m` | num | Yes | |
+| 8 | OT | Minutes + `m` | num | Yes | |
 
 ---
 

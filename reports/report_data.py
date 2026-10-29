@@ -1,7 +1,6 @@
 from reports.columns import ReportColumn
 from reports.exports import ReportData
 from reports.utils import format_datetime, format_minutes
-from schedule.calculation import expected_datetimes
 
 
 def duration_minutes(value) -> int | None:
@@ -52,12 +51,6 @@ def attendance_summary_report_data(rows, columns: list[ReportColumn]) -> ReportD
 def individual_attendance_row_dicts(records) -> list[dict]:
     dicts = []
     for record in records:
-        if record.shift is not None:
-            expected_in, expected_out = expected_datetimes(
-                timetable=record.shift, day=record.day
-            )
-        else:
-            expected_in, expected_out = None, None
         dicts.append(
             {
                 "employee": f"{record.employee.first_name} {record.employee.last_name}".strip(),
@@ -69,8 +62,6 @@ def individual_attendance_row_dicts(records) -> list[dict]:
                 "date": record.day,
                 "status": record.get_status_display(),
                 "status_code": record.status,
-                "expected_in": format_datetime(expected_in),
-                "expected_out": format_datetime(expected_out),
                 "first_in": format_datetime(record.first_in),
                 "last_out": format_datetime(record.last_out),
                 "worked": format_minutes(duration_minutes(record.total_work_time)),

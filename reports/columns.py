@@ -32,8 +32,6 @@ REPORT_COLUMNS: dict[str, list[ReportColumn]] = {
         ReportColumn("department", "Department"),
         ReportColumn("date", "Date"),
         ReportColumn("status", "Status"),
-        ReportColumn("expected_in", "Expected In"),
-        ReportColumn("expected_out", "Expected Out"),
         ReportColumn("first_in", "First In"),
         ReportColumn("last_out", "Last Out"),
         ReportColumn("worked", "Worked"),

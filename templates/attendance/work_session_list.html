@@ -1,0 +1,70 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block title %}Work Sessions{% endblock %}
+
+{% block page_content %}
+{% include "partials/tabs_attendance.html#tabs_attendance" %}
+
+<div class="toolbar">
+  <label class="sr-only" for="work-session-search">Search</label>
+  <input
+    id="work-session-search"
+    class="search-input toolbar__search"
+    type="search"
+    name="q"
+    value="{{ search }}"
+    placeholder="Employee..."
+    hx-get="{% url 'work_session_list' %}"
+    hx-target="#work-session-list"
+    hx-trigger="keyup changed delay:300ms, search"
+  >
+</div>
+
+<div class="card card--table">
+  <div class="card__body">
+    <div
+      id="work-session-list"
+      class="data-table-wrap"
+      hx-get="{% url 'work_session_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+      hx-target="this"
+      hx-swap="innerHTML"
+    >
+      {% partialdef work_session_table inline %}
+{% if page_obj.paginator.count %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Employee</th>
+            <th>Check In</th>
+            <th>Check Out</th>
+            <th>Total Time</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for session in page_obj %}
+        <tr>
+            <td>{{ session.day }}</td>
+            <td>{% include "partials/emp_cell.html" with employee=session.employee %}</td>
+            <td>{{ session.check_in }}</td>
+            <td>{% if session.check_out %}{{ session.check_out }}{% else %}<span class="badge status-missing_punch">Check out missing</span>{% endif %}</td>
+            <td>{% if session.check_out %}{{ session.total_time }}{% else %}&mdash;{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/pagination.html#pagination" %}
+{% else %}
+<p class="empty-state">
+    {% if search %}
+    No work sessions match "{{ search }}".
+    {% else %}
+    No work sessions recorded yet.
+    {% endif %}
+</p>
+{% endif %}
+{% endpartialdef work_session_table %}
+    </div>
+  </div>
+</div>
+{% endblock %}

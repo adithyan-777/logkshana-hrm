@@ -30,5 +30,6 @@ urlpatterns = [
         name="daily_delete",
     ),
     path("me/", views.my_attendance_view, name="my_attendance"),
+    path("work-sessions/", views.work_session_list_view, name="work_session_list"),
     path("gateway/", views.gateway_view, name="gateway"),
 ]

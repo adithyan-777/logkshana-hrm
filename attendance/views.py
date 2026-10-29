@@ -16,7 +16,11 @@ from attendance.calculation import direction_from_gateway_status_label
 from attendance.forms import AttendanceActivityForm, AttendanceForm
 from attendance.integrations.gateway import gateway_request_is_authorized
 from attendance.models import Attendance, AttendanceActivity
-from attendance.selectors import attendance_activity_list, attendance_list
+from attendance.selectors import (
+    attendance_activity_list,
+    attendance_list,
+    work_session_list,
+)
 from attendance.services import (
     activity_create,
     activity_delete,
@@ -147,6 +151,27 @@ def transaction_list_view(request: HttpRequest) -> HttpResponse:
         )
 
     return render(request, "attendance/transaction_list.html", context)
+
+
+@login_required
+@require_permission(PermissionCodename.ATTENDANCE_VIEW)
+@require_http_methods(["GET"])
+def work_session_list_view(request: HttpRequest) -> HttpResponse:
+    search = request.GET.get("q", "").strip()
+    context = list_pagination_context(
+        request,
+        work_session_list(search=search),
+        search=search,
+        base_url=reverse("work_session_list"),
+        hx_target="#work-session-list",
+    )
+
+    if is_htmx_partial(request):
+        return render(
+            request, "attendance/work_session_list.html#work_session_table", context
+        )
+
+    return render(request, "attendance/work_session_list.html", context)
 
 
 @login_required

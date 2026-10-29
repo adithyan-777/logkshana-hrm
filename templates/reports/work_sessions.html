@@ -1,0 +1,56 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block title %}Work Sessions Report{% endblock %}
+
+{% block page_content %}
+{% include "partials/tabs_reports.html#tabs_reports" %}
+
+{% if self_service %}
+{% if own_employee %}
+<p class="notice">Showing only your own work sessions ({{ own_employee.emp_code }}).</p>
+{% else %}
+<p class="notice">No employee profile is linked to this account. Ask an admin to link your login to your employee record.</p>
+{% endif %}
+{% endif %}
+<div class="report-toolbar">
+  {% include "reports/partials/filter_form.html#filter_form" %}
+</div>
+
+<div class="card card--table">
+  <div class="card__body">
+    <div class="data-table-wrap">
+      {% partialdef work_sessions_table inline %}
+{% if page_obj.paginator.count %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Employee</th>
+            <th>Department</th>
+            <th>Check In</th>
+            <th>Check Out</th>
+            <th>Total Time</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for session in page_obj %}
+        <tr>
+            <td>{{ session.day }}</td>
+            <td>{{ session.employee.full_name }}</td>
+            <td>{{ session.employee.department|default:"—" }}</td>
+            <td>{{ session.check_in }}</td>
+            <td>{% if session.check_out %}{{ session.check_out }}{% else %}<span class="badge status-missing_punch">Check out missing</span>{% endif %}</td>
+            <td>{% if session.check_out %}{{ session.total_time }}{% else %}&mdash;{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/pagination.html#pagination" %}
+{% else %}
+<p class="empty-state">No work sessions for the selected filters.</p>
+{% endif %}
+{% endpartialdef work_sessions_table %}
+    </div>
+  </div>
+</div>
+{% endblock %}

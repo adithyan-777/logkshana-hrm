@@ -224,6 +224,11 @@ BREADCRUMBS: dict[str, list[tuple[str, str | None]]] = {
         ("Reports", "report_hub"),
         ("Punch log", None),
     ],
+    "report_work_sessions": [
+        ("Dashboard", "dashboard"),
+        ("Reports", "report_hub"),
+        ("Work sessions", None),
+    ],
     "report_overtime": [
         ("Dashboard", "dashboard"),
         ("Reports", "report_hub"),
@@ -307,6 +312,7 @@ PAGE_HEADINGS: dict[str, str] = {
     "report_department_attendance": "Reports",
     "report_exceptions": "Reports",
     "report_punch_log": "Reports",
+    "report_work_sessions": "Reports",
     "report_overtime": "Reports",
     "report_leave": "Reports",
     "settings": "Settings",
@@ -357,6 +363,7 @@ PAGE_SUBTITLES: dict[str, str] = {
     "report_department_attendance": "Filtered analytics with CSV, Excel, and PDF export.",
     "report_exceptions": "Filtered analytics with CSV, Excel, and PDF export.",
     "report_punch_log": "Filtered analytics with CSV, Excel, and PDF export.",
+    "report_work_sessions": "Check-in, check-out, and total time with CSV, Excel, and PDF export.",
     "report_overtime": "Filtered analytics with CSV, Excel, and PDF export.",
     "report_leave": "Filtered analytics with CSV, Excel, and PDF export.",
     "settings": "Company settings.",
@@ -568,6 +575,13 @@ COMMAND_PALETTE: list[dict[str, str]] = [
         "icon": "bx-error-circle",
     },
     {
+        "title": "Work sessions",
+        "subtitle": "Check-in to check-out pairs",
+        "url_name": "report_work_sessions",
+        "group": "Reports",
+        "icon": "bx-time-five",
+    },
+    {
         "title": "Punch log",
         "subtitle": "Raw punch stream",
         "url_name": "report_punch_log",
@@ -726,6 +740,10 @@ def command_palette_for(request: HttpRequest) -> list[dict[str, str]]:
         "report_department_attendance": PermissionCodename.REPORTS_VIEW,
         "report_exceptions": PermissionCodename.REPORTS_VIEW,
         "report_punch_log": (
+            PermissionCodename.REPORTS_VIEW,
+            PermissionCodename.ATTENDANCE_OWN_VIEW,
+        ),
+        "report_work_sessions": (
             PermissionCodename.REPORTS_VIEW,
             PermissionCodename.ATTENDANCE_OWN_VIEW,
         ),

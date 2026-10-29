@@ -18,6 +18,7 @@ urlpatterns = [
         name="report_department_attendance",
     ),
     path("exceptions/", views.exception_report_view, name="report_exceptions"),
+    path("work-sessions/", views.work_sessions_report_view, name="report_work_sessions"),
     path("punch-log/", views.punch_log_view, name="report_punch_log"),
     path("overtime/", views.overtime_report_view, name="report_overtime"),
     path("leave/", views.leave_report_view, name="report_leave"),

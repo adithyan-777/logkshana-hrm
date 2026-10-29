@@ -9,6 +9,12 @@
   <a href="{% url 'report_individual_attendance' %}"
       class="tab {% if request.resolver_match.url_name == 'report_individual_attendance' %}is-active{% endif %}"
       role="tab">Individual</a>
+  <a href="{% url 'report_work_sessions' %}"
+      class="tab {% if request.resolver_match.url_name == 'report_work_sessions' %}is-active{% endif %}"
+      role="tab">Work sessions</a>
+  <a href="{% url 'report_punch_log' %}"
+      class="tab {% if request.resolver_match.url_name == 'report_punch_log' %}is-active{% endif %}"
+      role="tab">Punch log</a>
   {% endif %}
   {% if nav_can.reports %}
   <a href="{% url 'report_department_attendance' %}"
@@ -17,11 +23,6 @@
   <a href="{% url 'report_exceptions' %}"
       class="tab {% if request.resolver_match.url_name == 'report_exceptions' %}is-active{% endif %}"
       role="tab">Exceptions</a>
-  {% endif %}
-  {% if nav_can.reports_self %}
-  <a href="{% url 'report_punch_log' %}"
-      class="tab {% if request.resolver_match.url_name == 'report_punch_log' %}is-active{% endif %}"
-      role="tab">Punch log</a>
   {% endif %}
   {% if nav_can.reports %}
   <a href="{% url 'report_overtime' %}"

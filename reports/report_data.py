@@ -174,6 +174,37 @@ def punch_log_report_data(activities) -> ReportData:
     )
 
 
+def work_sessions_report_data(sessions) -> ReportData:
+    return ReportData(
+        title="Work Sessions",
+        headers=[
+            "Date",
+            "Employee",
+            "Department",
+            "Check In",
+            "Check Out",
+            "Total Time",
+        ],
+        rows=[
+            [
+                session.day,
+                session.employee.full_name,
+                session.employee.department.name
+                if session.employee.department
+                else "",
+                format_datetime(session.check_in),
+                format_datetime(session.check_out)
+                if session.check_out
+                else "Check out missing",
+                format_minutes(duration_minutes(session.total_time))
+                if session.total_time
+                else "",
+            ]
+            for session in sessions
+        ],
+    )
+
+
 def overtime_report_data(records) -> ReportData:
     return ReportData(
         title="Overtime Summary",

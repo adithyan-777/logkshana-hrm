@@ -6,7 +6,7 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
-from attendance.models import AttendanceActivity
+from attendance.models import AttendanceActivity, WorkSession
 from common.http import is_htmx_partial
 from common.pagination import paginate_queryset
 from employees.decorators import require_permission
@@ -41,6 +41,7 @@ from reports.report_data import (
     overtime_report_data,
     pending_leave_report_data,
     punch_log_report_data,
+    work_sessions_report_data,
 )
 from reports.selectors.attendance import (
     attendance_summary_list,
@@ -55,6 +56,7 @@ from reports.selectors.leave import (
 )
 from reports.selectors.overtime import overtime_report_list
 from reports.selectors.punch_log import punch_log_list
+from reports.selectors.work_sessions import work_session_report_list
 from reports.services import get_preferred_columns, save_preferred_columns
 from reports.utils import current_month_range, report_pagination_context
 
@@ -361,6 +363,68 @@ def exception_report_view(request: HttpRequest) -> HttpResponse:
         return render(request, "reports/exceptions.html#exceptions_table", context)
 
     return render(request, "reports/exceptions.html", context)
+
+
+@login_required
+@require_http_methods(["GET"])
+def work_sessions_report_view(request: HttpRequest) -> HttpResponse:
+    can_view_all, own_employee = _self_service_scope(request)
+    form = DateRangeFilterForm(request.GET or None)
+    date_from, date_to = current_month_range()
+    department_id = None
+    employee_id = None
+
+    if not can_view_all:
+        _strip_company_filters(form)
+
+    if form.is_valid():
+        date_from, date_to = form.cleaned_date_range()
+        if can_view_all:
+            department_id = (
+                form.cleaned_data["department"].pk
+                if form.cleaned_data["department"]
+                else None
+            )
+            employee_id = (
+                form.cleaned_data["employee"].pk
+                if form.cleaned_data["employee"]
+                else None
+            )
+        elif own_employee is not None:
+            employee_id = own_employee.pk
+
+    if can_view_all or employee_id is not None:
+        queryset = work_session_report_list(
+            date_from=date_from,
+            date_to=date_to,
+            department_id=department_id,
+            employee_id=employee_id,
+        )
+    else:
+        queryset = WorkSession.objects.none()
+
+    export_response = _maybe_export(
+        request,
+        data=work_sessions_report_data(list(queryset)),
+        filename="work-sessions",
+    )
+    if export_response:
+        return export_response
+
+    page_obj = paginate_queryset(request, queryset)
+    context = {
+        **_filter_context(request, form, report_url_name="report_work_sessions"),
+        **report_pagination_context(request, page_obj),
+        "date_from": date_from,
+        "date_to": date_to,
+        "self_service": not can_view_all,
+        "own_employee": own_employee,
+    }
+
+    if is_htmx_partial(request):
+        return render(request, "reports/work_sessions.html#work_sessions_table", context)
+
+    return render(request, "reports/work_sessions.html", context)
 
 
 @login_required

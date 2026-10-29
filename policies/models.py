@@ -25,3 +25,8 @@ class AttendancePolicy(BaseModel):
         choices=AttendancePerDay.choices,
         default=AttendancePerDay.SINGLE,
     )
+
+
+class UnscheduledConfig(BaseModel):
+    opening_time = models.TimeField(blank=True, null=True)
+    closing_time = models.TimeField(blank=True, null=True)

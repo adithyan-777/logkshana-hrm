@@ -28,12 +28,19 @@
 #   ./rds-dump-data.sh --copy-to me@10.0.0.7:/tmp/opencode
 #   ./rds-dump-data.sh --ssh ubuntu@3.11.2.1 --remote-dir /srv/pattika   (laptop)
 #   ./rds-dump-data.sh --ssh ec2-user@3.11.2.1 --ssh-key ~/.ssh/device.pem --remote-dir logkshana-hrm
+#   ./rds-dump-data.sh --ssh ec2-user@3.11.2.1 --ssh-key ~/.ssh/device.pem --remote-dir logkshana-hrm --restore-local
 #
 # Flags (must come before the positional backup-dir):
 #   --ssh user@host       SSH target of the server (SSH mode; or RDS_PULL_SSH env)
 #   --ssh-key /path.pem   private key for the SSH connection (SSH mode)
 #   --remote-dir /path    server project dir holding the server .env
 #                         (SSH mode; or RDS_PULL_REMOTE_DIR env)
+#   --restore-local [name]
+#                         SSH mode: after the dump is received and verified,
+#                         also work locally — drop/recreate database `name`
+#                         (default pattika_rds), restore the dump into it,
+#                         and rewrite DB_NAME= in the local .env to `name`.
+#                         .env is backed up to .env.bak first.
 #   --copy-to [user@]host[:dest]
 #                         server mode only: scp the verified dump to the
 #                         laptop. dest defaults to /tmp/opencode/ when
@@ -51,6 +58,7 @@ COPY_TO=""
 SSH_TARGET=""
 REMOTE_DIR=""
 SSH_KEY=""
+RESTORE_LOCAL=""
 
 usage() {
     sed -n '2,/^set -euo/p' "$0" | sed 's/^# \{0,1\}//'
@@ -78,6 +86,14 @@ while [[ $# -gt 0 ]]; do
         --remote-dir)
             REMOTE_DIR="${2:?--remote-dir needs /path/to/server/project}"
             shift 2
+            ;;
+        --restore-local)
+            RESTORE_LOCAL="pattika_rds"
+            if [[ $# -ge 2 && "$2" != --* ]]; then
+                RESTORE_LOCAL="$2"
+                shift
+            fi
+            shift
             ;;
         --*) echo "Unknown flag: $1 (see --help)" >&2; exit 2 ;;
         *) break ;;
@@ -253,18 +269,95 @@ REMOTE_EOF
 
     sha256sum "$DUMP_FILE" | tee -a "$BACKUP_DIR/SHA256SUMS" >&2
 
+    # ------------------------------------------------------------------
+    # Optional local restore — populate a local DB from the fresh dump.
+    # Local .env DB_* identify the LOCAL Postgres here.
+    # ------------------------------------------------------------------
+    ENV_UPDATED=""
+    if [[ -n "$RESTORE_LOCAL" ]]; then
+        [[ "$RESTORE_LOCAL" =~ ^[a-z_][a-z0-9_]*$ ]] \
+            || die "Invalid --restore-local database name: $RESTORE_LOCAL"
+        export PGPASSWORD="$DB_PASSWORD"
+        LOCAL_PSQL="psql -h $DB_HOST -p $DB_PORT -U $DB_USER -w -v ON_ERROR_STOP=1 -tA"
+        log "Restoring locally: dump -> $RESTORE_LOCAL on $DB_HOST:$DB_PORT"
+
+        # The dump may be newer than the local client, in which case
+        # pg_restore will refuse it: fall back to a container of the dump's
+        # major version, same throwaway pattern as the remote half.
+        DUMP_FROM_MAJOR=$(pg_restore --list "$DUMP_FILE" 2>/dev/null \
+            | awk '/Dumped from database version/ {for (i = 1; i <= NF; i++) if ($i ~ /^[0-9]+(\.[0-9]+)?/) {split($i, v, "."); print v[1]; exit}}')
+        RESTORE_MAJOR=$(pg_restore --version | grep -oE '[0-9]+' | head -n 1)
+        log "Client pg_restore: $RESTORE_MAJOR, dump from server major: ${DUMP_FROM_MAJOR:-unknown}"
+
+        $LOCAL_PSQL -d postgres -c "DROP DATABASE IF EXISTS $RESTORE_LOCAL;"
+        $LOCAL_PSQL -d postgres -c "CREATE DATABASE $RESTORE_LOCAL OWNER \"$DB_USER\";"
+
+        RESTORED=0
+        if [[ -n "$DUMP_FROM_MAJOR" && "$RESTORE_MAJOR" -lt "$DUMP_FROM_MAJOR" ]]; then
+            if command -v docker >/dev/null 2>&1; then
+                PG_IMAGE="postgres:${DUMP_FROM_MAJOR}-alpine"
+                log "Local pg_restore too old; pulling $PG_IMAGE for version-matched restore"
+                docker pull -q "$PG_IMAGE" >&2 || die "Could not pull $PG_IMAGE"
+                docker run --rm --add-host=host.docker.internal:host-gateway \
+                    -e "PGPASSWORD=$DB_PASSWORD" \
+                    -v "$BACKUP_DIR:/backups" "$PG_IMAGE" \
+                    pg_restore -h host.docker.internal -p "$DB_PORT" -U "$DB_USER" -w \
+                    --no-owner --no-privileges -j 4 -d "$RESTORE_LOCAL" \
+                    -F c "/backups/$(basename "$DUMP_FILE")" \
+                    || { $LOCAL_PSQL -d postgres -c "DROP DATABASE IF EXISTS $RESTORE_LOCAL;" >/dev/null 2>&1 || true;
+                         die "Local container restore into $RESTORE_LOCAL failed"; }
+                RESTORED=1
+            else
+                $LOCAL_PSQL -d postgres -c "DROP DATABASE IF EXISTS $RESTORE_LOCAL;" >/dev/null 2>&1 || true
+                die "Local pg_restore $RESTORE_MAJOR is too old for server $DUMP_FROM_MAJOR and no docker available"
+            fi
+        else
+            pg_restore -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -w \
+                --no-owner --no-privileges -j 4 -d "$RESTORE_LOCAL" "$DUMP_FILE" \
+                || { $LOCAL_PSQL -d postgres -c "DROP DATABASE IF EXISTS $RESTORE_LOCAL;" >/dev/null 2>&1 || true;
+                     die "Local restore into $RESTORE_LOCAL failed"; }
+            RESTORED=1
+        fi
+
+        RESTORED_COUNT=$($LOCAL_PSQL -d "$RESTORE_LOCAL" -c \
+            "SELECT count(*) FROM pg_tables WHERE schemaname NOT LIKE 'pg\_%' AND schemaname <> 'information_schema';")
+        [[ "$RESTORED_COUNT" -gt 0 ]] || die "Recovered nothing: restored DB $RESTORE_LOCAL is empty"
+        log "Local restore passed ($RESTORED_COUNT tables in $RESTORE_LOCAL)"
+
+        if grep -qE '^DB_NAME=' "$ENV_FILE"; then
+            cp -f "$ENV_FILE" "$ENV_FILE.bak"
+            sed -E -i "s/^DB_NAME=.*/DB_NAME=${RESTORE_LOCAL}/" "$ENV_FILE"
+        else
+            printf 'DB_NAME=%s\n' "$RESTORE_LOCAL" >> "$ENV_FILE"
+        fi
+        ENV_UPDATED="$ENV_FILE"
+        log "Updated DB_NAME=$RESTORE_LOCAL in $ENV_FILE (backup at $ENV_FILE.bak)"
+    fi
+
     cat >&2 <<EOF
 ================================================================
 DONE. Summary:
   dump:  $DUMP_FILE
   log:   $LOG_FILE
+  sha:   computed (see SHA256SUMS)
 
 To use it locally:
+EOF
+    if [[ -n "$ENV_UPDATED" ]]; then
+        cat >&2 <<EOF
+  restored: $ENV_UPDATED now points at database $RESTORE_LOCAL
+  healthcheck:
+    python manage.py check && python manage.py shell -c "import companies; from companies.models import Company; print(Company.objects.count(), 'companies')"
+  switch back to your dev DB: copy across $ENV_FILE.bak
+EOF
+    else
+        cat >&2 <<EOF
   createdb -h localhost -p 5432 -U $DB_USER pattika_rds
   pg_restore -h localhost -p 5432 -U $DB_USER --no-owner --no-privileges -j 4 -d pattika_rds "$DUMP_FILE"
   # then set DB_NAME=pattika_rds in .env
-================================================================
 EOF
+    fi
+    echo "================================================================" >&2
     exit 0
 fi
 

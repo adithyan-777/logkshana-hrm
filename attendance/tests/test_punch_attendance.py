@@ -1,6 +1,6 @@
 """Tests for punch-driven Attendance row updates."""
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 
 from django.utils import timezone
 
@@ -9,9 +9,10 @@ from attendance.services import activity_create, attendance_update_for_punch
 from common.tests.base import BaseTenantTestCase
 from common.tests.factories import device_factory, employee_factory
 from companies.services import attendance_log_create
-from policies.models import AttendancePolicy
+from policies.models import AttendancePolicy, UnscheduledConfig
 
 DAY = date(2026, 11, 2)
+NEXT_DAY = date(2026, 11, 3)
 
 
 def _dt(day, hour, minute=0):
@@ -64,7 +65,7 @@ class PunchInTests(BaseTenantTestCase):
         session = WorkSession.objects.get(attendance=row)
         self.assertEqual(session.check_in, _dt(DAY, 8, 5))
 
-    def test_double_in_is_ignored_no_new_session(self):
+    def test_double_in_opens_new_session(self):
         employee = employee_factory(first_name="Twice", emp_code="PU003")
         attendance_update_for_punch(
             employee=employee, punch_time=_dt(DAY, 8), direction="in"
@@ -74,11 +75,18 @@ class PunchInTests(BaseTenantTestCase):
             employee=employee, punch_time=_dt(DAY, 8, 30), direction="in"
         )
 
-        # First-in wins: no second session, boundaries unchanged.
+        # Every IN opens its own session; the earlier one stays open
+        # (its OUT never came) and the day's first check_in is kept.
         self.assertEqual(row.check_in, _dt(DAY, 8))
-        self.assertEqual(
-            WorkSession.objects.filter(employee=employee).count(), 1
-        )
+        sessions = WorkSession.objects.filter(
+            employee=employee
+        ).order_by("check_in")
+        self.assertEqual(sessions.count(), 2)
+        first, second = list(sessions)
+        self.assertIsNone(first.check_out)
+        self.assertEqual(first.check_in, _dt(DAY, 8))
+        self.assertIsNone(second.check_out)
+        self.assertEqual(second.check_in, _dt(DAY, 8, 30))
 
     def test_in_keeps_handmade_status(self):
         # A hand-made LEAVE row is not overwritten by a punch.
@@ -129,15 +137,180 @@ class PunchOutTests(BaseTenantTestCase):
 
         row = attendance_update_for_punch(
             employee=employee,
-            punch_time=_dt(date(2026, 11, 3), 6),
+            punch_time=_dt(date(2026, 11, 3), 3),
             direction="out",
         )
 
         # The OUT closes the open session from the IN's day, not today's.
         self.assertEqual(row.day, DAY)
-        self.assertEqual(row.total_work_time, timedelta(hours=8))
+        self.assertEqual(row.total_work_time, timedelta(hours=5))
         self.assertEqual(WorkSession.objects.first().day, DAY)
         self.assertFalse(Attendance.objects.filter(day=date(2026, 11, 3)).exists())
+
+
+class ForgottenPunchOutTests(BaseTenantTestCase):
+    """Next-day punches when yesterday's session was never closed.
+
+    The likely story is a forgotten check-out: an IN on the new day
+    must open a fresh session (not be absorbed), while an OUT belongs
+    to yesterday only earlier than the tenant's configured opening
+    time (UnscheduledConfig.opening_time); with no configured opening
+    the boundary is unbounded and any next-day OUT closes yesterday's
+    session.
+    """
+
+    @staticmethod
+    def _tenant_opening(opening_time: time):
+        """Configure the tenant's day boundary (next-day-OUT cutoff)."""
+        UnscheduledConfig.objects.create(opening_time=opening_time)
+
+    def test_in_next_day_opens_new_session(self):
+        employee = employee_factory(first_name="Forgot", emp_code="PU017")
+        attendance_update_for_punch(
+            employee=employee, punch_time=_dt(DAY, 22), direction="in"
+        )
+
+        row = attendance_update_for_punch(
+            employee=employee, punch_time=_dt(NEXT_DAY, 6), direction="in"
+        )
+
+        self.assertEqual(row.day, NEXT_DAY)
+        self.assertEqual(row.check_in, _dt(NEXT_DAY, 6))
+        self.assertEqual(row.status, Attendance.Status.PRESENT)
+        sessions = WorkSession.objects.filter(
+            employee=employee
+        ).order_by("check_in")
+        self.assertEqual(sessions.count(), 2)
+        stale, fresh = list(sessions)
+        # Yesterday's session stays open (its check-out genuinely never
+        # happened); the new-day session does not steal its punches.
+        self.assertIsNone(stale.check_out)
+        self.assertEqual(stale.day, DAY)
+        self.assertEqual(fresh.day, NEXT_DAY)
+        self.assertIsNone(fresh.check_out)
+        # The new-day row is fresh: no punches were stolen from yesterday.
+        self.assertIsNone(
+            Attendance.objects.get(employee=employee, day=DAY).check_out
+        )
+
+    def test_out_next_day_before_configured_opening_closes_yesterday(self):
+        self._tenant_opening(time(4, 0))
+        employee = employee_factory(first_name="Night", emp_code="PU018")
+        attendance_update_for_punch(
+            employee=employee, punch_time=_dt(DAY, 22), direction="in"
+        )
+
+        row = attendance_update_for_punch(
+            employee=employee,
+            punch_time=_dt(NEXT_DAY, 3),
+            direction="out",
+        )
+
+        # 03:00 is before the configured opening (04:00): overnight wrap.
+        self.assertEqual(row.day, DAY)
+        self.assertEqual(row.total_work_time, timedelta(hours=5))
+        session = WorkSession.objects.get(employee=employee)
+        self.assertEqual(session.check_out, _dt(NEXT_DAY, 3))
+        self.assertFalse(Attendance.objects.filter(day=NEXT_DAY).exists())
+
+    def test_out_next_day_at_configured_opening_closes_yesterday(self):
+        self._tenant_opening(time(4, 0))
+        employee = employee_factory(first_name="Edge", emp_code="PU023")
+        attendance_update_for_punch(
+            employee=employee, punch_time=_dt(DAY, 22), direction="in"
+        )
+
+        row = attendance_update_for_punch(
+            employee=employee,
+            punch_time=_dt(NEXT_DAY, 4),
+            direction="out",
+        )
+
+        # Strict comparison: exactly at the opening still counts as the
+        # overnight wrap. The boundary crossing is `> opening`.
+        self.assertEqual(row.day, DAY)
+        self.assertEqual(row.total_work_time, timedelta(hours=6))
+        session = WorkSession.objects.get(employee=employee)
+        self.assertEqual(session.check_out, _dt(NEXT_DAY, 4))
+
+    def test_out_next_day_after_configured_opening_is_stray(self):
+        self._tenant_opening(time(4, 0))
+        employee = employee_factory(first_name="Forgot", emp_code="PU019")
+        attendance_update_for_punch(
+            employee=employee, punch_time=_dt(DAY, 22), direction="in"
+        )
+
+        row = attendance_update_for_punch(
+            employee=employee,
+            punch_time=_dt(NEXT_DAY, 6),
+            direction="out",
+        )
+
+        # 06:00 is past the configured opening (04:00): yesterday's
+        # session was never closed and this OUT is the new day's stray.
+        self.assertIsNone(row)
+        session = WorkSession.objects.get(employee=employee)
+        self.assertIsNone(session.check_out)
+        self.assertEqual(session.total_time, timedelta(0))
+        stored = Attendance.objects.get(employee=employee, day=DAY)
+        self.assertIsNone(stored.check_out)
+        self.assertEqual(stored.total_work_time, timedelta(0))
+
+    def test_out_next_day_with_no_config_is_unbounded(self):
+        # No UnscheduledConfig row (or null opening_time): no day
+        # boundary — any next-day OUT closes yesterday's session.
+        employee = employee_factory(first_name="Boundless", emp_code="PU024")
+        attendance_update_for_punch(
+            employee=employee, punch_time=_dt(DAY, 22), direction="in"
+        )
+
+        row = attendance_update_for_punch(
+            employee=employee,
+            punch_time=_dt(NEXT_DAY, 6),
+            direction="out",
+        )
+
+        self.assertEqual(row.day, DAY)
+        self.assertEqual(row.total_work_time, timedelta(hours=8))
+        session = WorkSession.objects.get(employee=employee)
+        self.assertEqual(session.check_out, _dt(NEXT_DAY, 6))
+
+    def test_null_opening_time_is_unbounded_too(self):
+        self._tenant_opening(None)
+        employee = employee_factory(first_name="NullBound", emp_code="PU025")
+        attendance_update_for_punch(
+            employee=employee, punch_time=_dt(DAY, 22), direction="in"
+        )
+
+        row = attendance_update_for_punch(
+            employee=employee,
+            punch_time=_dt(NEXT_DAY, 6),
+            direction="out",
+        )
+
+        self.assertEqual(row.day, DAY)
+        self.assertEqual(row.total_work_time, timedelta(hours=8))
+
+    def test_next_day_stray_out_keeps_session_open_in_scheduled_mode_too(
+        self,
+    ):
+        # The day boundary is policy-independent: the pairing primitive
+        # is called directly (gateway path) in any mode — only the
+        # configured opening decides, not the attendance policy mode.
+        self._tenant_opening(time(4, 0))
+        employee = employee_factory(first_name="Direct", emp_code="PU020")
+        attendance_update_for_punch(
+            employee=employee, punch_time=_dt(DAY, 22), direction="in"
+        )
+
+        row = attendance_update_for_punch(
+            employee=employee,
+            punch_time=_dt(NEXT_DAY, 6),
+            direction="out",
+        )
+
+        self.assertIsNone(row)
+
 
     def test_stray_out_creates_no_daily_row(self):
         employee = employee_factory(first_name="Stray", emp_code="PU007")
@@ -251,6 +424,51 @@ class UnknownDirectionTests(BaseTenantTestCase):
         )
 
         self.assertFalse(Attendance.objects.filter(employee=employee).exists())
+
+
+class ReplayIdempotencyTests(BaseTenantTestCase):
+    """Replaying a punch stream must be a no-op, not a second pairing.
+
+    Recalculation scripts (and gateway replays) re-feed punches whose
+    work already exists; the primitive must return the original state
+    instead of tripping uniq_worksession_in_punch or re-closing
+    another open session.
+    """
+
+    def test_replaying_in_and_out_leaves_one_closed_session(self):
+        _unschedule_tenant()
+        employee = employee_factory(first_name="Replay", emp_code="PU021")
+        in_a = activity_create(employee=employee, punch_time=_dt(DAY, 8), direction="in")
+        out_a = activity_create(employee=employee, punch_time=_dt(DAY, 17), direction="out")
+
+        for _ in range(2):
+            attendance_update_for_punch(
+                employee=employee, punch_time=in_a.punch_time,
+                direction="in", activity=in_a,
+            )
+            attendance_update_for_punch(
+                employee=employee, punch_time=out_a.punch_time,
+                direction="out", activity=out_a,
+            )
+
+        self.assertEqual(WorkSession.objects.filter(employee=employee).count(), 1)
+        session = WorkSession.objects.get(employee=employee)
+        self.assertEqual(session.check_out, _dt(DAY, 17))
+        self.assertEqual(session.total_time, timedelta(hours=9))
+        row = Attendance.objects.get(employee=employee, day=DAY)
+        self.assertEqual(row.total_work_time, timedelta(hours=9))
+
+    def test_out_without_activity_replay_guard_sits_out(self):
+        # Direct-tool calls (activity=None) bypass the replay guard on
+        # purpose — the punch log linkage is what makes a call replay.
+        employee = employee_factory(first_name="Direct", emp_code="PU022")
+        attendance_update_for_punch(
+            employee=employee, punch_time=_dt(DAY, 8), direction="in"
+        )
+        row = attendance_update_for_punch(
+            employee=employee, punch_time=_dt(DAY, 17), direction="out"
+        )
+        self.assertEqual(row.check_out, _dt(DAY, 17))
 
 
 class PunchPolicyGatingTests(BaseTenantTestCase):

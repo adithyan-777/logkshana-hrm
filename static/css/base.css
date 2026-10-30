@@ -71,8 +71,31 @@ body:has(.app) {
   color: inherit;
 }
 
+/*
+  Text selection: the old fixed 12% ink overlay is invisible over the dark
+  canvas (#1B1B1B). Keep 12% ink in light theme; switch to brand
+  maroon in dark so light text stays readable on the highlight.
+*/
 ::selection {
-  background: rgba(24, 24, 27, 0.12);
+  background: light-dark(
+    rgba(24, 24, 27, 0.12),
+    color-mix(in srgb, var(--accent) 65%, transparent)
+  );
+}
+
+/*
+  Native <select> popups normally take OS colors — the hovered/checked row
+  comes out black in dark themes. Paint options from the theme tokens so the
+  popup and its highlight stay readable in both modes.
+*/
+option {
+  background-color: var(--bg-elevated);
+  color: var(--text);
+}
+
+option:checked {
+  background-color: var(--accent);
+  color: var(--text-inverse);
 }
 
 .app :focus-visible {

@@ -61,7 +61,7 @@ def create_view(request):
 ## Common Pitfalls
 
 - Full-page templates returned to HTMX calls (must return the fragment branch).
-- `hx-push-url` inherited from `<body>` onto widget fetches (rule: explicit false per element) — leads to the stale-URL/refresh bug chain (see AGENTS §1.3).
+- `hx-push-url` inherited from `<body>` onto widget fetches (rule: explicit false per element) — an aux URL like `/select-options/?…` silently replaces the report page in the address bar, and a later refresh replays the fragment URL.
 - Fragments rendered as bare pages for non-HTMX visits.
 - Swap-geometry mismatches (fragment ↔ target wrapper) multiplying sections.
 - Multi-line Django template tokens being silently emitted as raw text.

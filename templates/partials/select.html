@@ -179,7 +179,11 @@ Dark mode: panel/highlights are token-driven (see components.css .x-select).
   if (window.xSelectPick) return;
 
   function closeMenu(root) {
-    root.dispatchEvent(new CustomEvent("x-select-close", { bubbles: false }));
+    // The @x-select-close listener lives on the menu div; dispatching on the
+    // root never reaches it (events don't propagate down), which used to be
+    // masked by auto-submit re-rendering the widget closed after a pick.
+    var menu = root.querySelector(".x-select__menu");
+    (menu || root).dispatchEvent(new CustomEvent("x-select-close", { bubbles: false }));
   }
 
   window.xSelectHighlight = function (list, idx) {

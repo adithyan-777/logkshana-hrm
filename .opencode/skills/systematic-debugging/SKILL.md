@@ -60,7 +60,7 @@ Or drop into the debugger: `breakpoint()` inside the view/test (commands: n, s, 
 
 - Read the full stack trace; check violated assumptions.
 - Classify: Is it data (wrong tenant schema / seed), logic (selector filter, service write), or presentation (template swap, fragment geometry, HTMX flags)?
-- For HTMX/SPA UI bugs ("refresh lands me on a weird page", duplicated sections): suspect push/history and fragment-target problems first (see AGENTS §1.3) — that is a push/restore-class bug, not a view bug.
+- For HTMX/SPA UI bugs ("refresh lands me on a weird page", duplicated sections): suspect push/history and fragment-target problems first — that is a push/restore-class bug, not a view bug.
 
 ### Phase 4: Fix and Verify
 

@@ -27,6 +27,8 @@ from reports.forms import (
     IndividualReportFilterForm,
     LeaveReportFilterForm,
     OvertimeReportFilterForm,
+    PunchLogFilterForm,
+    WorkSessionFilterForm,
 )
 from reports.report_data import (
     attendance_summary_report_data,
@@ -192,7 +194,7 @@ def attendance_summary_view(request: HttpRequest) -> HttpResponse:
 
     if is_htmx_partial(request):
         return render(
-            request, "reports/attendance_summary.html#attendance_summary_table", context
+            request, "reports/attendance_summary.html#report_page", context
         )
 
     return render(request, "reports/attendance_summary.html", context)
@@ -205,7 +207,7 @@ def individual_attendance_view(request: HttpRequest) -> HttpResponse:
     form = IndividualReportFilterForm(request.GET or None)
     date_from, date_to = current_month_range()
     department_id = None
-    employee_id = None
+    employee_ids: list[int] = []
     queryset = []
     queried = False
 
@@ -217,17 +219,18 @@ def individual_attendance_view(request: HttpRequest) -> HttpResponse:
         if can_view_all:
             if form.cleaned_data["department"]:
                 department_id = form.cleaned_data["department"].pk
-            if form.cleaned_data["employee"]:
-                employee_id = form.cleaned_data["employee"].pk
+            employee_ids = [
+                employee.pk for employee in form.cleaned_data["employee"]
+            ]
         elif own_employee is not None:
-            employee_id = own_employee.pk
+            employee_ids = [own_employee.pk]
 
-    if can_view_all or employee_id is not None:
+    if can_view_all or employee_ids:
         queryset = individual_attendance_list(
             date_from=date_from,
             date_to=date_to,
             department_id=department_id,
-            employee_id=employee_id,
+            employee_ids=employee_ids,
         )
         queried = True
 
@@ -258,7 +261,7 @@ def individual_attendance_view(request: HttpRequest) -> HttpResponse:
     }
 
     if is_htmx_partial(request):
-        return render(request, "reports/individual.html#individual_table", context)
+        return render(request, "reports/individual.html#report_page", context)
 
     return render(request, "reports/individual.html", context)
 
@@ -308,7 +311,7 @@ def department_attendance_view(request: HttpRequest) -> HttpResponse:
     }
 
     if is_htmx_partial(request):
-        return render(request, "reports/department.html#department_table", context)
+        return render(request, "reports/department.html#report_page", context)
 
     return render(request, "reports/department.html", context)
 
@@ -360,7 +363,7 @@ def exception_report_view(request: HttpRequest) -> HttpResponse:
     }
 
     if is_htmx_partial(request):
-        return render(request, "reports/exceptions.html#exceptions_table", context)
+        return render(request, "reports/exceptions.html#report_page", context)
 
     return render(request, "reports/exceptions.html", context)
 
@@ -369,36 +372,37 @@ def exception_report_view(request: HttpRequest) -> HttpResponse:
 @require_http_methods(["GET"])
 def work_sessions_report_view(request: HttpRequest) -> HttpResponse:
     can_view_all, own_employee = _self_service_scope(request)
-    form = DateRangeFilterForm(request.GET or None)
+    form = WorkSessionFilterForm(request.GET or None)
     date_from, date_to = current_month_range()
     department_id = None
-    employee_id = None
+    employee_ids: list[int] = []
+    status = ""
 
     if not can_view_all:
         _strip_company_filters(form)
 
     if form.is_valid():
         date_from, date_to = form.cleaned_date_range()
+        status = form.cleaned_data.get("status") or ""
         if can_view_all:
             department_id = (
                 form.cleaned_data["department"].pk
                 if form.cleaned_data["department"]
                 else None
             )
-            employee_id = (
-                form.cleaned_data["employee"].pk
-                if form.cleaned_data["employee"]
-                else None
-            )
+            employee_ids = [
+                employee.pk for employee in form.cleaned_data["employee"]
+            ]
         elif own_employee is not None:
-            employee_id = own_employee.pk
+            employee_ids = [own_employee.pk]
 
-    if can_view_all or employee_id is not None:
+    if can_view_all or employee_ids:
         queryset = work_session_report_list(
             date_from=date_from,
             date_to=date_to,
             department_id=department_id,
-            employee_id=employee_id,
+            employee_ids=employee_ids,
+            status=status,
         )
     else:
         queryset = WorkSession.objects.none()
@@ -422,7 +426,7 @@ def work_sessions_report_view(request: HttpRequest) -> HttpResponse:
     }
 
     if is_htmx_partial(request):
-        return render(request, "reports/work_sessions.html#work_sessions_table", context)
+        return render(request, "reports/work_sessions.html#report_page", context)
 
     return render(request, "reports/work_sessions.html", context)
 
@@ -431,36 +435,37 @@ def work_sessions_report_view(request: HttpRequest) -> HttpResponse:
 @require_http_methods(["GET"])
 def punch_log_view(request: HttpRequest) -> HttpResponse:
     can_view_all, own_employee = _self_service_scope(request)
-    form = DateRangeFilterForm(request.GET or None)
+    form = PunchLogFilterForm(request.GET or None)
     date_from, date_to = current_month_range()
     department_id = None
-    employee_id = None
+    employee_ids: list[int] = []
+    direction = ""
 
     if not can_view_all:
         _strip_company_filters(form)
 
     if form.is_valid():
         date_from, date_to = form.cleaned_date_range()
+        direction = form.cleaned_data.get("direction") or ""
         if can_view_all:
             department_id = (
                 form.cleaned_data["department"].pk
                 if form.cleaned_data["department"]
                 else None
             )
-            employee_id = (
-                form.cleaned_data["employee"].pk
-                if form.cleaned_data["employee"]
-                else None
-            )
+            employee_ids = [
+                employee.pk for employee in form.cleaned_data["employee"]
+            ]
         elif own_employee is not None:
-            employee_id = own_employee.pk
+            employee_ids = [own_employee.pk]
 
-    if can_view_all or employee_id is not None:
+    if can_view_all or employee_ids:
         queryset = punch_log_list(
             date_from=date_from,
             date_to=date_to,
             department_id=department_id,
-            employee_id=employee_id,
+            employee_ids=employee_ids,
+            direction=direction,
         )
     else:
         queryset = AttendanceActivity.objects.none()
@@ -484,7 +489,7 @@ def punch_log_view(request: HttpRequest) -> HttpResponse:
     }
 
     if is_htmx_partial(request):
-        return render(request, "reports/punch_log.html#punch_log_table", context)
+        return render(request, "reports/punch_log.html#report_page", context)
 
     return render(request, "reports/punch_log.html", context)
 
@@ -536,7 +541,7 @@ def overtime_report_view(request: HttpRequest) -> HttpResponse:
     }
 
     if is_htmx_partial(request):
-        return render(request, "reports/overtime.html#overtime_table", context)
+        return render(request, "reports/overtime.html#report_page", context)
 
     return render(request, "reports/overtime.html", context)
 
@@ -615,8 +620,8 @@ def leave_report_view(request: HttpRequest) -> HttpResponse:
 
     if is_htmx_partial(request):
         if report_type == "balance":
-            return render(request, "reports/leave.html#leave_balance_table", context)
-        return render(request, "reports/leave.html#leave_requests_table", context)
+            return render(request, "reports/leave.html#report_page", context)
+        return render(request, "reports/leave.html#report_page", context)
 
     return render(request, "reports/leave.html", context)
 

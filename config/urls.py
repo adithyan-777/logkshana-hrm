@@ -20,6 +20,8 @@ from django.urls import path, include
 
 from config import views
 
+from common import views as common_views
+
 from django.urls import path
 
 
@@ -40,5 +42,8 @@ urlpatterns = [
     path("reports/", include("reports.urls")),
     path("devices/", include("companies.urls_devices")),
     path("api/", include("companies.urls")),
+    # HTMX fragment for the reusable select partial (partials/select.html):
+    # sources live in common.views.SOURCES.
+    path("select-options/", common_views.select_options_view, name="select_options"),
     path("sentry-debug/", trigger_error),
 ]

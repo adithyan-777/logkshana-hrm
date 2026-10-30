@@ -1,16 +1,48 @@
 {% partialdef filter_form inline %}
-<form method="get" class="report-filters">
+{% url 'select_options' as select_options_url %}
+
+{# HTMX auto-apply: submit events swap #report-page-region (tabs + filters + table), so export links refresh; native GET submit is the no-JS fallback; date inputs auto-apply on change via the from: trigger. #}
+<form method="get"
+      class="report-filters"
+      hx-get="{{ request.path }}"
+      hx-target="#report-page-region"
+      hx-swap="outerHTML"
+      hx-replace-url="true"
+      hx-trigger="submit, change from:find input[type='date']"
+      hx-push-url="false"
+>
     <div class="report-filters__grid">
         {% for field in form %}
         <div class="form-field">
-            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {% if field.is_hidden %}
             {{ field }}
+            {% else %}
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {% endif %}
+            {% if field.name == "employee" and field.field.widget.allow_multiple_selected %}
+            {# Multi employee picker (individual/run reports): HTMX candidates; chips render into the full-width row below the grid #}
+            {# Distinct uid per variant — a duplicate uid would make htmx hx-include selectors match both widgets if a page ever rendered both #}
+            {% include "partials/select.html#select_multi" with name=field.html_name input_id=field.auto_id errors=field.errors placeholder="All employees" options_url=select_options_url|add:"?source=employees" searchable=True uid="xfilt-employees" chips_target="#xfilt-employees-chips" %}
+            {% elif field.name == "employee" %}
+            {# Big list: HTMX mode — lazily fetched, searchable #}
+            {% include "partials/select.html#select_body" with name=field.html_name input_id=field.auto_id value=field.value|default_if_none:"" errors=field.errors placeholder=field.field.empty_label options_url=select_options_url|add:"?source=employees" searchable=True auto_submit=True uid="xfilt-employee" %}
+            {% elif field.name == "department" or field.name == "exception_type" or field.name == "status" or field.name == "report_type" or field.name == "direction" %}
+            {# Short lists: inline options, no HTMX round-trip needed; no auto-submit — all filters apply together via the Apply button, same as the multi employee picker #}
+            {% include "partials/select.html#select_body" with name=field.html_name input_id=field.auto_id value=field.value|default_if_none:"" errors=field.errors placeholder=field.field.empty_label options=field.field.choices uid="xfilt-"|add:field.name %}
+            {% else %}
+            {{ field }}
+            {% endif %}
             {% if field.errors %}
             <p class="form-error">{{ field.errors|join:", " }}</p>
             {% endif %}
         </div>
         {% endfor %}
     </div>
+    {% if form.employee.field.widget.allow_multiple_selected %}
+    <div id="xfilt-employees-chips" class="x-select__chips x-select__chips--row"></div>
+    {% else %}
+    <div id="xfilt-employee-chips" class="x-select__chips x-select__chips--row"></div>
+    {% endif %}
     {% if available_columns %}
     <input type="hidden" name="report_key" value="{{ report_key }}">
     <details class="report-columns">

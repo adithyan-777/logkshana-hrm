@@ -11,6 +11,7 @@ def _attendance_base_queryset(
     date_to: date,
     department_id: int | None = None,
     employee_id: int | None = None,
+    employee_ids: list[int] | None = None,
 ) -> QuerySet[Attendance]:
     queryset = Attendance.objects.filter(
         day__range=(date_from, date_to),
@@ -20,6 +21,8 @@ def _attendance_base_queryset(
         queryset = queryset.filter(employee__department_id=department_id)
     if employee_id:
         queryset = queryset.filter(employee_id=employee_id)
+    if employee_ids:
+        queryset = queryset.filter(employee_id__in=employee_ids)
 
     return queryset
 
@@ -64,6 +67,7 @@ def individual_attendance_list(
     date_from: date,
     date_to: date,
     employee_id: int | None = None,
+    employee_ids: list[int] | None = None,
     department_id: int | None = None,
 ):
     return (
@@ -72,6 +76,7 @@ def individual_attendance_list(
             date_to=date_to,
             department_id=department_id,
             employee_id=employee_id,
+            employee_ids=employee_ids,
         )
         .select_related("shift", "employee__department")
         .prefetch_related("activities")

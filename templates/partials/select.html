@@ -1,0 +1,579 @@
+{% comment %}
+Reusable HTMX + Alpine dropdown select.
+
+Replaces a native <select> wherever included. POST/GET payload stays identical
+to a native select (hidden input carries the value), so forms and tests keep
+working — only the rendered control changes.
+
+Usage (inside a <form> or any container):
+  {# Inline options (list of (value, label) tuples) #}
+  {% include "partials/select.html#select_body" with name="status" input_id="id_status" value=v options=status_choices uid="xfilt-status" %}
+
+  {# Form-aware shorthand (BoundField) — options default to field choices #}
+  {% include "partials/select.html#select_body" with field=form.department uid="xfilt-department" %}
+
+  {# HTMX-driven options — initial list fetched on `load`, search refetches #}
+  {% url 'select_options' as select_options_url %}
+  {% include "partials/select.html#select_body" with field=form.employee options_url=select_options_url|add:"?source=employees" searchable=True auto_submit=True uid="xfilt-employee" %}
+
+  {# Multi-select (chips + hidden real <select multiple>, POST shape unchanged) #}
+  {% include "partials/select.html#select_multi" with name="employees" values=selected_ids options=employee_choices uid="xfilt-employees" %}
+  {% include "partials/select.html#select_multi" with field=form.employees options_url=select_options_url|add:"?source=employees" searchable=True uid="xfilt-emps" %}
+
+Params:
+- field            BoundField (optional). Fills name/value/errors from it.
+                   For a ModelMultipleChoiceField, the multi variant renders
+                   automatically (or force `multiple=True` in bare mode).
+- name, value      Bare mode (used when no `field`).
+- options          Iterable of (value, label) tuples. Default: field's choices.
+- options_url      "…?source=…". The partial appends &target= and &selected=.
+  searchable       Show the search box in HTMX mode (default False).
+  auto_submit      requestSubmit() the closest <form> after picking.
+  disabled         Render a disabled trigger.
+  uid              Unique per page (DOM ids: <uid>-search, <uid>-list).
+  input_id         Id of the hidden input (keep = field.auto_id to match labels).
+  placeholder      Closes-state hint (default "Select…").
+  extra_class      Additional classes on the wrapper.
+- auto_id          On BoundField inputs, the hidden input id matches
+                   field.auto_id so existing `for=` labels keep working.
+
+Dark mode: panel/highlights are token-driven (see components.css .x-select).
+{% endcomment %}
+
+{% if field and field.field.widget.allow_multiple_selected %}
+  {% include "partials/select.html#select_multi" with name=field.html_name input_id=field.auto_id errors=field.errors disabled=field.field.disabled field=field options_url=options_url searchable=searchable placeholder=placeholder placeholder_default=placeholder uid=uid extra_class=extra_class %}
+{% elif multiple %}
+  {% include "partials/select.html#select_multi" with name=name input_id=input_id errors=errors disabled=disabled options=options values=values options_url=options_url searchable=searchable placeholder=placeholder placeholder_default=placeholder uid=uid extra_class=extra_class %}
+{% elif field %}
+  {% include "partials/select.html#select_body" with name=field.html_name input_id=field.auto_id value=field.value|default_if_none:"" errors=field.errors disabled=field.field.disabled options=field.field.choices placeholder=field.field.empty_label placeholder_default=placeholder options_url=options_url searchable=searchable auto_submit=auto_submit uid=uid %}
+{% else %}
+  {% include "partials/select.html#select_body" with name=name input_id=input_id value=value|default_if_none:"" errors=errors disabled=disabled options=options placeholder=placeholder placeholder_default=placeholder options_url=options_url searchable=searchable auto_submit=auto_submit uid=uid %}
+{% endif %}
+
+{% partialdef select_body inline %}
+{% with name=name|default:"input" %}
+{% if uid %}
+  {% include "partials/select.html#select_control" with wid=uid %}
+{% else %}
+  {% include "partials/select.html#select_control" with wid="sel-"|add:name %}
+{% endif %}
+{% endwith %}
+{% endpartialdef select_body %}
+
+{# Actual markup for select_body — never included directly; #select_body resolves wid from uid/name. #}
+{% partialdef select_control inline %}
+{% with ph=placeholder|default:"" pd=placeholder_default|default:"" %}
+{% with placeholder=ph|default:pd|default:"Select…" %}
+<div
+  class="x-select {{ extra_class|default:'' }}"
+  x-data="{open:false, hi:-1}"
+  data-x-select
+  {% if auto_submit %}data-x-select-auto-submit{% endif %}
+  hx-boost="false"
+  @keydown.arrow-down.prevent="if (open) { hi = Math.min(hi + 1, $root.querySelectorAll('.x-select__item').length - 1); window.xSelectHighlight && xSelectHighlight($root.querySelector('.x-select__options'), hi); } else { open = true; }"
+  @keydown.arrow-up.prevent="if (open && hi > 0) { hi = hi - 1; window.xSelectHighlight && xSelectHighlight($root.querySelector('.x-select__options'), hi); }"
+  @keydown.escape="if (open) { open = false; hi = -1; $root.querySelector('button').focus(); }"
+  @keydown.enter="$event.preventDefault(); if (open && hi >= 0) { var items = $root.querySelectorAll('.x-select__item'); if (items[hi]) { items[hi].click(); } hi = -1; } else if (!open) { $event.target.click(); }"
+>
+  <input
+    type="hidden"
+    name="{{ name }}"
+    id="{{ input_id }}"
+    value="{{ value|default:'' }}"
+    data-x-select-input
+  >
+
+  <button
+    type="button"
+    class="x-select__trigger"
+    data-x-select-trigger
+    {% if disabled %}disabled{% endif %}
+    aria-haspopup="listbox"
+    :aria-expanded="String(open)"
+    @click="open = !open; if (open) { window.xSelectOnOpen && xSelectOnOpen($root); }"
+  >
+    <span
+      class="x-select__label{% if not value %} x-select__label--placeholder{% endif %}"
+      data-x-select-label
+      data-placeholder="{{ placeholder }}"
+    >{% if value %}{% for ov, ol in options %}{% if ov|stringformat:"s" == value|stringformat:"s" %}{{ ol }}{% endif %}{% endfor %}{% else %}{{ placeholder }}{% endif %}</span>
+    <i class="bx bx-chevron-down x-select__chev" aria-hidden="true"></i>
+  </button>
+
+  <div
+    class="x-select__menu"
+    x-ref="menu"
+    x-show="open"
+    x-cloak
+    x-transition
+    @click.outside="open = false"
+    @x-select-close="open = false; hi = -1"
+  >
+    {% if options_url %}
+    <input
+      type="search"
+      id="{{ wid }}-search"
+      name="q"
+      class="x-select__search"
+      placeholder="Type 2+ letters to search…"
+      autocomplete="off"
+      {% if not searchable %}hidden{% endif %}
+      x-ref="search"
+      {% if searchable %}aria-label="Search options"{% endif %}
+    >
+    <i class="bx bx-loader-alt bx-spin x-select__spinner htmx-indicator" aria-hidden="true"></i>
+    <div
+      id="{{ wid }}-list"
+      class="x-select__options"
+      role="listbox"
+      aria-label="{{ placeholder }}"
+      tabindex="-1"
+      x-ref="list"
+      hx-get="{{ options_url }}&amp;target={{ wid }}&amp;selected={{ value|default:'' }}"
+      hx-include="#{{ wid }}-search"
+      hx-target="this"
+      hx-swap="innerHTML"
+      hx-push-url="false"
+      hx-params="q"
+      {% if searchable %}
+        hx-trigger="load, input from:#{{ wid }}-search changed delay:250ms"
+      {% else %}
+        hx-trigger="load"
+      {% endif %}
+    ></div>
+    {% else %}
+    <div
+      id="{{ wid }}-list"
+      class="x-select__options"
+      role="listbox"
+      aria-label="{{ placeholder }}"
+      tabindex="-1"
+      x-ref="list"
+    >
+      {% for ov, ol in options %}
+      <button
+        type="button"
+        class="x-select__item{% if ov|stringformat:"s" == value|stringformat:"s" and value %} is-selected{% endif %}"
+        role="option"
+        data-value="{{ ov }}"
+        data-label="{{ ol }}"
+        onclick="xSelectPick(this)"
+        aria-selected="{% if ov|stringformat:'s' == value|stringformat:'s' and value %}true{% else %}false{% endif %}"
+      >{{ ol }}</button>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% if errors %}<span class="form-error">{{ errors }}</span>{% endif %}
+
+{% include "partials/select.html#select_script" %}
+{% endwith %}
+{% endwith %}
+{% endpartialdef select_control %}
+
+{# Shared widget JS — included by select_control and select_multi_control (defined once per page via the guard). #}
+{% partialdef select_script inline %}
+<script>
+(function () {
+  if (window.xSelectPick) return;
+
+  function closeMenu(root) {
+    // The @x-select-close listener lives on the menu div; dispatching on the
+    // root never reaches it (events don't propagate down), which used to be
+    // masked by auto-submit re-rendering the widget closed after a pick.
+    var menu = root.querySelector(".x-select__menu");
+    (menu || root).dispatchEvent(new CustomEvent("x-select-close", { bubbles: false }));
+  }
+
+  window.xSelectHighlight = function (list, idx) {
+    if (!list) return;
+    var items = list.querySelectorAll(".x-select__item");
+    Array.prototype.forEach.call(items, function (el, i) {
+      var active = i === idx;
+      el.classList.toggle("is-highlight", active);
+      if (active && el.scrollIntoView) el.scrollIntoView({ block: "nearest" });
+    });
+  };
+
+  window.xSelectOnOpen = function (root) {
+    if (!root) return;
+    if (root.hasAttribute("data-x-select-multiple")) {
+      var s0 = root.querySelector(".x-select__search");
+      if (!s0 || !s0.value) window.xSelectMultiRender(root);
+    } else {
+      var sA = root.querySelector(".x-select__search");
+      if (!sA || !sA.value) window.xSelectSyncLabel(root);
+    }
+    var search = root.querySelector(".x-select__search");
+    if (search && !search.hasAttribute("hidden")) {
+      search.focus();
+      return;
+    }
+    var list = root.querySelector(".x-select__options");
+    if (list) list.focus();
+  };
+
+  // Sync the trigger label with the hidden input from whatever the current
+  // option list holds (HTMX mode: after a fetch lands; inline mode: at open).
+  window.xSelectSyncLabel = function (root) {
+    if (!root) return;
+    var input = root.querySelector("input[data-x-select-input]");
+    var label = root.querySelector("[data-x-select-label]");
+    var list = root.querySelector(".x-select__options");
+    if (!input || !label) return;
+    var value = input.value || "";
+    var match = null;
+    if (list && value) {
+      Array.prototype.forEach.call(list.querySelectorAll(".x-select__item"), function (el) {
+        if (!match && (el.getAttribute("data-value") || "") === value) {
+          match = el;
+          el.classList.add("is-selected");
+          el.setAttribute("aria-selected", "true");
+        } else {
+          el.classList.remove("is-selected");
+          el.setAttribute("aria-selected", "false");
+        }
+      });
+    }
+    if (match) {
+      label.textContent = match.getAttribute("data-label");
+      label.classList.remove("x-select__label--placeholder");
+    } else if (!value) {
+      label.textContent = label.getAttribute("data-placeholder") || "Select…";
+      label.classList.add("x-select__label--placeholder");
+    }
+    // no match + non-empty value: keep whatever label/placeholder is showing.
+  };
+
+  window.xSelectPick = function (btn) {
+    var root = btn.closest(".x-select");
+    if (!root) return;
+    if (root.hasAttribute("data-x-select-multiple")) {
+      window.xSelectMultiPick(btn);
+      return;
+    }
+    var input = root.querySelector("input[data-x-select-input]");
+    var label = root.querySelector("[data-x-select-label]");
+    Array.prototype.forEach.call(root.querySelectorAll(".x-select__item"), function (el) {
+      var picked = el === btn;
+      el.classList.toggle("is-selected", picked);
+      el.setAttribute("aria-selected", picked ? "true" : "false");
+    });
+    if (input) {
+      input.value = btn.getAttribute("data-value") || "";
+      if ("createEvent" in document) input.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    if (label) {
+      label.textContent = btn.getAttribute("data-label");
+      label.classList.remove("x-select__label--placeholder");
+    }
+    var search = root.querySelector(".x-select__search");
+    if (search) search.value = "";
+    closeMenu(root);
+    if (root.hasAttribute("data-x-select-auto-submit")) {
+      var form = root.closest("form");
+      if (form) {
+        if (form.requestSubmit) form.requestSubmit();
+        else form.submit();
+      }
+    }
+  };
+
+  // Label sync after every HTMX swap of an options list (HTMX-mode widgets).
+  document.body.addEventListener("htmx:afterSwap", function (event) {
+    var target = event.target;
+    if (target && target.classList && target.classList.contains("x-select__options")) {
+      var root = target.closest(".x-select");
+      if (!root) return;
+      var search = root.querySelector(".x-select__search");
+      // Only sync the closed-state label when the fetch wasn't search-driven.
+      if (!search || !search.value) {
+        if (root.hasAttribute("data-x-select-multiple")) window.xSelectMultiRender(root);
+        else window.xSelectSyncLabel(root);
+      }
+    }
+  });
+
+  /* ---- Multi-select variant (chips + hidden real <select multiple>) ---- */
+
+  window.xSelectMultiRender = function (root) {
+    if (!root) return;
+    var selectBox = root.querySelector("select[multiple]");
+    var label = root.querySelector("[data-x-select-label]");
+    if (!selectBox) return;
+    var placeholder = (label && label.getAttribute("data-placeholder")) || "Select…";
+    var picked = Array.prototype.filter.call(selectBox.options, function (o) {
+      return o.selected;
+    });
+
+    if (label) {
+      if (picked.length === 1) {
+        label.textContent = picked[0].textContent || picked[0].value;
+      } else if (picked.length > 1) {
+        label.textContent = picked.length + " selected";
+      } else {
+        label.textContent = placeholder;
+      }
+      label.classList.toggle("x-select__label--placeholder", picked.length === 0);
+    }
+
+    // Chips live inside the control by default, or in an external row
+    // (data-x-select-chips-target) when the includer provides one.
+    var rootId = root.getAttribute("data-x-select-id") || "";
+    var targetSel = root.getAttribute("data-x-select-chips-target");
+    var chipsBox = root.querySelector("[data-x-select-chips]");
+    if (targetSel) {
+      var external = document.querySelector(targetSel);
+      if (external) chipsBox = external;
+    }
+    if (chipsBox) {
+      chipsBox.innerHTML = "";
+      if (picked.length) {
+        // Clear-selection pill leads the external row.
+        var clearBtn = document.createElement("button");
+        clearBtn.type = "button";
+        clearBtn.className = "x-select__clear x-select__clear--chip";
+        clearBtn.textContent = "Clear selection";
+        clearBtn.setAttribute("data-x-root-id", rootId);
+        clearBtn.setAttribute("data-x-select-clear", "true");
+        clearBtn.setAttribute("onclick", "xSelectMultiClear(this)");
+        chipsBox.appendChild(clearBtn);
+      }
+      picked.forEach(function (opt) {
+        var title = opt.textContent || opt.value;
+        var chip = document.createElement("span");
+        chip.className = "x-select__chip";
+        var text = document.createElement("span");
+        text.textContent = title;
+        chip.appendChild(text);
+        var x = document.createElement("button");
+        x.type = "button";
+        x.className = "x-select__chip__remove";
+        x.textContent = "×";
+        x.setAttribute("data-value", opt.value);
+        x.setAttribute("data-x-root-id", rootId);
+        x.setAttribute("aria-label", "Remove " + title);
+        x.setAttribute("title", "Remove");
+        x.setAttribute("onclick", "xSelectMultiRemove(this)");
+        chip.appendChild(x);
+        chipsBox.appendChild(chip);
+      });
+    }
+
+    var chosen = {};
+    picked.forEach(function (o) { chosen[String(o.value)] = true; });
+    Array.prototype.forEach.call(root.querySelectorAll(".x-select__item"), function (el) {
+      var isSel = chosen[el.getAttribute("data-value")] === true;
+      el.classList.toggle("is-selected", isSel);
+      el.setAttribute("aria-selected", isSel ? "true" : "false");
+    });
+  };
+
+  // Works for actions fired from inside the widget OR from an external chips row.
+  window.xSelectMultiRoot = function (el) {
+    return el.closest(".x-select") || document.querySelector(
+      '.x-select[data-x-select-id="' + (el.getAttribute("data-x-root-id") || "") + '"]'
+    );
+  };
+
+  window.xSelectMultiPick = function (btn) {
+    var root = btn.closest(".x-select");
+    if (!root) return;
+    var selectBox = root.querySelector("select[multiple]");
+    if (!selectBox) return;
+    var value = btn.getAttribute("data-value") || "";
+    var label = btn.getAttribute("data-label") || value;
+    var opt = null;
+    Array.prototype.forEach.call(selectBox.options, function (o) {
+      if (!opt && String(o.value) === value) opt = o;
+    });
+    if (!opt) {
+      opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = label;
+      selectBox.appendChild(opt);
+    }
+    opt.selected = !opt.selected;
+    var search = root.querySelector(".x-select__search");
+    if (search) search.value = "";
+    window.xSelectMultiRender(root);
+  };
+
+  window.xSelectMultiRemove = function (chipBtn) {
+    var root = xSelectMultiRoot(chipBtn);
+    var selectBox = root && root.querySelector("select[multiple]");
+    if (!selectBox) return;
+    var value = chipBtn.getAttribute("data-value") || "";
+    Array.prototype.forEach.call(selectBox.options, function (o) {
+      if (String(o.value) === value) o.remove();
+    });
+    window.xSelectMultiRender(root);
+  };
+
+  window.xSelectMultiClear = function (btn) {
+    var root = xSelectMultiRoot(btn);
+    var selectBox = root && root.querySelector("select[multiple]");
+    if (selectBox) {
+      Array.prototype.forEach.call(selectBox.querySelectorAll("option"), function (o) {
+        o.remove();
+      });
+    }
+    window.xSelectMultiRender(root);
+  };
+
+  // Initial chips/label render for every multi widget already on the page.
+  Array.prototype.forEach.call(
+    document.querySelectorAll("[data-x-select-multiple]"),
+    function (root) {
+      var search = root.querySelector(".x-select__search");
+      if (!search || !search.value) window.xSelectMultiRender(root);
+    }
+  );
+})();
+</script>
+{% endpartialdef select_script %}
+
+{# Multi-select variant — use #select_multi; resolves wid like #select_body. #}
+{% partialdef select_multi inline %}
+{% with name=name|default:"input" %}
+{% if uid %}
+  {% include "partials/select.html#select_multi_control" with wid=uid %}
+{% else %}
+  {% include "partials/select.html#select_multi_control" with wid="sel-"|add:name %}
+{% endif %}
+{% endwith %}
+{% endpartialdef select_multi %}
+
+{% partialdef select_multi_control inline %}
+{% with ph=placeholder|default:"" pd=placeholder_default|default:"" %}
+{% with placeholder=ph|default:pd|default:"Select items…" %}
+<div
+  class="x-select x-select--multi {{ extra_class|default:'' }}"
+  x-data="{open:false, hi:-1}"
+  data-x-select
+  data-x-select-multiple
+  data-x-select-id="{{ wid }}"
+  {% if chips_target %}data-x-select-chips-target="{{ chips_target }}"{% endif %}
+  {% if auto_submit %}data-x-select-auto-submit{% endif %}
+  hx-boost="false"
+  @keydown.arrow-down.prevent="if (open) { hi = Math.min(hi + 1, $root.querySelectorAll('.x-select__item').length - 1); window.xSelectHighlight && xSelectHighlight($root.querySelector('.x-select__options'), hi); } else { open = true; }"
+  @keydown.arrow-up.prevent="if (open && hi > 0) { hi = hi - 1; window.xSelectHighlight && xSelectHighlight($root.querySelector('.x-select__options'), hi); }"
+  @keydown.escape="if (open) { open = false; hi = -1; $root.querySelector('button').focus(); }"
+  @keydown.enter="$event.preventDefault(); if (open && hi >= 0) { var items = $root.querySelectorAll('.x-select__item'); if (items[hi]) { items[hi].click(); } hi = -1; } else if (!open) { $event.target.click(); }"
+>
+  {# POST shape identical to a native <select multiple> — the real control carries the values. #}
+  <div hidden>
+    {% if field %}
+      {{ field }}
+    {% else %}
+      <select multiple name="{{ name }}" id="{{ input_id }}">
+        {% for ov, ol in options %}
+        <option value="{{ ov }}" {% if values and ov in values %}selected{% endif %}>{{ ol }}</option>
+        {% endfor %}
+      </select>
+    {% endif %}
+  </div>
+
+  <button
+    type="button"
+    class="x-select__trigger"
+    data-x-select-trigger
+    {% if disabled %}disabled{% endif %}
+    aria-haspopup="listbox"
+    aria-multiselectable="true"
+    :aria-expanded="String(open)"
+    @click="open = !open; if (open) { window.xSelectOnOpen && xSelectOnOpen($root); }"
+  >
+    <span class="x-select__label x-select__label--placeholder" data-x-select-label data-placeholder="{{ placeholder }}"></span>
+    <i class="bx bx-chevron-down x-select__chev" aria-hidden="true"></i>
+  </button>
+
+  {% if not chips_target %}
+  <button
+    type="button"
+    class="x-select__clear"
+    data-x-select-clear
+    hidden
+    onclick="xSelectMultiClear(this)"
+  >
+    Clear selection
+  </button>
+
+  <div
+    class="x-select__chips"
+    data-x-select-chips
+    aria-live="polite"
+  ></div>
+  {% endif %}
+
+  <div
+    class="x-select__menu"
+    x-ref="menu"
+    x-show="open"
+    x-cloak
+    x-transition
+    @click.outside="open = false"
+    @x-select-close="open = false; hi = -1"
+  >
+    {% if options_url %}
+    <input
+      type="search"
+      id="{{ wid }}-search"
+      name="q"
+      class="x-select__search"
+      placeholder="Type 2+ letters to search…"
+      autocomplete="off"
+      {% if not searchable %}hidden{% endif %}
+      x-ref="search"
+      {% if searchable %}aria-label="Search options"{% endif %}
+    >
+    <i class="bx bx-loader-alt bx-spin x-select__spinner htmx-indicator" aria-hidden="true"></i>
+    <div
+      id="{{ wid }}-list"
+      class="x-select__options"
+      role="listbox"
+      aria-label="{{ placeholder }}"
+      tabindex="-1"
+      x-ref="list"
+      hx-get="{{ options_url }}&amp;target={{ wid }}"
+      hx-include="#{{ wid }}-search"
+      hx-target="this"
+      hx-swap="innerHTML"
+      hx-push-url="false"
+      hx-params="q"
+      {% if searchable %}
+        hx-trigger="load, input from:#{{ wid }}-search changed delay:250ms"
+      {% else %}
+        hx-trigger="load"
+      {% endif %}
+    ></div>
+    {% else %}
+    <div
+      id="{{ wid }}-list"
+      class="x-select__options"
+      role="listbox"
+      aria-label="{{ placeholder }}"
+      tabindex="-1"
+      x-ref="list"
+    >
+      {% for ov, ol in options %}
+      <button
+        type="button"
+        class="x-select__item"
+        role="option"
+        data-value="{{ ov }}"
+        data-label="{{ ol }}"
+        onclick="xSelectPick(this)"
+      >{{ ol }}</button>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% if errors %}<span class="form-error">{{ errors }}</span>{% endif %}
+
+{% include "partials/select.html#select_script" %}
+{% endwith %}
+{% endwith %}
+{% endpartialdef select_multi_control %}

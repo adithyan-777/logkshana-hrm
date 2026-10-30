@@ -1,10 +1,12 @@
 import json
+from types import SimpleNamespace
 
 from django.http import HttpResponse
 from django.test import RequestFactory, SimpleTestCase
 from django.urls import reverse
 
 from common.http import is_htmx_partial, redirect_to_list_drawer, set_hx_trigger
+from common.views import select_options_view
 
 
 class IsHtmxPartialTests(SimpleTestCase):
@@ -72,6 +74,54 @@ class SetHxTriggerTests(SimpleTestCase):
         self.assertTrue(payload["employeeCreated"])
         self.assertNotIn("closeModal", payload)
         self.assertEqual(payload["showToast"]["message"], "Employee added.")
+
+
+class SelectOptionsGuardTests(SimpleTestCase):
+    """Non-HTMX visits of the select-options fragment redirect out."""
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.url = reverse("select_options")
+
+    def _request(self, referer=None, *, user=True):
+        kwargs = {}
+        if referer is not None:
+            kwargs["HTTP_REFERER"] = referer
+        request = self.factory.get(self.url, **kwargs)
+        if user:
+            request.user = SimpleNamespace(is_authenticated=True)
+        return select_options_view(request)
+
+    def test_referer_is_not_trusted_goes_to_reports(self):
+        # Reload referers can be the tab's historical committed document —
+        # an arbitrary old page (observed: the exceptions report). Never
+        # follow it for aux option endpoints.
+        response = self._request("http://testserver/reports/exceptions/")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("report_hub"))
+
+    def test_self_referential_referer_goes_to_reports(self):
+        # Refreshing a previously pushed fragment URL sends /select-options/
+        # back as its own Referer; redirecting to it would loop.
+        response = self._request(
+            "http://testserver/select-options/?source=employees&target=xfilt-employee"
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("report_hub"))
+
+    def test_missing_referer_goes_to_reports(self):
+        response = self._request()
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("report_hub"))
+
+    def test_unauthenticated_goes_to_login(self):
+        response = self._request("http://testserver/reports/individual/", user=False)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("account_login"))
 
 
 class RedirectToListDrawerTests(SimpleTestCase):

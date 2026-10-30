@@ -4,6 +4,8 @@
 {% block title %}Individual Attendance Report{% endblock %}
 
 {% block page_content %}
+{% partialdef report_page inline %}
+<div id="report-page-region">
 {% include "partials/tabs_reports.html#tabs_reports" %}
 
 {% if self_service %}
@@ -17,6 +19,7 @@
   {% include "reports/partials/filter_form.html#filter_form" %}
 </div>
 
+<div id="report-region">
 <div class="card card--table">
   <div class="card__body">
     <div class="data-table-wrap">
@@ -54,4 +57,7 @@
     </div>
   </div>
 </div>
+</div>
+</div>
+{% endpartialdef report_page %}
 {% endblock %}

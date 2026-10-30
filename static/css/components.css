@@ -1345,6 +1345,41 @@ button.btn--danger:hover {
 
 .form-textarea { min-height: 96px; resize: vertical; }
 
+/* Password reveal toggle */
+.password-wrapper { position: relative; }
+
+.password-wrapper .form-input { padding-right: calc(var(--space-3) + 30px); }
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: var(--space-2);
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.password-toggle:hover {
+  color: var(--text);
+  background-color: var(--hover);
+}
+
+.password-toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
 .form-error {
   font-size: 12.5px;
   color: var(--danger);

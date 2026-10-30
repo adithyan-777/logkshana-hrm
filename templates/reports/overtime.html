@@ -3,8 +3,11 @@
 {% block title %}Overtime Summary Report{% endblock %}
 
 {% block page_content %}
+{% partialdef report_page inline %}
+<div id="report-page-region">
 {% include "partials/tabs_reports.html#tabs_reports" %}
 
+<div id="report-region">
 <div class="report-toolbar">
   {% include "reports/partials/filter_form.html#filter_form" %}
 </div>
@@ -46,4 +49,7 @@
     </div>
   </div>
 </div>
+</div>
+</div>
+{% endpartialdef report_page %}
 {% endblock %}

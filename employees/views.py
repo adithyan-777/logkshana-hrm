@@ -12,6 +12,7 @@ from common.http import (
     set_hx_trigger,
 )
 from common.pagination import list_pagination_context
+from common.views import redirect_stale_fragment_visit
 from django.db.models import ProtectedError
 from django.forms.forms import NON_FIELD_ERRORS
 from employees.decorators import require_permission
@@ -109,7 +110,16 @@ def employee_options_view(request: HttpRequest) -> HttpResponse:
     With ``?mode=multi&target=<box-id>`` returns Add-button options
     for the multi-select widget instead of single-select options.
     Returns a small HTML fragment for ``#employee-results``.
+    Non-HTMX visits reload out like ``select_options_view`` — calls must
+    carry the ``HX-Request`` header.
     """
+    if not is_htmx_partial(request):
+        return redirect_stale_fragment_visit(
+            request,
+            fallback_url_name="dashboard",
+            follow_referer=True,
+            fragment_path="/employees/options/",
+        )
     allowed = (
         user_has_permission(user=request.user, codename=PermissionCodename.ATTENDANCE_ADD)
         or user_has_permission(user=request.user, codename=PermissionCodename.ATTENDANCE_VIEW)

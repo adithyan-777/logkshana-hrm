@@ -1,0 +1,22 @@
+{% comment %}
+HTMX response fragment for partials/select.html (options_url mode).
+
+Query params consumed by the view: q (search text), source, target (widget uid),
+selected (initial value to mark). Items carry data-value/data-label and call
+xSelectPick(), defined in the select partial's script block.
+{% endcomment %}
+{% if options %}
+  {% for opt in options %}
+  <button
+    type="button"
+    class="x-select__item{% if selected and opt.value|stringformat:"s" == selected|stringformat:"s" %} is-selected{% endif %}"
+    role="option"
+    data-value="{{ opt.value }}"
+    data-label="{{ opt.label }}"
+    onclick="xSelectPick(this)"
+    aria-selected="{% if selected and opt.value|stringformat:'s' == selected|stringformat:'s' %}true{% else %}false{% endif %}"
+  >{{ opt.label }}</button>
+  {% endfor %}
+{% else %}
+  <p class="x-select__empty">No matches{% if query %} for “{{ query }}”{% endif %}.</p>
+{% endif %}

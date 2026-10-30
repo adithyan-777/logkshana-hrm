@@ -3,6 +3,8 @@
 {% block title %}Work Sessions Report{% endblock %}
 
 {% block page_content %}
+{% partialdef report_page inline %}
+<div id="report-page-region">
 {% include "partials/tabs_reports.html#tabs_reports" %}
 
 {% if self_service %}
@@ -12,6 +14,7 @@
 <p class="notice">No employee profile is linked to this account. Ask an admin to link your login to your employee record.</p>
 {% endif %}
 {% endif %}
+<div id="report-region">
 <div class="report-toolbar">
   {% include "reports/partials/filter_form.html#filter_form" %}
 </div>
@@ -53,4 +56,7 @@
     </div>
   </div>
 </div>
+</div>
+</div>
+{% endpartialdef report_page %}
 {% endblock %}

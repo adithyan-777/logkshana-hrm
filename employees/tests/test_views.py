@@ -589,7 +589,9 @@ class PermissionViewTests(BaseTenantTestCase):
 
 class EmployeeOptionsViewTests(BaseTenantTestCase):
     def test_short_query_returns_empty(self):
-        response = self.client.get(reverse("employee_options"), {"q": "a"})
+        response = self.client.get(
+            reverse("employee_options"), {"q": "a"}, HTTP_HX_REQUEST="true"
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content.decode().strip(), "")
@@ -597,7 +599,9 @@ class EmployeeOptionsViewTests(BaseTenantTestCase):
     def test_two_letter_query_searches(self):
         employee_factory(first_name="Searchable", last_name="Person", emp_code="SEA123")
 
-        response = self.client.get(reverse("employee_options"), {"q": "se"})
+        response = self.client.get(
+            reverse("employee_options"), {"q": "se"}, HTTP_HX_REQUEST="true"
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Searchable")
@@ -605,13 +609,17 @@ class EmployeeOptionsViewTests(BaseTenantTestCase):
     def test_search_returns_matching_employee(self):
         employee_factory(first_name="Searchable", last_name="Person", emp_code="SEA123")
 
-        response = self.client.get(reverse("employee_options"), {"q": "sea"})
+        response = self.client.get(
+            reverse("employee_options"), {"q": "sea"}, HTTP_HX_REQUEST="true"
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Searchable")
 
     def test_no_match_returns_empty_state(self):
-        response = self.client.get(reverse("employee_options"), {"q": "zzz-no-such"})
+        response = self.client.get(
+            reverse("employee_options"), {"q": "zzz-no-such"}, HTTP_HX_REQUEST="true"
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "No employees match")
@@ -624,6 +632,34 @@ class EmployeeOptionsViewTests(BaseTenantTestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertIn("/accounts/login/", response.url)
+
+    def test_stale_non_htmx_visit_redirects_out(self):
+        response = self.client.get(reverse("employee_options"), {"q": "sea"})
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("dashboard"))
+
+    def test_stale_visit_follows_real_referer(self):
+        response = self.client.get(
+            reverse("employee_options"),
+            {"q": "sea"},
+            HTTP_REFERER="https://testserver/corrections/add/",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response["Location"], "https://testserver/corrections/add/"
+        )
+
+    def test_stale_visit_ignores_self_referential_referer(self):
+        response = self.client.get(
+            reverse("employee_options"),
+            {"q": "sea"},
+            HTTP_REFERER="https://testserver/employees/options/?q=sea",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("dashboard"))
 
 
 class SidebarActiveStateTests(BaseTenantTestCase):

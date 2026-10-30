@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django_tenants.test.client import TenantClient
 
-from attendance.models import Attendance
+from attendance.models import Attendance, AttendanceActivity, WorkSession
 from common.tests.base import TEST_PASSWORD, BaseTenantTestCase, pagination_bounds
 from common.tests.factories import (
     activity_factory,
@@ -29,6 +29,7 @@ from reports.selectors.leave import (
 )
 from reports.selectors.overtime import overtime_report_list
 from reports.selectors.punch_log import punch_log_list
+from reports.selectors.work_sessions import work_session_report_list
 
 
 class AttendanceSummarySelectorTests(BaseTenantTestCase):
@@ -98,6 +99,27 @@ class IndividualAttendanceSelectorTests(BaseTenantTestCase):
         )
 
         self.assertEqual(len(results), 2)
+
+    def test_filters_by_multiple_employees(self):
+        first = employee_factory(first_name="Multi", emp_code="R002C")
+        second = employee_factory(first_name="MultiTwo", emp_code="R003C")
+        other = employee_factory(first_name="Excluded", emp_code="R004C")
+        attendance_record_factory(employee=first, day=date(2026, 3, 1))
+        attendance_record_factory(employee=second, day=date(2026, 3, 1))
+        attendance_record_factory(employee=other, day=date(2026, 3, 1))
+
+        results = list(
+            individual_attendance_list(
+                date_from=date(2026, 3, 1),
+                date_to=date(2026, 3, 31),
+                employee_ids=[first.pk, second.pk],
+            )
+        )
+
+        self.assertEqual(len(results), 2)
+        self.assertSetEqual(
+            {r.employee_id for r in results}, {first.pk, second.pk}
+        )
 
     def test_filters_by_department(self):
         department = department_factory(name="Ops", code="OPS2")
@@ -184,6 +206,101 @@ class PunchLogSelectorTests(BaseTenantTestCase):
         )
 
         self.assertEqual(len(results), 1)
+
+    def test_filters_by_multiple_employees(self):
+        first = employee_factory(first_name="EveOne", emp_code="R006A")
+        second = employee_factory(first_name="EveTwo", emp_code="R006B")
+        other = employee_factory(first_name="Excluded", emp_code="R006C")
+        for employee in (first, second, other):
+            activity_factory(
+                employee=employee,
+                punch_time=timezone.make_aware(datetime(2026, 6, 1, 9, 0)),
+            )
+
+        results = list(
+            punch_log_list(
+                date_from=date(2026, 6, 1),
+                date_to=date(2026, 6, 30),
+                employee_ids=[first.pk, second.pk],
+            )
+        )
+
+        self.assertEqual(len(results), 2)
+        self.assertCountEqual(
+            [item.employee_id for item in results],
+            [first.pk, second.pk],
+        )
+
+    def test_filters_by_direction(self):
+        employee = employee_factory(first_name="EveDir", emp_code="R006D")
+        activity_factory(
+            employee=employee,
+            punch_time=timezone.make_aware(datetime(2026, 6, 1, 9, 0)),
+            direction=AttendanceActivity.Direction.IN,
+        )
+        activity_factory(
+            employee=employee,
+            punch_time=timezone.make_aware(datetime(2026, 6, 1, 17, 0)),
+            direction=AttendanceActivity.Direction.OUT,
+        )
+
+        results = list(
+            punch_log_list(
+                date_from=date(2026, 6, 1),
+                date_to=date(2026, 6, 30),
+                direction=AttendanceActivity.Direction.IN,
+            )
+        )
+
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0].direction, AttendanceActivity.Direction.IN)
+
+
+class WorkSessionSelectorTests(BaseTenantTestCase):
+    def test_filters_by_checkout_status(self):
+        employee = employee_factory(first_name="Sess", emp_code="R006S")
+        record = attendance_record_factory(
+            employee=employee,
+            day=date(2026, 7, 1),
+        )
+        open_session = WorkSession.objects.create(
+            employee=employee,
+            attendance=record,
+            day=date(2026, 7, 1),
+            check_in=timezone.make_aware(datetime(2026, 7, 1, 9, 0)),
+        )
+        closed_session = WorkSession.objects.create(
+            employee=employee,
+            attendance=record,
+            day=date(2026, 7, 1),
+            check_in=timezone.make_aware(datetime(2026, 7, 1, 9, 0)),
+            check_out=timezone.make_aware(datetime(2026, 7, 1, 17, 0)),
+        )
+
+        open_only = list(
+            work_session_report_list(
+                date_from=date(2026, 7, 1),
+                date_to=date(2026, 7, 30),
+                status="open",
+            )
+        )
+        closed_only = list(
+            work_session_report_list(
+                date_from=date(2026, 7, 1),
+                date_to=date(2026, 7, 30),
+                status="closed",
+            )
+        )
+        everything = list(
+            work_session_report_list(
+                date_from=date(2026, 7, 1),
+                date_to=date(2026, 7, 30),
+            )
+        )
+
+        self.assertEqual(open_only, [open_session])
+        self.assertEqual(closed_only, [closed_session])
+        self.assertCountEqual(everything, [open_session, closed_session])
 
 
 class OvertimeReportSelectorTests(BaseTenantTestCase):
@@ -530,6 +647,51 @@ class ReportSelfServiceTests(BaseTenantTestCase):
         ):
             response = client.get(reverse(url_name))
             self.assertEqual(response.status_code, 403, msg=url_name)
+
+
+class ReportWidgetMultiEmployeeTests(BaseTenantTestCase):
+    """Punch log and work sessions use the shared multi employee picker."""
+
+    def test_punch_log_renders_multi_employee_filter(self):
+        response = self.client.get(reverse("report_punch_log"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "x-select--multi")
+        self.assertContains(response, "data-x-select-multiple")
+        self.assertContains(response, "All employees")
+        self.assertContains(response, "All directions")
+
+    def test_work_sessions_renders_multi_employee_filter(self):
+        response = self.client.get(reverse("report_work_sessions"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "x-select--multi")
+        self.assertContains(response, "data-x-select-multiple")
+        self.assertContains(response, "All employees")
+        self.assertContains(response, "Missing checkout")
+
+    def test_punch_log_filters_by_multiple_employees(self):
+        first = employee_factory(first_name="MultiA", emp_code="R-MA1")
+        second = employee_factory(first_name="MultiB", emp_code="R-MB1")
+        other = employee_factory(first_name="MultiC", emp_code="R-MC1")
+        for employee in (first, second, other):
+            activity_factory(
+                employee=employee,
+                punch_time=timezone.make_aware(datetime(2026, 9, 2, 9, 0)),
+            )
+
+        response = self.client.get(
+            reverse("report_punch_log"),
+            {
+                "date_from": "2026-09-01",
+                "date_to": "2026-09-30",
+                "employee": [first.pk, second.pk],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        rendered = [t.employee_id for t in response.context["page_obj"].object_list]
+        self.assertCountEqual(rendered, [first.pk, second.pk])
 
 
 class ReportPaginationTests(BaseTenantTestCase):

@@ -136,6 +136,15 @@ Or use Docker Compose (web + worker + crontab + redis):
 docker compose up --build
 ```
 
+Alternate laptop stack (`docker/local/`, plain-HTTP nginx, no cert
+requirements, DEBUG on):
+
+```bash
+# web on :8000 too — stop the root stack first to free ports, if needed:
+docker compose down
+docker compose -f docker/local/docker-compose.yml up --build -d
+```
+
 ## Common commands
 
 | Command | Description |

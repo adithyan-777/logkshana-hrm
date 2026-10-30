@@ -2026,6 +2026,246 @@ div.dt-container button.dt-paging-button:focus-visible {
   margin: 4px 0;
 }
 
+/*
+  Reusable HTMX select (partials/select.html). Token-driven so the dark
+  theme is readable by construction — highlight/selected = brand maroon on
+  both themes.
+*/
+.x-select { position: relative; display: flex; width: 100%; }
+
+.x-select__trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--control-h);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--input);
+  border-radius: var(--r-md);
+  background: var(--bg-prompt);
+  color: var(--text);
+  font: inherit;
+  line-height: var(--text-body-sm-lh);
+  box-shadow: none;
+  text-align: left;
+  cursor: pointer;
+  transition: var(--motion-interactive);
+  transform: none;
+}
+
+.x-select__trigger:hover { border-color: var(--input); transform: none; }
+
+.x-select__trigger:focus-visible {
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: var(--shadow-focus);
+}
+
+.x-select__trigger:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.x-select__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.x-select__label--placeholder { color: var(--text-faint); }
+
+.x-select__chev {
+  color: var(--text-muted);
+  font-size: 1.1em;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: var(--motion-fast);
+}
+
+.x-select.is-open .x-select__chev,
+.x-select__trigger[aria-expanded="true"] .x-select__chev { transform: rotate(180deg); }
+
+.x-select__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 60;
+  width: 100%;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  margin: 0;
+  background: var(--bg-popover);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-popover);
+}
+
+.x-select__menu--end { left: auto; right: 0; }
+
+.x-select__search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--space-1) var(--space-2);
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  min-height: 28px;
+  transition: var(--motion-interactive);
+}
+
+.x-select__search:hover { border-color: var(--border); }
+
+.x-select__search:focus {
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: var(--shadow-focus);
+}
+
+.x-select__spinner {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.95em;
+  pointer-events: none;
+}
+
+.x-select__options {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 264px;
+  overflow-y: auto;
+  outline: none;
+}
+
+.x-select__item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-2);
+  border-radius: var(--r-sm);
+  font-size: 13.5px;
+  color: var(--text);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: var(--motion-interactive);
+  transform: none;
+}
+
+.x-select__item:hover {
+  background: var(--hover);
+  color: var(--text);
+  transform: none;
+}
+
+.x-select__item.is-highlight { background: var(--hover); color: var(--text); }
+
+.x-select__item:focus-visible {
+  outline: none;
+  background: var(--hover);
+}
+
+/* Picked + hovered rows: maroon + white, readable in dark and light. */
+.x-select__item.is-selected {
+  background: var(--accent);
+  color: var(--text-inverse);
+}
+
+.x-select__item.is-selected:hover {
+  background: var(--accent-hover);
+  color: var(--text-inverse);
+}
+
+.x-select__empty {
+  padding: var(--space-2);
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Multi-select variant: chips row + clear pill */
+.x-select__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.x-select__chips:empty { display: none; }
+
+/* full-width row variant (external render target in report filters) */
+.x-select__chips--row { margin-top: var(--space-2); }
+
+.x-select__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.2rem 0.35rem 0.2rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--bg-muted);
+  color: var(--text);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.x-select__chip__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.x-select__chip__remove:hover {
+  background: color-mix(in srgb, var(--danger) 15%, transparent);
+  color: var(--danger);
+}
+
+.x-select__clear {
+  align-self: flex-start;
+  margin-top: var(--space-1);
+  padding: 2px var(--space-2);
+  font-size: 12.5px;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: var(--motion-interactive);
+}
+
+.x-select__clear:hover {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 25%, transparent);
+}
+
+/* Clear pill rendered at the head of an external chips row */
+.x-select__clear--chip {
+  margin-top: 0;
+  padding: 0.2rem 0.65rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  align-self: center;
+}
+
 /* Modal — right drawer; follows data-sidebar-variant (default | inset) */
 .admin-modal {
   position: fixed;

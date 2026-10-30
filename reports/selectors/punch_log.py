@@ -22,7 +22,8 @@ def punch_log_list(
     date_from: date,
     date_to: date,
     department_id: int | None = None,
-    employee_id: int | None = None,
+    employee_ids: list[int] | None = None,
+    direction: str = "",
 ) -> QuerySet[AttendanceActivity]:
     start, end = _punch_time_range(date_from=date_from, date_to=date_to)
     queryset = AttendanceActivity.objects.filter(
@@ -31,7 +32,9 @@ def punch_log_list(
 
     if department_id:
         queryset = queryset.filter(employee__department_id=department_id)
-    if employee_id:
-        queryset = queryset.filter(employee_id=employee_id)
+    if employee_ids:
+        queryset = queryset.filter(employee_id__in=employee_ids)
+    if direction:
+        queryset = queryset.filter(direction=direction)
 
     return queryset.order_by("-punch_time")

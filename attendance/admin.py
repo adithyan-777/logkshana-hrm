@@ -7,6 +7,7 @@ from attendance.models import (
     BreakSession,
     WorkSession,
 )
+from attendance.services import activity_create, punch_apply, punch_delete
 
 
 @admin.register(AttendanceActivity)
@@ -29,6 +30,40 @@ class AttendanceActivityAdmin(admin.ModelAdmin):
     autocomplete_fields = ("employee",)
     list_select_related = ("employee",)
     date_hierarchy = "punch_time"
+
+    def save_model(self, request, obj, form, change):
+        # Writes go through the ingest services so Attendance and
+        # WorkSession derivations follow the punch (a raw save leaves
+        # them stale — direction also defaults to "unknown", which the
+        # pairing ignores; the form default stays visible to the
+        # editor).
+        if change:
+            previous = AttendanceActivity.objects.get(pk=obj.pk)
+            previous_employee = previous.employee
+            previous_punch_time = previous.punch_time
+            obj.save()
+            punch_apply(
+                activity=obj,
+                previous_employee=previous_employee,
+                previous_punch_time=previous_punch_time,
+            )
+        else:
+            created = activity_create(
+                employee=obj.employee,
+                punch_time=obj.punch_time,
+                direction=obj.direction,
+                method=obj.method,
+                external_id=obj.external_id or None,
+                raw_data=obj.raw_data,
+            )
+            obj.pk = created.pk
+
+    def delete_model(self, request, obj):
+        punch_delete(activity=obj)
+
+    def delete_queryset(self, request, queryset):
+        for obj in queryset:
+            punch_delete(activity=obj)
 
 
 class WorkSessionInline(admin.StackedInline):

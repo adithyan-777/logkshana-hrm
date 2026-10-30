@@ -23,11 +23,11 @@ from attendance.selectors import (
 )
 from attendance.services import (
     activity_create,
-    activity_delete,
-    activity_update,
     attendance_record_create,
     attendance_record_delete,
     attendance_record_update,
+    punch_delete,
+    punch_edit,
 )
 from common.http import (
     delete_blocked_response,
@@ -231,7 +231,10 @@ def transaction_edit(request: HttpRequest, transaction_id: int) -> HttpResponse:
         form = AttendanceActivityForm(request.POST, instance=transaction)
         _configure_datetime_fields(form)
         if form.is_valid():
-            activity_update(**_cleaned_without_search(form), activity=transaction)
+            # The service re-couples the edited punch to its work
+            # sessions and refreshes the affected attendance rows (the
+            # plain update would leave them stale).
+            punch_edit(**_cleaned_without_search(form), activity=transaction)
             response = _render_transaction_edit_form(
                 request,
                 AttendanceActivityForm(instance=transaction),
@@ -259,7 +262,9 @@ def transaction_edit(request: HttpRequest, transaction_id: int) -> HttpResponse:
 @require_http_methods(["DELETE"])
 def transaction_delete_view(request: HttpRequest, transaction_id: int) -> HttpResponse:
     transaction = get_object_or_404(AttendanceActivity, pk=transaction_id)
-    activity_delete(activity=transaction)
+    # punch_delete rebuilds the sessions/attendance rows the punch used
+    # to feed, then removes the punch itself.
+    punch_delete(activity=transaction)
     response = HttpResponse("")
     response["HX-Trigger"] = "transactionDeleted"
     return response

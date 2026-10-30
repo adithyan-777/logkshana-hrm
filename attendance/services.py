@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import OuterRef, Q, Subquery, Sum
+from django.db.models import Count, Max, Min, OuterRef, Q, Subquery, Sum
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django_tenants.utils import get_public_schema_name, schema_context
@@ -404,6 +404,326 @@ def attendance_update_for_punch(
         _activity_attendance_link(activity, row)
         return row
     return None
+
+
+# -- Manual punches & corrections: re-coupling ---------------------------
+#
+# The pairing primitive only ever pairs forward: an IN opens its own
+# session, an OUT closes the most recent open one — it can never
+# un-pair. A punch added through ``activity_create`` is fine this way
+# (it pairs on entry), but an EDIT or DELETE of a punch leaves the
+# derived state stale: the session keeps the old check-in/total and the
+# daily row keeps the old boundaries. The service below re-runs the
+# derivation around one changed punch so the punch log stays the
+# single source of truth.
+
+
+def _punch_scope_days(
+    *,
+    activity: AttendanceActivity,
+    previous_employee: Employee | None = None,
+    previous_punch_time: datetime | None = None,
+) -> dict[int, set[date]]:
+    """Employee pk -> days whose derivation can mention this punch.
+
+    The punch's own day anchors the window (± 1 day is applied later).
+    An edited punch can also move between days or employees, and its
+    session may wrap past midnight (an 23:00 IN accrues to its own day
+    while the OUT falls on the next calendar day), so the days of the
+    sessions it opens or closes — and of the partner punches that
+    opened them — are anchored as well.
+    """
+    scope: dict[int, set[date]] = {}
+
+    def _anchor(employee_id, punch_time):
+        if employee_id is not None and punch_time is not None:
+            scope.setdefault(employee_id, set()).add(punch_time.date())
+
+    _anchor(activity.employee_id, activity.punch_time)
+    _anchor(
+        previous_employee.pk if previous_employee else None,
+        previous_punch_time,
+    )
+    owned = WorkSession.objects.filter(
+        Q(in_punch=activity) | Q(out_punch=activity)
+    ).select_related("in_punch", "out_punch")
+    for session in owned:
+        partner_in = session.in_punch.punch_time if session.in_punch else None
+        _anchor(session.employee_id, partner_in)
+        if session.out_punch is not None and session.out_punch_id != activity.pk:
+            _anchor(session.out_punch.employee_id, session.out_punch.punch_time)
+    return scope
+
+
+def _attendance_row_refresh(*, row: Attendance, had_sessions: bool) -> None:
+    """Recompute one daily row from its (rebuilt) work sessions.
+
+    Mirrors what the pairing primitive writes on the OUT path: the row
+    boundaries come from the earliest session's check-in, the latest
+    closed session's check-out, and the sum of closed session
+    durations. Status is left to the pairing (an IN flips ABSENT/
+    INCOMPLETE to PRESENT, hand-made statuses are kept) — except that
+    a row which lost every session it used to have (e.g. its punch was
+    deleted) is demoted from PRESENT to INCOMPLETE.
+    """
+    stats = WorkSession.objects.filter(attendance=row).aggregate(
+        first_in=Min("check_in"),
+        last_out=Max("check_out"),
+        total=Sum("total_time", filter=Q(check_out__isnull=False)),
+        session_count=Count("pk"),
+    )
+    row.check_in = stats["first_in"]
+    row.check_out = stats["last_out"]
+    row.total_work_time = stats["total"] or timedelta(0)
+    if (
+        stats["session_count"] == 0
+        and had_sessions
+        and row.status == Attendance.Status.PRESENT
+    ):
+        row.status = Attendance.Status.INCOMPLETE
+    row.save(
+        update_fields=[
+            "check_in", "check_out", "total_work_time", "status", "updated_at",
+        ]
+    )
+
+
+def _punch_links_repair(*, punches: list[AttendanceActivity]) -> None:
+    """Re-point window punches to the rows their sessions landed on.
+
+    The reset clears every window punch's attendance link, and
+    ``_activity_attendance_link`` only fills a NULL — so a punch whose
+    pairing is the idempotent early-return (an OUT that re-closes a
+    session kept from before the window) would stay unlinked forever.
+    Derive the link back from the punch's session (unconditionally:
+    the reset cleared the links, so the write is always a repair).
+    """
+    for punch in punches:
+        if punch.direction == AttendanceActivity.Direction.IN:
+            session = WorkSession.objects.filter(
+                in_punch=punch
+            ).only("attendance_id").first()
+        elif punch.direction == AttendanceActivity.Direction.OUT:
+            session = WorkSession.objects.filter(
+                out_punch=punch
+            ).only("attendance_id").first()
+        else:
+            continue
+        if session is not None:
+            AttendanceActivity.objects.filter(pk=punch.pk).update(
+                attendance_id=session.attendance_id
+            )
+
+
+def _punch_window_replay(
+    *,
+    employee: Employee,
+    window_start: date,
+    window_end: date,
+    skip_activity: AttendanceActivity | None = None,
+) -> list[Attendance]:
+    """Reset and replay one employee's derived state for a day window.
+
+    Sessions and daily-row stamps inside the window are wiped (status
+    is kept, as in the replay script's reset) and rebuilt by replaying
+    the window's punches chronologically through the pairing primitive
+    — so every production rule (the opening-time day boundary, the
+    no-backwards guard, overnight closes) applies as if the punches
+    had just arrived. Sessions from before the window are kept: a
+    window OUT that originally closed one re-pairs by idempotency.
+    """
+    had_sessions = set(
+        Attendance.objects.filter(
+            employee=employee,
+            day__gte=window_start,
+            day__lte=window_end,
+            work_sessions__isnull=False,
+        ).values_list("pk", flat=True)
+    )
+    WorkSession.objects.filter(
+        employee=employee,
+        day__gte=window_start,
+        day__lte=window_end,
+    ).delete()
+    punches = [
+        punch
+        for punch in AttendanceActivity.objects.filter(
+            employee=employee,
+            punch_time__date__gte=window_start,
+            punch_time__date__lte=window_end,
+        )
+        .order_by("punch_time", "id")
+        if punch.pk != (skip_activity.pk if skip_activity else None)
+    ]
+    AttendanceActivity.objects.filter(
+        pk__in=[punch.pk for punch in punches]
+    ).update(attendance=None)
+    Attendance.objects.filter(
+        employee=employee,
+        day__gte=window_start,
+        day__lte=window_end,
+    ).update(
+        check_in=None, check_out=None, total_work_time=timedelta(0)
+    )
+    for punch in punches:
+        attendance_update_for_punch(
+            employee=employee,
+            punch_time=punch.punch_time,
+            direction=punch.direction,
+            activity=punch,
+        )
+    rows = list(
+        Attendance.objects.filter(
+            employee=employee,
+            day__gte=window_start,
+            day__lte=window_end,
+        ).order_by("day")
+    )
+    for row in rows:
+        _attendance_row_refresh(
+            row=row, had_sessions=row.pk in had_sessions
+        )
+    _punch_links_repair(punches=punches)
+    return rows
+
+
+@transaction.atomic
+def punch_apply(
+    *,
+    activity: AttendanceActivity,
+    previous_employee: Employee | None = None,
+    previous_punch_time: datetime | None = None,
+    deleted: bool = False,
+) -> list[Attendance]:
+    """Re-couple one manual punch or correction to its derived state.
+
+    Called after a punch is added, edited (time/direction/employee) or
+    about to be deleted, so its WorkSessions and daily Attendance rows
+    follow the punch log again.
+
+    Phase 1 — scope: the punch's day (plus its previous day/time when
+    it was edited, and the days of the sessions it opens or closes)
+    fixes the window; sessions closed by a much later punch-out (the
+    unbounded no-opening-time boundary) pull the window's end forward
+    so the replay re-pairs those closes too.
+    Phase 2 — replay: each affected employee's window is reset and
+    re-derived through the pairing primitive (``_punch_window_replay``).
+    Phase 3 — refresh: daily rows are recomputed from their rebuilt
+    sessions (``_attendance_row_refresh``).
+
+    Manual daily corrections (``daily_add`` rows) are touched only
+    where the derivation actually reaches them: their status is kept,
+    their times are recomputed from sessions — which hand-made rows
+    normally do not have.
+    """
+    if not attendance_policy_is_unscheduled():
+        # Punch derivation only exists for the unscheduled policy —
+        # keep in sync with activity_create (scheduled mode just
+        # records the punch).
+        return []
+    scope = _punch_scope_days(
+        activity=activity,
+        previous_employee=previous_employee,
+        previous_punch_time=previous_punch_time,
+    )
+    # Replay order matters when a punch was moved between employees:
+    # the previous employee's window must be rebuilt first so the
+    # punch's old session (still FK'd to that employee) is gone before
+    # the current employee's replay re-pairs the punch — otherwise the
+    # IN idempotency check finds the stale session and no-ops.
+    order: list[int] = []
+
+    def _queue(employee_id):
+        if employee_id in scope and employee_id not in order:
+            order.append(employee_id)
+
+    _queue(previous_employee.pk if previous_employee else None)
+    for session in WorkSession.objects.filter(
+        Q(in_punch=activity) | Q(out_punch=activity)
+    ):
+        _queue(session.employee_id)
+    _queue(activity.employee_id)
+    for employee_id in scope:
+        _queue(employee_id)
+
+    refreshed: list[Attendance] = []
+    for employee_id in order:
+        punch_days = scope[employee_id]
+        window_start = min(punch_days) - timedelta(days=1)
+        window_end = max(punch_days) + timedelta(days=1)
+        # A session built from window punches may be closed by a punch
+        # far outside the window (no opening time configured means any
+        # next-day OUT closes yesterday's session). Pull its day in, or
+        # the replay would rebuild that session open.
+        latest_out = (
+            WorkSession.objects.filter(
+                employee_id=employee_id,
+                day__gte=window_start,
+                out_punch__isnull=False,
+            )
+            .aggregate(latest=Max("out_punch__punch_time"))["latest"]
+        )
+        if latest_out is not None and latest_out.date() > window_end:
+            window_end = latest_out.date()
+        employee = Employee.objects.get(pk=employee_id)
+        refreshed += _punch_window_replay(
+            employee=employee,
+            window_start=window_start,
+            window_end=window_end,
+            skip_activity=activity if deleted else None,
+        )
+    if deleted:
+        activity.delete()
+    return refreshed
+
+
+@transaction.atomic
+def punch_edit(
+    *,
+    activity: AttendanceActivity,
+    employee,
+    punch_time,
+    direction: str,
+    method: str,
+    external_id: str | None = None,
+    raw_data=None,
+) -> list[Attendance]:
+    """Update a punch and re-couple its derived state.
+
+    Wraps ``activity_update`` + ``punch_apply``: the previous
+    employee/punch time are captured so a moved punch (different day or
+    a different employee) repairs the old day's rows too.
+    """
+    previous_employee = activity.employee
+    previous_punch_time = activity.punch_time
+    activity_update(
+        activity=activity,
+        employee=employee,
+        punch_time=punch_time,
+        direction=direction,
+        method=method,
+        external_id=external_id,
+        raw_data=raw_data,
+    )
+    return punch_apply(
+        activity=activity,
+        previous_employee=previous_employee,
+        previous_punch_time=previous_punch_time,
+    )
+
+
+@transaction.atomic
+def punch_delete(*, activity: AttendanceActivity) -> list[Attendance]:
+    """Delete a punch and rebuild the rows it used to feed.
+
+    The punch itself is removed whatever the policy mode; only the
+    work-session/attendance re-derivation is unscheduled-only.
+    """
+    if not attendance_policy_is_unscheduled():
+        activity.delete()
+        return []
+    return punch_apply(activity=activity, deleted=True)
+
 
 def _employee_get_or_create_for_device(*, emp_code: str, branch=None) -> Employee:
     employee = employee_get_by_emp_code(emp_code=emp_code)

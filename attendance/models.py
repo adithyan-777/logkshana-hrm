@@ -131,14 +131,16 @@ class WorkSession(BaseModel):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="in_puch",
+        # Anonymous reverse access: nothing reverse-queries the session
+        # side of a punch (WorkSession is reachable from Attendance).
+        related_name="+",
     )
     out_punch = models.ForeignKey(
         "AttendanceActivity",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="out_puch",
+        related_name="+",
     )
     check_in = models.DateTimeField()
     check_out = models.DateTimeField(null=True, blank=True)

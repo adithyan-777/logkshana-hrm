@@ -6,6 +6,11 @@ urlpatterns = [
     path("", views.employee_list_view, name="employee_list"),
     path("options/", views.employee_options_view, name="employee_options"),
     path("add/", views.employee_add, name="employee_add"),
+    path(
+        "<int:employee_id>/punch/",
+        views.employee_punch_toggle,
+        name="employee_punch_toggle",
+    ),
     path("<int:employee_id>/edit/", views.employee_edit, name="employee_edit"),
     path(
         "<int:employee_id>/delete/", views.employee_delete_view, name="employee_delete"

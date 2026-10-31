@@ -380,6 +380,71 @@ fieldset.form-section > legend {
   color: var(--accent);
 }
 
+/* Live punch-status badges (employees list): one family per punch
+   direction family, reusing the same semantic tokens as status badges.
+   Punch in = primary/accent, punch out = danger red; suspended states
+   keep their own hues. */
+.badge.punch-in {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+
+.badge.punch-out {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+}
+
+.badge.punch-break_in,
+.badge.punch-break_out {
+  background: color-mix(in srgb, var(--warning) 18%, transparent);
+  color: #9a7b00;
+}
+
+.badge.punch-overtime_in,
+.badge.punch-overtime_out {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+/* One-click web-punch toggle on the employees list: the badge keeps
+   its state face, and hover (or focus) reveals the next action. Both
+   faces stack in one grid cell, so the button is always sized by the
+   wider label and hovering can never change its footprint. */
+.badge.hover-swap {
+  display: inline-grid;
+  place-items: center;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.badge.hover-swap .badge__state,
+.badge.hover-swap .badge__action {
+  grid-area: 1 / 1;
+  white-space: nowrap;
+}
+
+.badge.hover-swap .badge__action {
+  visibility: hidden;
+}
+
+.badge.hover-swap:hover .badge__state,
+.badge.hover-swap:focus .badge__state {
+  visibility: hidden;
+}
+
+.badge.hover-swap:hover .badge__action,
+.badge.hover-swap:focus .badge__action {
+  visibility: visible;
+}
+
+/* Never-punched employee; dashed outline signals "nothing yet" and the
+   hover action invites the first punch. */
+.badge.punch-none {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px dashed var(--border);
+}
+
 .message {
   padding: var(--space-3);
   border-radius: var(--r-md);

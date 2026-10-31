@@ -1,9 +1,15 @@
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
+from django.db.models import ProtectedError, Q
+from django.forms.forms import NON_FIELD_ERRORS
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
+from attendance.models import AttendanceActivity
+from attendance.services import activity_create
 from common.http import (
     delete_blocked_response,
     is_htmx_partial,
@@ -13,8 +19,6 @@ from common.http import (
 )
 from common.pagination import list_pagination_context
 from common.views import redirect_stale_fragment_visit
-from django.db.models import ProtectedError
-from django.forms.forms import NON_FIELD_ERRORS
 from employees.decorators import require_permission
 from employees.forms import (
     DepartmentForm,
@@ -24,10 +28,6 @@ from employees.forms import (
     RoleForm,
 )
 from employees.models import Department, Employee, Position
-from django.core.exceptions import PermissionDenied
-from django.db.models import Q
-
-from employees.models import Employee
 from employees.permission_catalog import PermissionCodename
 from employees.selectors import (
     department_list,
@@ -92,11 +92,47 @@ def employee_list_view(request: HttpRequest) -> HttpResponse:
     context["can_delete"] = user_has_permission(
         user=request.user, codename=PermissionCodename.EMPLOYEES_DELETE
     )
+    # Web-punch toggle availability (attendance.add holders may punch
+    # for anyone from the list; the badge renders inert for others).
+    context["can_punch"] = user_has_permission(
+        user=request.user, codename=PermissionCodename.ATTENDANCE_ADD
+    )
 
     if is_htmx_partial(request):
         return render(request, "employees/list.html#employee_table", context)
 
     return render(request, "employees/list.html", context)
+
+
+@login_required
+@require_permission(PermissionCodename.ATTENDANCE_ADD)
+@require_http_methods(["POST"])
+def employee_punch_toggle(request: HttpRequest, employee_id: int) -> HttpResponse:
+    """One-click web punch from the employees list (attendance.add only).
+
+    The next punch direction is the inverse of the employee's mirrored
+    state (punched out ⇒ IN, punched in ⇒ OUT; suspended states close
+    their sub-period first). The punch itself goes through
+    ``activity_create`` — the exact same path as a manual punch from
+    the Record-punch form — so pairing, day rows, and the status
+    mirror all update through the regular pipeline.
+
+    Returns just the re-rendered badge, so htmx swaps the button in
+    place without refreshing the whole table.
+    """
+    employee = get_object_or_404(Employee, pk=employee_id)
+    activity_create(
+        employee=employee,
+        punch_time=timezone.now(),
+        direction=employee.next_punch_direction,
+        method=AttendanceActivity.AttendanceActivityMethodType.WEB,
+    )
+    employee.refresh_from_db()
+    return render(
+        request,
+        "partials/punch_status_badge.html",
+        {"employee": employee, "can_punch": True},
+    )
 
 
 @login_required

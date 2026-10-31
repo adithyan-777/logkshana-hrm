@@ -12,6 +12,7 @@ from django.urls import reverse
 from django.utils.text import slugify
 from django_tenants.utils import get_public_schema_name, schema_context
 
+from attendance.models import AttendanceActivity
 from companies.models import Company, Device
 from companies.selectors import device_get_by_serial_number
 from employees.models import Department, Employee, Permission, Position, Role
@@ -279,6 +280,48 @@ def employee_delete(*, employee: Employee) -> Employee:
                 for serial in serials
             ]
         )
+    return employee
+
+
+# -- Live punch-status mirror --------------------------------------------
+
+
+def _latest_punch_direction(*, employee: Employee) -> AttendanceActivity | None:
+    """The employee's latest meaningful punch, or None.
+
+    Unknown-direction punches (devices that send no status label) are
+    skipped: they carry no state to mirror. ``-id`` breaks ties between
+    two punches stamped at the same second so recompute is deterministic.
+    """
+    return (
+        AttendanceActivity.objects.filter(employee=employee)
+        .exclude(direction=AttendanceActivity.Direction.UNKNOWN)
+        .order_by("-punch_time", "-id")
+        .first()
+    )
+
+
+@transaction.atomic
+def employee_punch_status_recompute(*, employee: Employee) -> Employee:
+    """Refresh the denormalized punch-status mirror from the punch log.
+
+    Single sync point for ``Employee.punch_status`` / ``punch_time``,
+    called at the end of every punch write path (create, update,
+    delete, gateway replays). Always recomputed *from*
+    ``AttendanceActivity`` — never patched from call-site arguments —
+    so edit/delete paths can't leave a stale state behind, and a
+    wholesale backfill can re-derive every row with the same code.
+
+    No-op (no write) when the mirror already matches the log.
+    """
+    latest = _latest_punch_direction(employee=employee)
+    status = latest.direction if latest is not None else ""
+    punch_time = latest.punch_time if latest is not None else None
+    if employee.punch_status == status and employee.punch_time == punch_time:
+        return employee
+    employee.punch_status = status
+    employee.punch_time = punch_time
+    employee.save(update_fields=["punch_status", "punch_time", "updated_at"])
     return employee
 
 

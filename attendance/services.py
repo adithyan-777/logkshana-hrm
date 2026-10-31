@@ -18,7 +18,7 @@ from attendance.models import (
 from companies.selectors import device_get_by_serial_number
 from employees.models import Employee
 from employees.selectors import employee_get_by_emp_code
-from employees.services import employee_create
+from employees.services import employee_create, employee_punch_status_recompute
 from policies.selectors import (
     attendance_policy_is_unscheduled,
     unscheduled_opening_time_get,
@@ -62,6 +62,9 @@ def activity_create(
             direction=activity.direction,
             activity=activity,
         )
+    # Refresh the denormalized live punch-status mirror on Employee
+    # (mirrors this new punch; re-derived from the log, not patched).
+    employee_punch_status_recompute(employee=activity.employee)
     return activity
 
 
@@ -87,13 +90,24 @@ def activity_update(
     activity.raw_data = raw_data or {}
     activity.full_clean()
     activity.save()
+    # A changed time/direction changes the mirrored state as well
+    # (re-derived from the log — including falling back to an older
+    # punch when this one is no longer the latest).
+    employee_punch_status_recompute(employee=activity.employee)
     return activity
 
 
 @transaction.atomic
 def activity_delete(*, activity: AttendanceActivity) -> AttendanceActivity:
-    """Deletes the punch."""
+    """Deletes the punch, refreshes the live punch-status mirror.
+
+    Removing the latest punch makes the mirror fall back to the
+    previously latest one (or to "never punched" when none is left) —
+    re-derived from the punch log, not from the deleted row.
+    """
+    employee = activity.employee
     activity.delete()
+    employee_punch_status_recompute(employee=employee)
     return activity
 
 

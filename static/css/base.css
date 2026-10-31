@@ -48,7 +48,7 @@ body:has(.app) {
   color: inherit;
 }
 
-.app button:not(.btn):not(.btn-icon):not(.seg__btn):not(.sidebar-search):not([type="submit"]) {
+.app button:not(.btn):not(.btn-icon):not(.seg__btn):not(.sidebar-search):not([type="submit"]):not(.badge) {
   background: none;
   border: 0;
   color: inherit;

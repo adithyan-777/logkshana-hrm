@@ -31,7 +31,7 @@ def activity_create(
     employee,
     punch_time,
     direction: str = AttendanceActivity.Direction.UNKNOWN,
-    method: str = AttendanceActivity.AttendanceActivityMethodType.BIOMETRIC,
+    method: str = AttendanceActivity.AttendanceActivityMethodType.MANUAL,
     external_id: str | None = None,
     raw_data=None,
 ) -> AttendanceActivity:
@@ -41,6 +41,15 @@ def activity_create(
         existing = AttendanceActivity.objects.filter(external_id=external_id).first()
         if existing is not None:
             return existing
+    # Punches that merely repeat the current checked-in/out state are
+    # kept for the log but marked ignored: they never open/close a
+    # session. Only meaningful in unscheduled mode (punch pairing on);
+    # in scheduled mode punches are a pure log, so nothing is ignored.
+    ignored = False
+    if attendance_policy_is_unscheduled():
+        ignored = punch_is_duplicate(
+            employee=employee, punch_day=punch_time.date(), direction=direction
+        )
     activity = AttendanceActivity(
         employee=employee,
         punch_time=punch_time,
@@ -48,6 +57,7 @@ def activity_create(
         method=method,
         external_id=external_id,
         raw_data=raw_data or {},
+        ignored=ignored,
     )
     activity.full_clean()
     activity.save()
@@ -55,7 +65,7 @@ def activity_create(
     # policy is "unscheduled". In "scheduled" mode the punch is just
     # recorded; Attendance rows come from the (schedule-driven)
     # calculation instead.
-    if attendance_policy_is_unscheduled():
+    if attendance_policy_is_unscheduled() and not ignored:
         attendance_update_for_punch(
             employee=activity.employee,
             punch_time=activity.punch_time,
@@ -65,6 +75,43 @@ def activity_create(
     return activity
 
 
+def punch_is_duplicate(
+    *,
+    employee,
+    punch_day: date,
+    direction: str,
+) -> bool:
+    """True when the punch merely repeats the employee's current state.
+
+    - An IN while a WorkSession (this same day) is already open:
+      he is already checked in — the punch is ignored instead of
+      opening a second session.
+    - An OUT with no open session: he is already checked out — the
+      punch is ignored instead of staying an unmarked stray.
+
+    Exceptions that keep the existing pairing behavior:
+    - A cross-day IN is never a duplicate: yesterday's open session
+      means a missed punch-out, and this IN must open the new day's
+      session (otherwise a forgotten check-out would swallow it).
+    - Break/overtime/unknown directions: unhandled here.
+    """
+    open_sessions = WorkSession.objects.filter(
+        employee=employee,
+        out_punch__isnull=True,
+    ).order_by("-check_in")
+    if direction == AttendanceActivity.Direction.OUT:
+        # Already checked out — nothing to close.
+        return not open_sessions.exists()
+    if direction != AttendanceActivity.Direction.IN:
+        return False
+    latest_open = open_sessions.first()
+    if latest_open is None:
+        return False
+    # Same-day second check-in is a duplicate; a cross-day one is a
+    # fresh start (missed punch-out recovery).
+    return latest_open.day == punch_day
+
+
 @transaction.atomic
 def activity_update(
     *,
@@ -72,7 +119,7 @@ def activity_update(
     employee,
     punch_time,
     direction: str,
-    method: str,
+    method: str | None = None,
     external_id: str | None = None,
     raw_data=None,
 ) -> AttendanceActivity:
@@ -83,7 +130,10 @@ def activity_update(
         activity.external_id = external_id
     activity.punch_time = punch_time
     activity.direction = direction
-    activity.method = method
+    # Manual edits never reclassify the punch source: only an explicit
+    # method (e.g. gateway ingest) may change it.
+    if method is not None:
+        activity.method = method
     activity.raw_data = raw_data or {}
     activity.full_clean()
     activity.save()

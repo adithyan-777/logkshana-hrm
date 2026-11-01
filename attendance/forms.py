@@ -23,11 +23,12 @@ class AttendanceActivityForm(forms.ModelForm):
 
     class Meta:
         model = AttendanceActivity
+        # method is intentionally excluded: manual punches are always
+        # MANUAL; BIOMETRIC can only come in via the gateway.
         fields = [
             "employee",
             "punch_time",
             "direction",
-            "method",
         ]
         widgets = {
             "employee": forms.HiddenInput,
@@ -39,6 +40,23 @@ class AttendanceActivityForm(forms.ModelForm):
         self.fields["employee"].queryset = Employee.objects.filter(
             is_active=True
         ).order_by("first_name", "last_name")
+        # Manual forms never offer "Unknown": unclassified directions
+        # can only come in via the gateway. Keep an existing unknown
+        # value selectable so legacy/gateway punches still validate
+        # when edited.
+        direction_field = self.fields["direction"]
+        unknown = AttendanceActivity.Direction.UNKNOWN
+        # Only an existing record may carry unknown through (edit case).
+        keep_unknown = (
+            getattr(self.instance, "pk", None) is not None
+            and self.instance.direction == unknown
+        )
+        direction_field.choices = [
+            choice
+            for choice in AttendanceActivity.Direction.choices
+            if choice[0] != unknown or keep_unknown
+        ]
+        direction_field.widget.choices = direction_field.choices
         if self.instance is not None and getattr(self.instance, "employee_id", None):
             emp = self.instance.employee
             self.fields["employee_q"].initial = f"{emp.emp_code} - {emp.full_name}"

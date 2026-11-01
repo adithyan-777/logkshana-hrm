@@ -55,8 +55,14 @@ class AttendanceActivity(BaseModel):
     method = models.CharField(
         max_length=10,
         choices=AttendanceActivityMethodType.choices,
-        default=AttendanceActivityMethodType.BIOMETRIC
+        default=AttendanceActivityMethodType.MANUAL,
     )
+    # Punches that merely repeat the employee's current state (second
+    # check-in on a day that already has an open session, or a
+    # check-out with nothing to close). They stay in the log, but are
+    # marked so the UI can badge them and pairing never consumes them.
+    ignored = models.BooleanField(default=False)
+
     # Original provider payload (status codes, verify mode, ...).
     raw_data = models.JSONField(default=dict, blank=True)
 
@@ -90,6 +96,15 @@ class AttendanceActivity(BaseModel):
             ),
             models.Index(fields=["punch_time"], name="act_punch_time_idx"),
         ]
+
+    @property
+    def is_editable(self) -> bool:
+        """False for gateway (biometric) punches: they are read-only in
+        the web UI. The gateway re-ingests with a stable ``external_id``,
+        so a manual edit/delete would resurface on the next sync — the
+        device is the single source of truth for these punches.
+        """
+        return self.method != self.AttendanceActivityMethodType.BIOMETRIC
 
     @property
     def is_attendance_processed(self) -> bool:

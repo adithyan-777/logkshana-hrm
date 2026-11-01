@@ -221,11 +221,40 @@ def _render_transaction_edit_form(
     )
 
 
+def _readonly_punch_toast_response(*, message: str) -> HttpResponse:
+    """Empty swap with an error toast + drawer close.
+
+    Used to refuse operations on gateway-managed (biometric) punches
+    from HTMX flows; the UI hides the controls, so this only fires on
+    stale markup or a hand-crafted request.
+    """
+    response = HttpResponse("")
+    response["HX-Trigger"] = json.dumps(
+        {"closeModal": True, "showToast": {"message": message, "type": "error"}}
+    )
+    return response
+
+
 @login_required
 @require_permission(PermissionCodename.ATTENDANCE_ADD)
 @require_http_methods(["GET", "POST"])
 def transaction_edit(request: HttpRequest, transaction_id: int) -> HttpResponse:
     transaction = get_object_or_404(AttendanceActivity, pk=transaction_id)
+    if not transaction.is_editable:
+        # Gateway punches are read-only: the tab hides the edit/delete
+        # controls; this guard covers stale markup + direct requests.
+        if is_htmx_partial(request):
+            return _readonly_punch_toast_response(
+                message=(
+                    "Biometric punches can't be edited —"
+                    " they come from the device gateway."
+                ),
+            )
+        return redirect_to_list_drawer(
+            list_url_name="attendance_transaction_list",
+            form_url=reverse("attendance_transaction_add"),
+            title="Record punch",
+        )
 
     if request.method == "POST":
         form = AttendanceActivityForm(request.POST, instance=transaction)
@@ -259,6 +288,13 @@ def transaction_edit(request: HttpRequest, transaction_id: int) -> HttpResponse:
 @require_http_methods(["DELETE"])
 def transaction_delete_view(request: HttpRequest, transaction_id: int) -> HttpResponse:
     transaction = get_object_or_404(AttendanceActivity, pk=transaction_id)
+    if not transaction.is_editable:
+        return delete_blocked_response(
+            message=(
+                "Biometric punches can't be deleted —"
+                " they come from the device gateway."
+            ),
+        )
     activity_delete(activity=transaction)
     response = HttpResponse("")
     response["HX-Trigger"] = "transactionDeleted"

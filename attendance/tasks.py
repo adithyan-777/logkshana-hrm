@@ -20,11 +20,10 @@ def fanout_mark_absent_for_today():
     Pre-creates ABSENT rows for the day starting; the (future) daily
     calculation flips them as punches land.
     """
-    from django.utils import timezone
-
+    from common.localtime import local_date
     from companies.models import Company
 
-    day_iso = timezone.localdate().isoformat()
+    day_iso = local_date().isoformat()
     for schema_name in (
         Company.objects.exclude(schema_name="public").values_list(
             "schema_name", flat=True

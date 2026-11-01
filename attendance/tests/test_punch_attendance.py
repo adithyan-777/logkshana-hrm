@@ -2,8 +2,6 @@
 
 from datetime import date, datetime, time, timedelta
 
-from django.utils import timezone
-
 from attendance.models import Attendance, AttendanceActivity, WorkSession
 from attendance.services import activity_create, attendance_update_for_punch
 from common.tests.base import BaseTenantTestCase
@@ -17,7 +15,7 @@ NEXT_DAY = date(2026, 11, 3)
 
 def _dt(day, hour, minute=0):
     return datetime(day.year, day.month, day.day, hour, minute,
-                    tzinfo=timezone.get_current_timezone())
+                    )
 
 
 def _unschedule_tenant():

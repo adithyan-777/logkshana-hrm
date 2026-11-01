@@ -52,7 +52,9 @@ class AttendanceActivityEditDeleteTests(
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers.get("HX-Trigger"), "transactionUpdated")
+        trigger = response.headers.get("HX-Trigger", "")
+        self.assertIn("transactionUpdated", trigger)
+        self.assertIn("closeModal", trigger)
         punch.refresh_from_db()
         self.assertEqual(punch.direction, AttendanceActivity.Direction.OUT)
         self.assertEqual(punch.external_id, "TX-ED-POST")

@@ -63,6 +63,39 @@ class AttendanceActivityForm(forms.ModelForm):
         apply_form_field_ui(self)
 
 
+class AttendanceCorrectionForm(forms.ModelForm):
+    """Direction-only correction form for a biometric punch.
+
+    Employee and punch time are inherited from the corrected punch and
+    shown read-only in the template; only the direction is editable.
+    The corrected row's method is forced to CORRECTION by the service,
+    so it is intentionally absent from the fields.
+    """
+
+    class Meta:
+        model = AttendanceActivity
+        fields = ("direction",)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Same rule as AttendanceActivityForm: manual forms never offer
+        # "Unknown"; keep an existing unknown value selectable so
+        # legacy/gateway punches still validate.
+        direction_field = self.fields["direction"]
+        unknown = AttendanceActivity.Direction.UNKNOWN
+        keep_unknown = (
+            getattr(self.instance, "pk", None) is not None
+            and self.instance.direction == unknown
+        )
+        direction_field.choices = [
+            choice
+            for choice in AttendanceActivity.Direction.choices
+            if choice[0] != unknown or keep_unknown
+        ]
+        direction_field.widget.choices = direction_field.choices
+        apply_form_field_ui(self)
+
+
 class AttendanceForm(forms.ModelForm):
     employee_q = forms.CharField(
         required=False,

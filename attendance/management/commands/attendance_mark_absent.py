@@ -8,7 +8,6 @@ exists for backfills and testing. Run per tenant schema.
 from datetime import date
 
 from django.core.management.base import BaseCommand
-from django.utils import timezone
 
 
 class Command(BaseCommand):
@@ -27,9 +26,12 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         from attendance.services import attendance_absent_rows_ensure
+        from common.localtime import local_date
 
         day = (
-            date.fromisoformat(options["day"]) if options["day"] else timezone.localdate()
+            date.fromisoformat(options["day"])
+            if options["day"]
+            else local_date()
         )
         rows = attendance_absent_rows_ensure(day=day)
         self.stdout.write(

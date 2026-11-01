@@ -42,7 +42,7 @@
 
     <div class="form-actions">
         <button class="btn btn--primary" type="submit">Save changes</button>
-        <a href="{% url 'attendance_transaction_list' %}" class="btn btn--ghost">Back to punches</a>
+        <a href="{% url 'attendance_transaction_list' %}" class="btn btn--ghost" @click="$store.ui.closeModal()">Back to punches</a>
     </div>
 </form>
       </div>

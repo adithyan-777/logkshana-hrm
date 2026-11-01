@@ -61,15 +61,17 @@ class OvernightShiftScenarioTests(BaseTenantTestCase):
         )
 
     def test_expected_window_spans_two_calendar_days(self):
+        from common.localtime import local_dt
+
         expected_in, expected_out = expected_datetimes(
             timetable=self.night, day=self.monday
         )
 
         self.assertEqual(
-            timezone.localtime(expected_in),
-            datetime(2026, 3, 9, 22, 0, tzinfo=QATAR),
+            local_dt(expected_in),
+            datetime(2026, 3, 9, 22, 0),
         )
         self.assertEqual(
-            timezone.localtime(expected_out),
-            datetime(2026, 3, 10, 6, 0, tzinfo=QATAR),
+            local_dt(expected_out),
+            datetime(2026, 3, 10, 6, 0),
         )

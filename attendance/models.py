@@ -81,12 +81,49 @@ class AttendanceActivity(BaseModel):
     # manual:<uuid>). Blank only for legacy hand-entered punches.
     external_id = models.CharField(max_length=255, blank=True, default="")
 
+    # Correction lineage. The gateway (biometric) punch itself is never
+    # edited or deleted; the fix is recorded as a NEW punch row with
+    # method=correction, inheriting employee and punch time (only the
+    # direction may be corrected). The original points at its fix
+    # (corrected_punch + corrected_at) and the fix points back (corrects).
+    corrected_punch = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="corrected_originals",
+    )
+    corrected_at = models.DateTimeField(null=True, blank=True)
+    corrects = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="corrections",
+    )
+    # Who recorded the correction (audit trail, mirrors Attendance's
+    # hand-edit stamping). The original row itself is never modified;
+    # the correction row and these fields live on it.
+    edited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    edit_reason = models.CharField(max_length=255, blank=True, default="")
+
     class Meta:
         constraints = [
             models.UniqueConstraint(
                 fields=("external_id",),
                 condition=~Q(external_id=""),
                 name="uniq_attendanceactivity_external_id",
+            ),
+            models.UniqueConstraint(
+                fields=("corrects",),
+                condition=Q(corrects__isnull=False),
+                name="uniq_correction_per_original",
             ),
         ]
         indexes = [
@@ -105,6 +142,20 @@ class AttendanceActivity(BaseModel):
         device is the single source of truth for these punches.
         """
         return self.method != self.AttendanceActivityMethodType.BIOMETRIC
+
+    @property
+    def is_correctable(self) -> bool:
+        """True for gateway (biometric) punches without a correction yet.
+
+        Corrections never touch the original row: they add a new punch
+        with method=correction (see activity_correction_create), so an
+        already-corrected punch — or one that is not gateway-managed —
+        cannot be corrected again.
+        """
+        return (
+            self.method == self.AttendanceActivityMethodType.BIOMETRIC
+            and self.corrected_punch_id is None
+        )
 
     @property
     def is_attendance_processed(self) -> bool:

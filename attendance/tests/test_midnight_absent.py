@@ -3,8 +3,6 @@
 from datetime import date, datetime
 from unittest.mock import patch
 
-from django.utils import timezone
-
 from attendance.models import Attendance, AttendanceActivity
 from attendance.services import (
     attendance_absent_rows_ensure,
@@ -19,7 +17,7 @@ DAY = date(2026, 11, 2)
 
 def _punch_time(day, hour=9, minute=0):
     return datetime(day.year, day.month, day.day, hour, minute,
-                    tzinfo=timezone.get_current_timezone())
+                    )
 
 
 class EmployeesAbsentConditionTests(BaseTenantTestCase):

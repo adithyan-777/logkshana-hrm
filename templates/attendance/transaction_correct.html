@@ -1,0 +1,125 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block title %}Correct Punch{% endblock %}
+
+{% block page_content %}
+{% include "partials/tabs_attendance.html#tabs_attendance" %}
+
+<div class="card" style="max-width:720px;">
+  <div class="card__header">
+    <span class="card__title">Correct punch</span>
+  </div>
+  <div class="card__body">
+      {% partialdef transaction_correct_review inline %}
+      <div id="transaction-correct-flow">
+    <div class="message warning">
+        Saving a correction re-pairs <strong>{{ impact.days|length }}</strong>
+        day(s) and rebuilds the sessions below from the full punch log.
+        Open sessions without a check-out are also rebuilt.
+    </div>
+
+    <p class="text-muted" style="font-weight:600;">Work sessions to be rebuilt</p>
+    {% if impact.sessions %}
+    <table class="data-table">
+      <thead>
+        <tr><th>Day</th><th>Check in</th><th>Check out</th><th>Total</th></tr>
+      </thead>
+      <tbody>
+        {% for session in impact.sessions %}
+        <tr>
+          <td>{{ session.day }}</td>
+          <td>{{ session.check_in|date:"Y-m-d H:i" }}</td>
+          {% if session.check_out %}<td>{{ session.check_out|date:"Y-m-d H:i" }}</td>{% else %}<td><span class="badge status-ignored">OPEN</span></td>{% endif %}
+          <td>{{ session.total_time }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="text-muted">
+        No work sessions for this day (or open ones) — only the daily row
+        will be re-derived.
+    </p>
+    {% endif %}
+
+    <p class="text-muted" style="font-weight:600;">Daily attendance rows re-derived</p>
+    {% if impact.records %}
+    <table class="data-table">
+      <thead>
+        <tr><th>Day</th><th>Status</th><th>Check in</th><th>Check out</th><th>Worked</th></tr>
+      </thead>
+      <tbody>
+        {% for record in impact.records %}
+        <tr>
+          <td>{{ record.day }}</td>
+          <td>{{ record.get_status_display }}</td>
+          <td>{% if record.check_in %}{{ record.check_in|date:"H:i" }}{% else %}--{% endif %}</td>
+          <td>{% if record.check_out %}{{ record.check_out|date:"H:i" }}{% else %}--{% endif %}</td>
+          <td>{{ record.total_work_time }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="text-muted">No daily row exists for this day yet.</p>
+    {% endif %}
+
+    <div class="form-actions">
+        <button type="button" class="btn btn--primary"
+            hx-get="{% url 'transaction_correct' transaction.pk %}?step=form"
+            hx-target="#transaction-correct-flow"
+            hx-swap="outerHTML">Continue to correction</button>
+        <a href="{% url 'attendance_transaction_list' %}" class="btn btn--ghost" @click="$store.ui.closeModal()">Cancel</a>
+    </div>
+      </div>
+{% endpartialdef transaction_correct_review %}
+
+      {% partialdef transaction_correct_form inline %}
+      <div id="transaction-correct-flow">
+<form class="tt-form-shell"
+    id="transaction-correct-form"
+    hx-post="{% url 'transaction_correct' transaction.pk %}"
+    hx-target="#transaction-correct-flow"
+    hx-swap="outerHTML"
+>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="message error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="message warning">
+        The correction is stored as a new punch (never editing the
+        original) and the affected sessions from the review step are
+        rebuilt on save.
+    </div>
+
+    <div class="field">
+        <label>Employee</label>
+        <p class="text-muted">{{ transaction.employee.emp_code }} - {{ transaction.employee.full_name }}</p>
+    </div>
+
+    <div class="field">
+        <label>Punch time</label>
+        <p class="text-muted">{{ transaction.punch_time|date:"Y-m-d H:i" }}</p>
+    </div>
+
+    <div class="field">
+        <label for="{{ form.direction.id_for_label }}">Corrected direction *</label>
+        {{ form.direction }}
+        {% if form.direction.errors %}<span class="error">{{ form.direction.errors }}</span>{% endif %}
+    </div>
+
+    <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Confirm &amp; save correction</button>
+        <button type="button" class="btn btn--ghost"
+            hx-get="{% url 'transaction_correct' transaction.pk %}"
+            hx-target="#transaction-correct-flow"
+            hx-swap="outerHTML">Back to review</button>
+    </div>
+</form>
+      </div>
+{% endpartialdef transaction_correct_form %}
+  </div>
+</div>
+{% endblock %}

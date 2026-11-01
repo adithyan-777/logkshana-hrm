@@ -2,8 +2,6 @@
 
 from datetime import date, datetime, time, timedelta
 
-from django.utils import timezone
-
 from attendance.models import Attendance, AttendanceActivity, WorkSession
 from attendance.services import activity_create, attendance_update_for_punch
 from common.tests.base import BaseTenantTestCase
@@ -17,7 +15,7 @@ NEXT_DAY = date(2026, 11, 3)
 
 def _dt(day, hour, minute=0):
     return datetime(day.year, day.month, day.day, hour, minute,
-                    tzinfo=timezone.get_current_timezone())
+                    )
 
 
 def _unschedule_tenant():
@@ -469,6 +467,119 @@ class ReplayIdempotencyTests(BaseTenantTestCase):
             employee=employee, punch_time=_dt(DAY, 17), direction="out"
         )
         self.assertEqual(row.check_out, _dt(DAY, 17))
+
+
+class DuplicatePunchIgnoreTests(BaseTenantTestCase):
+    """activity_create marks duplicate-direction punches as ignored.
+
+    A punch that merely repeats the employee's current state stays in
+    the log but never opens or closes a WorkSession: a second check-in
+    while a same-day session is open, and a check-out with nothing to
+    close. Direct `attendance_update_for_punch` calls keep the old
+    pairing semantics — the policy lives at the ingest layer.
+    """
+
+    def test_second_check_in_same_day_is_ignored(self):
+        _unschedule_tenant()
+        employee = employee_factory(first_name="Dup", emp_code="DP001")
+        first = activity_create(
+            employee=employee, punch_time=_dt(DAY, 8), direction="in"
+        )
+        second = activity_create(
+            employee=employee, punch_time=_dt(DAY, 8, 30), direction="in"
+        )
+
+        first.refresh_from_db()
+        second.refresh_from_db()
+        self.assertFalse(first.ignored)
+        self.assertTrue(second.ignored)
+        # The duplicate opened no second session and no daily punch.
+        self.assertEqual(WorkSession.objects.filter(employee=employee).count(), 1)
+        session = WorkSession.objects.get(employee=employee)
+        self.assertEqual(session.check_in, _dt(DAY, 8))
+        self.assertIsNone(session.out_punch)
+
+    def test_in_out_in_out_all_processed(self):
+        _unschedule_tenant()
+        employee = employee_factory(first_name="Cycle", emp_code="DP002")
+        activity_create(employee=employee, punch_time=_dt(DAY, 8), direction="in")
+        activity_create(employee=employee, punch_time=_dt(DAY, 13), direction="out")
+        third_in = activity_create(
+            employee=employee, punch_time=_dt(DAY, 14), direction="in"
+        )
+        fourth_out = activity_create(
+            employee=employee, punch_time=_dt(DAY, 17), direction="out"
+        )
+
+        third_in.refresh_from_db()
+        fourth_out.refresh_from_db()
+        self.assertFalse(third_in.ignored)
+        self.assertFalse(fourth_out.ignored)
+        self.assertEqual(WorkSession.objects.filter(employee=employee).count(), 2)
+        row = Attendance.objects.get(employee=employee, day=DAY)
+        self.assertEqual(row.check_in, _dt(DAY, 8))
+        self.assertEqual(row.check_out, _dt(DAY, 17))
+        self.assertEqual(row.total_work_time, timedelta(hours=8))
+
+    def test_check_out_without_open_session_is_ignored(self):
+        _unschedule_tenant()
+        employee = employee_factory(first_name="Stray", emp_code="DP003")
+        punch = activity_create(
+            employee=employee, punch_time=_dt(DAY, 17), direction="out"
+        )
+
+        punch.refresh_from_db()
+        self.assertTrue(punch.ignored)
+        self.assertFalse(Attendance.objects.filter(employee=employee).exists())
+        self.assertFalse(WorkSession.objects.filter(employee=employee).exists())
+
+    def test_second_check_out_is_ignored(self):
+        _unschedule_tenant()
+        employee = employee_factory(first_name="DoubleOut", emp_code="DP004")
+        activity_create(employee=employee, punch_time=_dt(DAY, 8), direction="in")
+        activity_create(employee=employee, punch_time=_dt(DAY, 17), direction="out")
+        second_out = activity_create(
+            employee=employee, punch_time=_dt(DAY, 17, 5), direction="out"
+        )
+
+        second_out.refresh_from_db()
+        self.assertTrue(second_out.ignored)
+        session = WorkSession.objects.get(employee=employee)
+        self.assertEqual(session.check_out, _dt(DAY, 17))
+        self.assertEqual(session.total_time, timedelta(hours=9))
+        row = Attendance.objects.get(employee=employee, day=DAY)
+        self.assertEqual(row.total_work_time, timedelta(hours=9))
+
+    def test_cross_day_check_in_is_not_ignored(self):
+        # Missed punch-out recovery: yesterday's session still open,
+        # today's check-in must start the new day, not be swallowed.
+        _unschedule_tenant()
+        employee = employee_factory(first_name="Forgot", emp_code="DP005")
+        activity_create(employee=employee, punch_time=_dt(DAY, 22), direction="in")
+        today_in = activity_create(
+            employee=employee, punch_time=_dt(NEXT_DAY, 6), direction="in"
+        )
+
+        today_in.refresh_from_db()
+        self.assertFalse(today_in.ignored)
+        self.assertEqual(WorkSession.objects.filter(employee=employee).count(), 2)
+        self.assertEqual(
+            Attendance.objects.get(employee=employee, day=NEXT_DAY).check_in,
+            _dt(NEXT_DAY, 6),
+        )
+
+    def test_scheduled_mode_never_ignores(self):
+        # Default tenant policy is scheduled: punches are a pure log,
+        # no pairing happens, so nothing is ever ignored there.
+        employee = employee_factory(first_name="Sched", emp_code="DP006")
+        activity_create(employee=employee, punch_time=_dt(DAY, 8), direction="in")
+        second = activity_create(
+            employee=employee, punch_time=_dt(DAY, 8, 30), direction="in"
+        )
+
+        second.refresh_from_db()
+        self.assertFalse(second.ignored)
+        self.assertFalse(WorkSession.objects.filter(employee=employee).exists())
 
 
 class PunchPolicyGatingTests(BaseTenantTestCase):

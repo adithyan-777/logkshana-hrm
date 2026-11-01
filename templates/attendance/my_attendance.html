@@ -39,7 +39,7 @@
             {% for punch in recent_punches %}
             <tr>
                 <td>{{ punch.punch_time }}</td>
-                <td>{{ punch.get_direction_display }}</td>
+                <td>{{ punch.get_direction_display }}{% if punch.ignored %} <span class="badge status-ignored">Ignored</span>{% endif %}</td>
                 <td>{{ punch.get_method_display }}</td>
             </tr>
             {% endfor %}

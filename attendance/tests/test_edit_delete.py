@@ -52,7 +52,9 @@ class AttendanceActivityEditDeleteTests(
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers.get("HX-Trigger"), "transactionUpdated")
+        trigger = response.headers.get("HX-Trigger", "")
+        self.assertIn("transactionUpdated", trigger)
+        self.assertIn("closeModal", trigger)
         punch.refresh_from_db()
         self.assertEqual(punch.direction, AttendanceActivity.Direction.OUT)
         self.assertEqual(punch.external_id, "TX-ED-POST")
@@ -79,6 +81,66 @@ class AttendanceActivityEditDeleteTests(
         response = self.client.delete(reverse("transaction_delete", args=[999999]))
 
         self.assertEqual(response.status_code, 404)
+
+    # ------------------------------------------------------------------
+    # Gateway (biometric) punches are read-only in the web UI.
+    # ------------------------------------------------------------------
+    def _biometric_punch(self, *, external_id):
+        return activity_factory(
+            external_id=external_id,
+            method=AttendanceActivity.AttendanceActivityMethodType.BIOMETRIC,
+        )
+
+    def test_edit_get_biometric_redirects_to_list(self):
+        punch = self._biometric_punch(external_id="gateway:ro-edit")
+
+        response = self.client.get(reverse("transaction_edit", args=[punch.pk]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("attendance_transaction_list"), response.url)
+
+    def test_edit_get_biometric_htmx_shows_error_toast(self):
+        punch = self._biometric_punch(external_id="gateway:ro-edit-toast")
+
+        response = self.client.get(
+            reverse("transaction_edit", args=[punch.pk]),
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, b"")
+        self.assertIn("showToast", response.headers.get("HX-Trigger"))
+        self.assertIn("closeModal", response.headers.get("HX-Trigger"))
+        punch.refresh_from_db()  # untouched
+
+    def test_edit_post_biometric_blocked(self):
+        punch = self._biometric_punch(external_id="gateway:ro-edit-post")
+        original_time = punch.punch_time
+
+        response = self.client.post(
+            reverse("transaction_edit", args=[punch.pk]),
+            {
+                "employee": punch.employee.pk,
+                "punch_time": timezone.now().strftime("%Y-%m-%dT%H:%M"),
+                "direction": "out",
+            },
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("showToast", response.headers.get("HX-Trigger"))
+        punch.refresh_from_db()
+        self.assertEqual(punch.direction, AttendanceActivity.Direction.IN)
+        self.assertEqual(punch.punch_time, original_time)
+
+    def test_delete_biometric_blocked(self):
+        punch = self._biometric_punch(external_id="gateway:ro-del")
+
+        response = self.client.delete(reverse("transaction_delete", args=[punch.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("showToast", response.headers.get("HX-Trigger"))
+        self.assertTrue(AttendanceActivity.objects.filter(pk=punch.pk).exists())
 
 
 class AttendanceRecordEditDeleteTests(AttendanceEditDeleteTestMixin, BaseTenantTestCase):

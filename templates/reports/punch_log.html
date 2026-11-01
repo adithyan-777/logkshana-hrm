@@ -40,7 +40,7 @@
             <td>{{ transaction.punch_time }}</td>
             <td>{{ transaction.employee.full_name }}</td>
             <td>{{ transaction.employee.department|default:"—" }}</td>
-            <td>{{ transaction.get_direction_display }}</td>
+            <td>{{ transaction.get_direction_display }}{% if transaction.ignored %} <span class="badge status-ignored">Ignored</span>{% endif %}</td>
             <td>{{ transaction.get_method_display }}</td>
         </tr>
         {% endfor %}

@@ -1,11 +1,12 @@
 from datetime import date
 
 from django.http import HttpRequest
-from django.utils import timezone
 
 
 def current_month_range() -> tuple[date, date]:
-    today = timezone.localdate()
+    from common.localtime import local_date
+
+    today = local_date()
     start = today.replace(day=1)
     return start, today
 
@@ -20,7 +21,9 @@ def format_minutes(minutes: int | None) -> str:
 def format_datetime(value) -> str:
     if value is None:
         return ""
-    return timezone.localtime(value).strftime("%Y-%m-%d %H:%M")
+    from common.localtime import local_dt
+
+    return local_dt(value).strftime("%Y-%m-%d %H:%M")
 
 
 def pagination_query_string(request: HttpRequest, page: int) -> str:

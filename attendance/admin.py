@@ -16,6 +16,7 @@ class AttendanceActivityAdmin(admin.ModelAdmin):
         "punch_time",
         "direction",
         "method",
+        "ignored",
         "attendance",
         "external_id",
     )

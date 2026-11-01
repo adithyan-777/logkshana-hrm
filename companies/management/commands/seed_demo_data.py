@@ -352,7 +352,9 @@ def seed_demo_data(*, branch=None) -> dict[str, int]:
     # ------------------------------------------------------------------
     # Attendance
     # ------------------------------------------------------------------
-    today = timezone.localdate()
+    from common.localtime import local_date
+
+    today = local_date()
     yesterday = today - timedelta(days=1)
 
     before = AttendanceActivity.objects.count()

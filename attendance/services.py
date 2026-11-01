@@ -8,6 +8,8 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django_tenants.utils import get_public_schema_name, schema_context
 
+from common.localtime import local_date, local_dt
+
 from attendance.calculation import direction_from_gateway_status_label
 from attendance.integrations.gateway import device_gateway_attendance_fetch
 from attendance.models import (
@@ -31,7 +33,7 @@ def activity_create(
     employee,
     punch_time,
     direction: str = AttendanceActivity.Direction.UNKNOWN,
-    method: str = AttendanceActivity.AttendanceActivityMethodType.BIOMETRIC,
+    method: str = AttendanceActivity.AttendanceActivityMethodType.MANUAL,
     external_id: str | None = None,
     raw_data=None,
 ) -> AttendanceActivity:
@@ -41,6 +43,23 @@ def activity_create(
         existing = AttendanceActivity.objects.filter(external_id=external_id).first()
         if existing is not None:
             return existing
+    # Punches that merely repeat the current checked-in/out state are
+    # kept for the log but marked ignored: they never open/close a
+    # session. Only meaningful in unscheduled mode (punch pairing on);
+    # in scheduled mode punches are a pure log, so nothing is ignored.
+    # Correction rows skip both: they never enter the forward pairing
+    # stream — their day effect happens in
+    # ``worksession_repair_for_employee_day`` (see
+    # activity_correction_create), which replays the whole punch log
+    # with corrections applied.
+    is_correction = (
+        method == AttendanceActivity.AttendanceActivityMethodType.CORRECTION
+    )
+    ignored = False
+    if not is_correction and attendance_policy_is_unscheduled():
+        ignored = punch_is_duplicate(
+            employee=employee, punch_day=punch_time.date(), direction=direction
+        )
     activity = AttendanceActivity(
         employee=employee,
         punch_time=punch_time,
@@ -48,6 +67,7 @@ def activity_create(
         method=method,
         external_id=external_id,
         raw_data=raw_data or {},
+        ignored=ignored,
     )
     activity.full_clean()
     activity.save()
@@ -55,7 +75,11 @@ def activity_create(
     # policy is "unscheduled". In "scheduled" mode the punch is just
     # recorded; Attendance rows come from the (schedule-driven)
     # calculation instead.
-    if attendance_policy_is_unscheduled():
+    if (
+        not is_correction
+        and attendance_policy_is_unscheduled()
+        and not ignored
+    ):
         attendance_update_for_punch(
             employee=activity.employee,
             punch_time=activity.punch_time,
@@ -65,6 +89,43 @@ def activity_create(
     return activity
 
 
+def punch_is_duplicate(
+    *,
+    employee,
+    punch_day: date,
+    direction: str,
+) -> bool:
+    """True when the punch merely repeats the employee's current state.
+
+    - An IN while a WorkSession (this same day) is already open:
+      he is already checked in — the punch is ignored instead of
+      opening a second session.
+    - An OUT with no open session: he is already checked out — the
+      punch is ignored instead of staying an unmarked stray.
+
+    Exceptions that keep the existing pairing behavior:
+    - A cross-day IN is never a duplicate: yesterday's open session
+      means a missed punch-out, and this IN must open the new day's
+      session (otherwise a forgotten check-out would swallow it).
+    - Break/overtime/unknown directions: unhandled here.
+    """
+    open_sessions = WorkSession.objects.filter(
+        employee=employee,
+        out_punch__isnull=True,
+    ).order_by("-check_in")
+    if direction == AttendanceActivity.Direction.OUT:
+        # Already checked out — nothing to close.
+        return not open_sessions.exists()
+    if direction != AttendanceActivity.Direction.IN:
+        return False
+    latest_open = open_sessions.first()
+    if latest_open is None:
+        return False
+    # Same-day second check-in is a duplicate; a cross-day one is a
+    # fresh start (missed punch-out recovery).
+    return latest_open.day == punch_day
+
+
 @transaction.atomic
 def activity_update(
     *,
@@ -72,10 +133,23 @@ def activity_update(
     employee,
     punch_time,
     direction: str,
-    method: str,
+    method: str | None = None,
     external_id: str | None = None,
     raw_data=None,
 ) -> AttendanceActivity:
+    unscheduled = attendance_policy_is_unscheduled()
+    if unscheduled:
+        # Snapshot the pre-edit pairing state: the punch's own sessions
+        # (wherever their day fell — an OUT can close an overnight
+        # session owned by another day's IN) are stale after the edit,
+        # and the old/new punch days both need re-derivation.
+        old_day = _punch_local_date(activity.punch_time)
+        old_employee = activity.employee
+        stale = WorkSession.objects.filter(
+            Q(in_punch=activity) | Q(out_punch=activity)
+        )
+        stale_days = {session.day for session in stale}
+        stale.delete()
     activity.employee = employee
     # external_id is a stable record identifier: keep the existing one
     # unless an explicit replacement is given.
@@ -83,18 +157,110 @@ def activity_update(
         activity.external_id = external_id
     activity.punch_time = punch_time
     activity.direction = direction
-    activity.method = method
+    # Manual edits never reclassify the punch source: only an explicit
+    # method (e.g. gateway ingest) may change it.
+    if method is not None:
+        activity.method = method
     activity.raw_data = raw_data or {}
     activity.full_clean()
     activity.save()
+    if unscheduled:
+        # Re-pair the affected days from the log in the same
+        # transaction (a moved punch shifts pairing on both its old
+        # and new day; an employee reassignment heals both sides).
+        new_day = _punch_local_date(activity.punch_time)
+        if old_employee.pk == activity.employee_id:
+            worksession_repair_for_employee_days(
+                employee=activity.employee,
+                days={old_day, new_day} | stale_days,
+            )
+        else:
+            worksession_repair_for_employee_days(
+                employee=old_employee, days={old_day} | stale_days
+            )
+            worksession_repair_for_employee_days(
+                employee=activity.employee, days={new_day}
+            )
     return activity
 
 
 @transaction.atomic
 def activity_delete(*, activity: AttendanceActivity) -> AttendanceActivity:
-    """Deletes the punch."""
+    """Deletes the punch and re-pairs its affected days.
+
+    Without the repair, deleting a punch left its frozen WorkSession
+    behind (in_punch/out_punch go NULL via SET_NULL) with stale
+    check-in/out times nothing would ever revisit.
+    """
+    unscheduled = attendance_policy_is_unscheduled()
+    if unscheduled:
+        day = _punch_local_date(activity.punch_time)
+        employee = activity.employee
+        stale = WorkSession.objects.filter(
+            Q(in_punch=activity) | Q(out_punch=activity)
+        )
+        stale_days = {session.day for session in stale}
+        stale.delete()
+        activity.delete()
+        worksession_repair_for_employee_days(
+            employee=employee, days={day} | stale_days
+        )
+        return activity
     activity.delete()
     return activity
+
+
+@transaction.atomic
+def activity_correction_create(
+    *,
+    original: AttendanceActivity,
+    direction: str,
+    corrected_by=None,
+    edit_reason: str = "",
+) -> AttendanceActivity:
+    """Record a correction for a gateway (biometric) punch.
+
+    The original punch is never edited or deleted: a second punch row
+    with method=CORRECTION carries the fix, inheriting the original's
+    employee and punch time — the user may only change the direction.
+    The original keeps pointing at its fix so the log stays auditable:
+
+    - original.corrected_punch -> the correction row
+    - original.corrected_at    -> the corrected datetime (= punch time)
+    - correction.corrects      -> back at the original
+    - correction.edited_by     -> who recorded the correction
+
+    The correction row never enters the forward pairing stream; in the
+    SAME transaction the punch day is rebuilt from the full log with
+    corrections applied in place of their originals
+    (worksession_repair_for_employee_day), so corrected directions take
+    effect for real — even on older, already-paired days.
+    """
+    if original.method != AttendanceActivity.AttendanceActivityMethodType.BIOMETRIC:
+        raise ValidationError("Only biometric punches can be corrected.")
+    if original.corrected_punch_id is not None:
+        raise ValidationError("This punch already has a correction.")
+    correction = activity_create(
+        employee=original.employee,
+        punch_time=original.punch_time,
+        direction=direction,
+        method=AttendanceActivity.AttendanceActivityMethodType.CORRECTION,
+        external_id=f"correction:{uuid4().hex}",
+    )
+    correction.corrects = original
+    correction.edited_by = corrected_by
+    correction.edit_reason = edit_reason
+    correction.save(
+        update_fields=["corrects", "edited_by", "edit_reason", "updated_at"]
+    )
+    original.corrected_punch = correction
+    original.corrected_at = correction.punch_time
+    original.save(update_fields=["corrected_punch", "corrected_at", "updated_at"])
+    worksession_repair_for_employee_day(
+        employee=original.employee,
+        day=_punch_local_date(original.punch_time),
+    )
+    return correction
 
 
 @transaction.atomic
@@ -404,6 +570,156 @@ def attendance_update_for_punch(
         _activity_attendance_link(activity, row)
         return row
     return None
+
+
+def _punch_local_date(punch_time) -> date:
+    """The punch's local wall-clock day.
+
+    Naive values are wall clock already (the project mode); legacy
+    aware values (gateway payloads with offsets, test fixtures) get
+    converted to the active timezone.
+    """
+    return local_date(punch_time)
+
+
+def _replay_punch_stream(*, employee, start: date, until: date) -> None:
+    """Re-derive the window from the effective punch log.
+
+    Effective log = every punch except already-corrected ones; a
+    correction stands for its original with the original's timestamp.
+    ``ignored`` is recomputed against the evolving replay state so
+    duplicate punches keep never consuming sessions. Intact sessions
+    outside the wiped set survive the pass as idempotent no-ops (in/out
+    punch ownership).
+
+    Punch times are normalized to the active timezone first: live
+    ingest pairs on the wall-clock value the caller passed (gateway
+    naive wall time / form input in the current tz), while DB-loaded
+    datetimes come back in UTC. Without the conversion, late-night
+    punches (stored before midnight UTC, after midnight local) would
+    re-pair onto a different day than they were originally ingested
+    onto, shifting session days and the opening-time boundary checks.
+    """
+    punches = (
+        AttendanceActivity.objects.filter(
+            employee=employee,
+            punch_time__date__gte=start,
+            punch_time__date__lte=until,
+            corrected_punch__isnull=True,
+        )
+        .order_by("punch_time", "pk")
+    )
+    unscheduled = attendance_policy_is_unscheduled()
+    for activity in punches:
+        punch_time = local_dt(activity.punch_time)
+        ignored = False
+        if unscheduled:
+            ignored = punch_is_duplicate(
+                employee=employee,
+                punch_day=punch_time.date(),
+                direction=activity.direction,
+            )
+        if activity.ignored != ignored:
+            activity.ignored = ignored
+            activity.save(update_fields=["ignored", "updated_at"])
+        if not ignored:
+            attendance_update_for_punch(
+                employee=employee,
+                punch_time=punch_time,
+                direction=activity.direction,
+                activity=activity,
+            )
+
+
+@transaction.atomic
+def worksession_repair_for_employee_day(*, employee, day: date) -> list[Attendance]:
+    """Rebuild one affected day's pairing (see the multi-day variant)."""
+    return worksession_repair_for_employee_days(employee=employee, days=[day])
+
+
+@transaction.atomic
+def worksession_repair_for_employee_days(*, employee, days) -> list[Attendance]:
+    """Rebuild the affected days' pairing from the punch log (Odoo-style).
+
+    A correction or a manual punch edit/delete must never be stitched
+    into a still-paired stream forward: old-punch direction flips would
+    dangle or be silently ignored. Instead the derived layer is treated
+    as a pure function of the effective punch log (every punch except
+    superseded originals; corrections stand in for their originals).
+
+    Affected days = the requested ``days`` plus the days of any stale
+    session: open sessions (the overnight case), sessions owned by a
+    superseded punch (a correction replaced its IN/OUT), and frozen
+    orphans of deleted OUT punches. Every rebuildable session on an
+    affected day is wiped and the whole day re-derived — ownership
+    idempotency alone would preserve stale pairings on those days.
+    Sessions whose IN punch is gone (un-rebuildable orphans) are kept.
+
+    No-op in "scheduled" mode: punch pairing never runs there, so
+    there is no punch-derived layer to repair.
+    """
+    if not attendance_policy_is_unscheduled():
+        return []
+    days = set(days)
+    if not days:
+        return []
+    superseded = list(
+        AttendanceActivity.objects.filter(
+            employee=employee, corrected_punch__isnull=False
+        ).values_list("pk", flat=True)
+    )
+    stale = (
+        WorkSession.objects.filter(employee=employee)
+        .exclude(in_punch__isnull=True)
+        .filter(
+            Q(check_out__isnull=True)
+            | Q(out_punch__isnull=True, check_out__isnull=False)
+            | Q(in_punch__in=superseded)
+            | Q(out_punch__in=superseded)
+        )
+    )
+    affected = set(days)
+    for session in stale:
+        affected.add(session.day)
+    last = (
+        AttendanceActivity.objects.filter(employee=employee)
+        .order_by("-punch_time")
+        .values_list("punch_time", flat=True)
+        .first()
+    )
+    until = max(list(affected) + [local_date(last)]) if last else max(affected)
+    start = min(affected)
+    wiped = WorkSession.objects.filter(
+        employee=employee, day__in=affected
+    ).exclude(in_punch__isnull=True)
+    session_days = set(affected)
+    for session in wiped:
+        session_days.add(session.day)
+    wiped.delete()
+    # BreakSessions are deliberately NOT wiped: nothing re-derives them
+    # yet (pairing only writes work sessions), so deleting them would
+    # be unrecoverable data loss. Their work_session FKs go NULL via
+    # SET_NULL when the sessions above are deleted.
+    punch_window = AttendanceActivity.objects.filter(
+        employee=employee,
+        punch_time__date__gte=start,
+        punch_time__date__lte=until,
+    )
+    punch_window.update(attendance=None)
+    Attendance.objects.filter(
+        employee=employee,
+        day__in=session_days,
+        edited_by__isnull=True,
+    ).update(
+        check_in=None,
+        check_out=None,
+        total_work_time=timedelta(0),
+    )
+    _replay_punch_stream(employee=employee, start=start, until=until)
+    return list(
+        Attendance.objects.filter(employee=employee, day__in=session_days)
+    )
+
 
 def _employee_get_or_create_for_device(*, emp_code: str, branch=None) -> Employee:
     employee = employee_get_by_emp_code(emp_code=emp_code)

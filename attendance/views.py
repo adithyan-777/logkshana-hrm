@@ -5,6 +5,7 @@ from functools import wraps
 import sentry_sdk
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db.models import Q
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
@@ -13,15 +14,21 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from attendance.calculation import direction_from_gateway_status_label
-from attendance.forms import AttendanceActivityForm, AttendanceForm
+from attendance.forms import (
+    AttendanceActivityForm,
+    AttendanceCorrectionForm,
+    AttendanceForm,
+)
 from attendance.integrations.gateway import gateway_request_is_authorized
-from attendance.models import Attendance, AttendanceActivity
+from attendance.models import Attendance, AttendanceActivity, WorkSession
 from attendance.selectors import (
     attendance_activity_list,
+    attendance_exception_day_list,
     attendance_list,
     work_session_list,
 )
 from attendance.services import (
+    activity_correction_create,
     activity_create,
     activity_delete,
     activity_update,
@@ -33,7 +40,9 @@ from common.http import (
     delete_blocked_response,
     is_htmx_partial,
     redirect_to_list_drawer,
+    set_hx_trigger,
 )
+from common.localtime import local_date
 from common.pagination import list_pagination_context
 from employees.decorators import require_permission
 from employees.permission_catalog import PermissionCodename
@@ -156,6 +165,66 @@ def transaction_list_view(request: HttpRequest) -> HttpResponse:
 @login_required
 @require_permission(PermissionCodename.ATTENDANCE_VIEW)
 @require_http_methods(["GET"])
+def anomaly_list_view(request: HttpRequest) -> HttpResponse:
+    """Punch-flow exception queue (TimeTrex-style, passive first pass).
+
+    Day-centric work queue: one row per (employee, day) with punch-flow
+    problems — missing check-out on a past day, stray check-outs,
+    duplicate punches — with corrections as the resolution path (the
+    row links straight to that employee's punches). Today's open
+    sessions are work-in-progress, not exceptions.
+    """
+    search = request.GET.get("q", "").strip()
+    status = request.GET.get("status", "").strip()
+    date_from = _parse_date_filter(request.GET.get("from"))
+    date_to = _parse_date_filter(request.GET.get("to"))
+    entries = attendance_exception_day_list(
+        search=search,
+        status=status,
+        date_from=date_from,
+        date_to=date_to,
+    )
+    unresolved_count = sum(1 for e in entries if e["has_problems"])
+    # page_obj + pagination_* land at top level for the template.
+    context = {
+        "search": search,
+        "status": status,
+        "date_from": date_from,
+        "date_to": date_to,
+        "unresolved_count": unresolved_count,
+    }
+    context.update(
+        list_pagination_context(
+            request,
+            entries,
+            search=search,
+            base_url=reverse("attendance_anomalies"),
+            hx_target="#anomaly-list",
+        )
+    )
+
+    if is_htmx_partial(request):
+        return render(
+            request, "attendance/anomaly_list.html#anomaly_table", context
+        )
+
+    return render(request, "attendance/anomaly_list.html", context)
+
+
+def _parse_date_filter(raw: str | None):
+    from datetime import date as date_cls
+
+    if not raw:
+        return None
+    try:
+        return date_cls.fromisoformat(raw)
+    except ValueError:
+        return None
+
+
+@login_required
+@require_permission(PermissionCodename.ATTENDANCE_VIEW)
+@require_http_methods(["GET"])
 def work_session_list_view(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
     context = list_pagination_context(
@@ -221,11 +290,95 @@ def _render_transaction_edit_form(
     )
 
 
+def _render_transaction_correct_form(
+    request: HttpRequest, form: AttendanceCorrectionForm, *, transaction
+) -> HttpResponse:
+    return render(
+        request,
+        "attendance/transaction_correct.html#transaction_correct_form",
+        {
+            "form": form,
+            "transaction": transaction,
+            "selected_label": _selected_employee_label(form),
+        },
+    )
+
+
+def _correction_impact(transaction) -> dict:
+    """Derived rows the day repair will delete and rebuild.
+
+    Same-day WorkSessions plus every open session of the employee (an
+    open session from any earlier day is the overnight case the repair
+    also wipes and re-pairs), and the Attendance day rows involved.
+    Read-only preview for the review step of the correction drawer.
+    The day is the wall-clock (local) day — same normalization the
+    repair itself uses.
+    """
+    employee = transaction.employee
+    day = local_date(transaction.punch_time)
+    sessions = list(
+        WorkSession.objects.filter(
+            Q(employee=employee, day=day) | Q(employee=employee, check_out__isnull=True)
+        )
+        .select_related("attendance", "in_punch", "out_punch")
+        .order_by("day", "check_in")
+    )
+    session_days = {session.day for session in sessions} | {day}
+    records = list(
+        Attendance.objects.filter(employee=employee, day__in=session_days).order_by(
+            "day"
+        )
+    )
+    return {"sessions": sessions, "records": records, "days": sorted(session_days)}
+
+
+def _render_transaction_correct_review(
+    request: HttpRequest, transaction
+) -> HttpResponse:
+    return render(
+        request,
+        "attendance/transaction_correct.html#transaction_correct_review",
+        {
+            "transaction": transaction,
+            "impact": _correction_impact(transaction),
+        },
+    )
+
+
+def _readonly_punch_toast_response(*, message: str) -> HttpResponse:
+    """Empty swap with an error toast + drawer close.
+
+    Used to refuse operations on gateway-managed (biometric) punches
+    from HTMX flows; the UI hides the controls, so this only fires on
+    stale markup or a hand-crafted request.
+    """
+    response = HttpResponse("")
+    response["HX-Trigger"] = json.dumps(
+        {"closeModal": True, "showToast": {"message": message, "type": "error"}}
+    )
+    return response
+
+
 @login_required
 @require_permission(PermissionCodename.ATTENDANCE_ADD)
 @require_http_methods(["GET", "POST"])
 def transaction_edit(request: HttpRequest, transaction_id: int) -> HttpResponse:
     transaction = get_object_or_404(AttendanceActivity, pk=transaction_id)
+    if not transaction.is_editable:
+        # Gateway punches are read-only: the tab hides the edit/delete
+        # controls; this guard covers stale markup + direct requests.
+        if is_htmx_partial(request):
+            return _readonly_punch_toast_response(
+                message=(
+                    "Biometric punches can't be edited —"
+                    " they come from the device gateway."
+                ),
+            )
+        return redirect_to_list_drawer(
+            list_url_name="attendance_transaction_list",
+            form_url=reverse("attendance_transaction_add"),
+            title="Record punch",
+        )
 
     if request.method == "POST":
         form = AttendanceActivityForm(request.POST, instance=transaction)
@@ -237,7 +390,16 @@ def transaction_edit(request: HttpRequest, transaction_id: int) -> HttpResponse:
                 AttendanceActivityForm(instance=transaction),
                 transaction=transaction,
             )
-            response["HX-Trigger"] = "transactionUpdated"
+            # Closed-drawer UX: toast + closeModal ride along with the
+            # update event (the list refreshes on transactionUpdated).
+            set_hx_trigger(
+                response,
+                event="transactionUpdated",
+                toast=(
+                    f"Punch updated for {transaction.employee.full_name}"
+                    f" at {transaction.punch_time:%Y-%m-%d %H:%M}."
+                ),
+            )
             return response
 
         return _render_transaction_edit_form(request, form, transaction=transaction)
@@ -255,10 +417,83 @@ def transaction_edit(request: HttpRequest, transaction_id: int) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.ATTENDANCE_ADD)
+@require_http_methods(["GET", "POST"])
+def transaction_correct(request: HttpRequest, transaction_id: int) -> HttpResponse:
+    """Direction-only correction for a gateway (biometric) punch.
+
+    Edit/delete are refused for biometric punches (the device is the
+    source of truth), but a correction is recorded as a NEW punch row
+    (method=correction); the original stays in the log and simply points
+    at its correction. Employee and punch time are inherited — the form
+    only offers the direction.
+    """
+    transaction = get_object_or_404(AttendanceActivity, pk=transaction_id)
+    if not transaction.is_correctable:
+        already_corrected = (
+            transaction.method
+            == AttendanceActivity.AttendanceActivityMethodType.BIOMETRIC
+        )
+        message = (
+            "This punch already has a correction."
+            if already_corrected
+            else "Only biometric punches can be corrected."
+        )
+        if is_htmx_partial(request):
+            return _readonly_punch_toast_response(message=message)
+        return redirect_to_list_drawer(
+            list_url_name="attendance_transaction_list",
+            form_url=reverse("attendance_transaction_add"),
+            title="Record punch",
+        )
+
+    if request.method == "POST":
+        form = AttendanceCorrectionForm(request.POST, instance=transaction)
+        if form.is_valid():
+            correction = activity_correction_create(
+                original=transaction,
+                direction=form.cleaned_data["direction"],
+                corrected_by=request.user,
+            )
+            response = HttpResponse("")
+            set_hx_trigger(
+                response,
+                event="transactionUpdated",
+                toast=(
+                    f"Correction recorded for {correction.employee.full_name}"
+                    f" at {correction.punch_time:%Y-%m-%d %H:%M}."
+                ),
+            )
+            return response
+        return _render_transaction_correct_form(request, form, transaction=transaction)
+
+    if is_htmx_partial(request):
+        if request.GET.get("step") == "form":
+            form = AttendanceCorrectionForm(instance=transaction)
+            return _render_transaction_correct_form(
+                request, form, transaction=transaction
+            )
+        return _render_transaction_correct_review(request, transaction)
+
+    return redirect_to_list_drawer(
+        list_url_name="attendance_transaction_list",
+        form_url=request.path,
+        title="Correct punch",
+    )
+
+
+@login_required
 @require_permission(PermissionCodename.ATTENDANCE_DELETE)
 @require_http_methods(["DELETE"])
 def transaction_delete_view(request: HttpRequest, transaction_id: int) -> HttpResponse:
     transaction = get_object_or_404(AttendanceActivity, pk=transaction_id)
+    if not transaction.is_editable:
+        return delete_blocked_response(
+            message=(
+                "Biometric punches can't be deleted —"
+                " they come from the device gateway."
+            ),
+        )
     activity_delete(activity=transaction)
     response = HttpResponse("")
     response["HX-Trigger"] = "transactionDeleted"

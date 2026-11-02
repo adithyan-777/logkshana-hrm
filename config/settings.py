@@ -212,7 +212,10 @@ TIME_ZONE = os.getenv("TIME_ZONE", "Asia/Qatar")
 
 USE_I18N = True
 
-USE_TZ = True
+# Operate in naive datetimes (Asia/Qatar wall clock) — no UTC storage.
+# All existing rows in the local DB were written under USE_TZ=True and
+# are shifted +3h by common/management/commands/time_shift_to_qatar.py.
+USE_TZ = False
 
 # Console logging so container stdout (scraped by Alloy -> Loki) always
 # carries Django request errors and server errors. Gunicorn workers inherit

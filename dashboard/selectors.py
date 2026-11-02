@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from datetime import date
 
 from django.db.models import Count, Q
-from django.utils import timezone
 
 from attendance.models import Attendance
 from employees.models import Employee
@@ -47,7 +46,9 @@ class DashboardSummary:
 
 def dashboard_summary_get(*, target_date: date | None = None) -> DashboardSummary:
     if target_date is None:
-        target_date = timezone.localdate()
+        from common.localtime import local_date
+
+        target_date = local_date()
 
     active_employee_count = Employee.objects.filter(is_active=True).count()
 

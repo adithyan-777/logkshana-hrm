@@ -1,0 +1,121 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block title %}Attendance Exceptions{% endblock %}
+
+{% block page_content %}
+{% include "partials/tabs_attendance.html#tabs_attendance" %}
+
+<div class="toolbar" id="anomaly-filters">
+  <label class="sr-only" for="anomaly-search">Search</label>
+  <input
+    id="anomaly-search"
+    class="search-input toolbar__search"
+    type="search"
+    name="q"
+    value="{{ search }}"
+    placeholder="Employee..."
+    hx-get="{% url 'attendance_anomalies' %}"
+    hx-include="#anomaly-filters"
+    hx-target="#anomaly-list"
+    hx-trigger="keyup changed delay:300ms, search"
+  >
+  <label class="sr-only" for="anomaly-status">Status</label>
+  <select
+    id="anomaly-status"
+    class="form-select"
+    name="status"
+    hx-get="{% url 'attendance_anomalies' %}"
+    hx-include="#anomaly-filters"
+    hx-target="#anomaly-list"
+    hx-trigger="change"
+  >
+    <option value="" {% if not status %}selected{% endif %}>All days</option>
+    <option value="unresolved" {% if status == 'unresolved' %}selected{% endif %}>Unresolved</option>
+    <option value="resolved" {% if status == 'resolved' %}selected{% endif %}>Resolved</option>
+  </select>
+  <label class="sr-only" for="anomaly-from">From</label>
+  <input id="anomaly-from" class="form-input" type="date" name="from" value="{{ date_from|date:'Y-m-d' }}" hx-get="{% url 'attendance_anomalies' %}" hx-include="#anomaly-filters" hx-target="#anomaly-list" hx-trigger="change">
+  <label class="sr-only" for="anomaly-to">To</label>
+  <input id="anomaly-to" class="form-input" type="date" name="to" value="{{ date_to|date:'Y-m-d' }}" hx-get="{% url 'attendance_anomalies' %}" hx-include="#anomaly-filters" hx-target="#anomaly-list" hx-trigger="change">
+</div>
+
+<div class="card card--table">
+  <div class="card__body">
+    <div
+      id="anomaly-list"
+      class="data-table-wrap"
+      hx-get="{% url 'attendance_anomalies' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+      hx-trigger="transactionUpdated from:body"
+      hx-target="this"
+      hx-swap="innerHTML"
+    >
+      {% partialdef anomaly_table inline %}
+<p class="text-muted">
+    {% if unresolved_count %}
+    <span class="badge status-missing_punch">{{ unresolved_count }} unresolved</span>
+    {% else %}
+    <span class="badge status-approved">All clear</span>
+    {% endif %}
+    days with punch-flow problems; today's open sessions are work in progress and not listed.
+</p>
+{% if page_obj.paginator.count %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Day</th>
+            <th>Employee</th>
+            <th>Problems</th>
+            <th>Status</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for entry in page_obj %}
+        <tr>
+            <td>{{ entry.day }}</td>
+            <td>{% include "partials/emp_cell.html" with employee=entry.employee %}</td>
+            <td>
+                {% if entry.open_sessions %}
+                <span class="badge status-missing_punch">Check out missing</span>
+                {% endif %}
+                {% if entry.stray_outs %}
+                <span class="badge status-ignored">{{ entry.stray_outs|length }} stray check-out{{ entry.stray_outs|length|pluralize }}</span>
+                {% endif %}
+                {% if entry.duplicate_ins %}
+                <span class="badge status-incomplete">{{ entry.duplicate_ins|length }} duplicate punch{{ entry.duplicate_ins|length|pluralize }}</span>
+                {% endif %}
+                {% if entry.corrected %}
+                <span class="badge status-corrected">Corrected to {{ entry.corrected.0.corrected_punch.get_direction_display }}</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if entry.resolved %}
+                <span class="badge status-approved">Resolved</span>
+                {% elif entry.has_problems %}
+                <span class="badge status-missing_punch">Open</span>
+                {% else %}
+                <span class="badge status-incomplete">Watch</span>
+                {% endif %}
+            </td>
+            <td class="table-actions">
+                <a class="btn btn--ghost" href="{% url 'attendance_transaction_list' %}?q={{ entry.employee.emp_code|urlencode }}">Open punches</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% include "partials/pagination.html#pagination" %}
+{% else %}
+<p class="empty-state">
+    {% if search %}
+    No exception days match "{{ search }}".
+    {% else %}
+    No punch-flow exceptions — every past day's sessions close cleanly.
+    {% endif %}
+</p>
+{% endif %}
+{% endpartialdef anomaly_table %}
+    </div>
+  </div>
+</div>
+{% endblock %}

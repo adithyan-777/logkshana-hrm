@@ -5,6 +5,7 @@ from unittest.mock import patch
 from django.http import HttpResponse
 from django.test import RequestFactory, SimpleTestCase
 from django.urls import reverse
+from django_tenants.test.client import TenantClient
 
 from attendance.models import Attendance
 from common.tests.base import TEST_PASSWORD, BaseTenantTestCase
@@ -14,7 +15,6 @@ from common.tests.factories import (
     leave_request_factory,
 )
 from dashboard.selectors import dashboard_summary_get
-from django_tenants.test.client import TenantClient
 from leave.models import LeaveRequest
 
 

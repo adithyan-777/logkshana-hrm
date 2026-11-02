@@ -9,5 +9,8 @@
   <a href="{% url 'attendance_transaction_list' %}"
      class="tab {% if request.resolver_match.url_name == 'attendance_transaction_list' or request.resolver_match.url_name == 'attendance_transaction_add' %}is-active{% endif %}"
      role="tab">Punches</a>
+  <a href="{% url 'attendance_anomalies' %}"
+     class="tab {% if request.resolver_match.url_name == 'attendance_anomalies' %}is-active{% endif %}"
+     role="tab">Exceptions</a>
 </div>
 {% endpartialdef tabs_attendance %}

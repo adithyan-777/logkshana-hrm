@@ -26,6 +26,8 @@
       id="work-session-list"
       class="data-table-wrap"
       hx-get="{% url 'work_session_list' %}{% if search %}?q={{ search|urlencode }}{% endif %}"
+      {# Explicit trigger: omitting hx-trigger would fall back to htmx's default "click" on this div, so clicking pagination bubbles a second request to the wrapper URL (no ?page=) and resets the table to page 1. #}
+      hx-trigger="attendanceTransactionCreated from:body, transactionUpdated from:body, transactionDeleted from:body"
       hx-target="this"
       hx-swap="innerHTML"
     >

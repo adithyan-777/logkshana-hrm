@@ -13,6 +13,11 @@ urlpatterns = [
         name="transaction_edit",
     ),
     path(
+        "transactions/<int:transaction_id>/correct/",
+        views.transaction_correct,
+        name="transaction_correct",
+    ),
+    path(
         "transactions/<int:transaction_id>/delete/",
         views.transaction_delete_view,
         name="transaction_delete",
@@ -30,6 +35,11 @@ urlpatterns = [
         name="daily_delete",
     ),
     path("me/", views.my_attendance_view, name="my_attendance"),
+    path(
+        "exceptions/",
+        views.anomaly_list_view,
+        name="attendance_anomalies",
+    ),
     path("work-sessions/", views.work_session_list_view, name="work_session_list"),
     path("gateway/", views.gateway_view, name="gateway"),
 ]

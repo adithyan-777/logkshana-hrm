@@ -79,7 +79,7 @@ def snapshot(window_punches, start, until_plus_one):
     }
 
 
-def replay_employee(employee, activities, qa):
+def replay_employee(employee, activities):
     before = len(activities)
     for activity in activities:
         attendance_update_for_punch(
@@ -97,11 +97,10 @@ def replay_employee(employee, activities, qa):
 
     def row_bit(r):
         check_in = (
-            timezone.localtime(r.check_in, qa).strftime("%H:%M")
-            if r.check_in else "--"
+            (r.check_in or timezone.now()).strftime("%H:%M")
         )
         check_out = (
-            "->" + timezone.localtime(r.check_out, qa).strftime("%H:%M")
+            "->" + r.check_out.strftime("%H:%M")
             if r.check_out else "open"
         )
         return f"{r.day:%d} {r.status} {check_in}{check_out}"
@@ -117,8 +116,7 @@ def replay_employee(employee, activities, qa):
 t = get_tenant_model().objects.get(schema_name=TENANT)
 
 with tenant_context(t):
-    qa = timezone.get_current_timezone()
-    UNTIL = _date_env_or_none("REPLAY_UNTIL") or timezone.localdate()
+    UNTIL = _date_env_or_none("REPLAY_UNTIL") or timezone.now().date()
     until_plus_one = UNTIL + timedelta(days=1)
 
     SINCE = _date_env_or_none("REPLAY_SINCE")
@@ -127,8 +125,7 @@ with tenant_context(t):
             "REPLAY_SINCE is required (e.g. REPLAY_SINCE=2026-10-28). "
             "Windows are pinned per run — no auto derivation."
         )
-    if SINCE > UNTIL:
-        SINCE = UNTIL
+    SINCE = min(SINCE, UNTIL)
 
     before = snapshot(
         AttendanceActivity.objects.filter(
@@ -193,7 +190,7 @@ with tenant_context(t):
             )
             replay_employee_rec = activities.select_related("attendance")
             employee = Employee.objects.get(pk=employee_id)
-            replay_employee(employee, list(replay_employee_rec), qa)
+            replay_employee(employee, list(replay_employee_rec))
 
         after = snapshot(
             AttendanceActivity.objects.filter(

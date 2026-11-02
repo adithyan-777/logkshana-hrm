@@ -419,6 +419,24 @@ fieldset.form-section > legend {
   color: var(--text-dim);
 }
 
+.badge.status-ignored {
+  margin-left: 4px;
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+}
+
+.badge.status-corrected {
+  margin-left: 4px;
+  background: color-mix(in srgb, var(--info) 14%, transparent);
+  color: var(--info);
+}
+
+.message.warning {
+  background: color-mix(in srgb, var(--warning) 14%, transparent);
+  color: var(--text-muted);
+  border-left: 3px solid var(--warning);
+}
+
 .badge.status-leave {
   background: color-mix(in srgb, var(--info) 14%, transparent);
   color: var(--info);

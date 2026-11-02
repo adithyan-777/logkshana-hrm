@@ -21,6 +21,7 @@ from common.http import (
     set_error_toast,
     set_hx_trigger,
 )
+from common.localtime import local_date, local_dt
 from common.pagination import list_pagination_context, paginate_queryset
 from common.views import redirect_stale_fragment_visit
 from employees.decorators import require_permission
@@ -86,8 +87,8 @@ def _duration_label(value: timedelta) -> str:
 
 def _timeline_segment(start, end, day: date, *, kind: str) -> dict | None:
     """Return one clipped interval for a local 24-hour attendance timeline."""
-    local_start = timezone.localtime(start)
-    local_end = timezone.localtime(end)
+    local_start = local_dt(start)
+    local_end = local_dt(end)
     if (
         local_start.date() > day
         or local_end.date() < day
@@ -207,19 +208,20 @@ def _punches_for_history_days(employee: Employee, punches) -> list[AttendanceAct
     history_days = {
         punch.attendance.day
         if punch.attendance_id and punch.attendance
-        else timezone.localtime(punch.punch_time).date()
+        else local_date(punch.punch_time)
         for punch in page_punches
     }
     if not history_days:
         return []
 
     day_filter = Q(attendance__day__in=history_days)
-    local_timezone = timezone.get_current_timezone()
+    # Naive wall-clock boundaries: with USE_TZ = False, punch_time is stored
+    # as naive Asia/Qatar local, so a naive midnight-to-midnight window
+    # matches exactly (make_aware/aware comparisons would pass through
+    # datetime adaptation and can shift under the DB session timezone).
     for day in history_days:
-        start = timezone.make_aware(datetime.combine(day, time.min), local_timezone)
-        end = timezone.make_aware(
-            datetime.combine(day + timedelta(days=1), time.min), local_timezone
-        )
+        start = datetime.combine(day, time.min)
+        end = datetime.combine(day + timedelta(days=1), time.min)
         day_filter |= Q(
             attendance__isnull=True,
             punch_time__gte=start,
@@ -252,7 +254,7 @@ def _employee_punch_days(punches) -> list[dict]:
         day = (
             attendance.day
             if attendance
-            else timezone.localtime(punch.punch_time).date()
+            else local_date(punch.punch_time)
         )
         group = days.setdefault(
             day,
@@ -303,7 +305,7 @@ def _employee_punch_days(punches) -> list[dict]:
             }
         )
         group["has_next_day_punches"] = any(
-            timezone.localtime(punch.punch_time).date() > day for punch in events
+            local_date(punch.punch_time) > day for punch in events
         )
         group["timeline_continues_next_day"] = any(
             segment["continues_next_day"] for segment in group["timeline"]
@@ -371,7 +373,7 @@ def employee_detail_view(request: HttpRequest, employee_id: int) -> HttpResponse
         history_from = history_to = None
         history_date_error = ""
         if not history_all:
-            today = timezone.localdate()
+            today = local_date()
             default_from = today - timedelta(days=6)
             try:
                 history_from = (

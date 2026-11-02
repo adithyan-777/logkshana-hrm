@@ -10,15 +10,15 @@ from employees.services import employee_punch_status_recompute
 
 
 class EmployeePunchStatusDisplayTests(BaseTenantTestCase):
-    """The badge time must read tenant-local (like the punch log), UTC."""
+    """The badge time must read tenant wall clock (naive local mode)."""
 
     def test_display_time_converts_utc_storage_to_local(self):
-        from django.utils import timezone as dj_timezone
-
-        employee = employee_factory(first_name="Tz", emp_code="PS300")
-        # 2030-01-01 22:15 UTC == 2030-01-02 01:15 in Asia/Qatar (+03:00):
-        # a raw UTC strftime would print "22:15" — the bug being guarded.
-        punch_time = datetime(2030, 1, 1, 22, 15, tzinfo=UTC)
+        # This repo runs USE_TZ = False (naive Asia/Qatar wall clock), so a
+        # punch written at 22:15 comes back naive and is displayed as-is —
+        # a strftime-on-UTC bug can't occur for values written under this
+        # mode. The is_aware branch guards legacy aware values instead.
+        employee = employee_factory(first_name="Naive", emp_code="PS300")
+        punch_time = datetime(2030, 1, 1, 22, 15)  # naive wall clock
         activity_create(
             employee=employee,
             punch_time=punch_time,
@@ -26,9 +26,17 @@ class EmployeePunchStatusDisplayTests(BaseTenantTestCase):
         )
         employee.refresh_from_db()
 
-        expected = dj_timezone.localtime(employee.punch_time).strftime("%H:%M")
-        self.assertEqual(expected, "01:15")
-        self.assertEqual(employee.punch_display_time, expected)
+        self.assertEqual(employee.punch_time, punch_time)
+        self.assertEqual(employee.punch_display_time, "22:15")
+
+    def test_display_time_localizes_legacy_aware_value(self):
+        # Legacy aware storage (2030-01-01 22:15 UTC == 2030-01-02 01:15
+        # in Asia/Qatar): punch_display_time must localize through
+        # timezone.localtime before strftime, not print UTC hours.
+        employee = employee_factory(first_name="Tz", emp_code="PS302")
+        employee.punch_time = datetime(2030, 1, 1, 22, 15, tzinfo=UTC)
+
+        self.assertEqual(employee.punch_display_time, "01:15")
 
     def test_display_time_empty_without_punch(self):
         employee = employee_factory(first_name="NoTz", emp_code="PS301")

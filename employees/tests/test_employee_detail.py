@@ -9,6 +9,7 @@ from django_tenants.test.client import TenantClient
 from django_tenants.utils import get_public_schema_name, schema_context
 
 from attendance.models import AttendanceActivity
+from common.localtime import local_date
 from common.tests.base import TEST_PASSWORD, BaseTenantTestCase
 from common.tests.factories import activity_factory, employee_factory
 from employees.models import Employee, Permission, Role
@@ -122,7 +123,16 @@ class EmployeeDetailTests(BaseTenantTestCase):
         self.assertEqual(
             first.context["page_obj"].paginator.count, settings.DEFAULT_PAGE_SIZE + 1
         )
-        self.assertEqual(first.context["next_page_url"], f"{url}?tab=attendance&page=2")
+        # The default range (last 7 days) is derived from "today", so the
+        # pagination link must pin from/to explicitly — dropping them would
+        # silently recompute (and eventually shift) the range on page loads
+        # across a day boundary.
+        today = local_date(timezone.now())
+        self.assertEqual(
+            first.context["next_page_url"],
+            f"{url}?tab=attendance&page=2"
+            f"&from={(today - timedelta(days=6)).isoformat()}&to={today.isoformat()}",
+        )
         self.assertEqual(second.context["page_obj"].number, 2)
         self.assertEqual(len(second.context["punches"]), 1)
 

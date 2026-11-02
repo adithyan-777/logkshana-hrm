@@ -227,10 +227,12 @@ class Employee(BaseModel):
     def punch_display_time(self) -> str:
         """HH:MM of the mirrored punch, in tenant local time.
 
-        Punches are stored aware (UTC) like every other timestamp; the
-        badge must display the same wall-clock the punch log shows
-        (``TIME_ZONE``), so aware values are localized before manual
-        ``strftime`` — a raw ``strftime`` would print UTC hours.
+        With ``USE_TZ = False`` punches are stored as naive Asia/Qatar
+        wall-clock values and are displayed as-is (which is exactly the
+        wall clock the punch log shows, ``TIME_ZONE``). The is_aware
+        guard is defensive: legacy aware values (or a settings flip)
+        would need an explicit localtime() before manual ``strftime`` —
+        a raw ``strftime`` on an aware value would print its tz's hours.
         """
         if self.punch_time is None:
             return ""

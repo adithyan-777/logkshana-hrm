@@ -6,11 +6,15 @@ from django.utils.http import urlencode
 from attendance.models import AttendanceActivity, WorkSession
 from attendance.selectors import attendance_exception_day_list
 from attendance.services import activity_correction_create
+from common.localtime import local_date
 from common.tests.base import BaseTenantTestCase
 from common.tests.factories import activity_factory, employee_factory
 from policies.models import AttendancePolicy
 
-DAY = date(2026, 11, 2)
+# A guaranteed-past day: the exception queue only reports open sessions
+# on PAST days (today's open sessions are work in progress). A fixed
+# calendar date would collide with "today" once a year and flake.
+DAY = local_date() - timedelta(days=1)
 
 
 class ExceptionQueueTestMixin:
@@ -81,7 +85,7 @@ class ExceptionDayListTests(ExceptionQueueTestMixin, BaseTenantTestCase):
         self.assertTrue(entry["has_problems"])
 
     def test_todays_open_session_is_not_an_exception(self):
-        today = date.today()
+        today = local_date()
         employee = employee_factory(first_name="Today", emp_code="EX-T1")
         self._punch(
             external_id="ex:today-in", direction="in",

@@ -142,7 +142,7 @@ One row per employee per day after rules and schedule are applied.
 
 #### Corrections (`/attendance/corrections/`)
 
-Adjust check-in/out with reason and status (default **pending**). Date/time fields use Flatpickr.
+Adjust check-in/out with reason and status (default **pending**). Date/time fields use native browser controls.
 
 #### Rules (`/attendance/rules/`)
 
@@ -179,7 +179,7 @@ Hub plus filtered reports with CSV / Excel / PDF export (`hx-boost="false"` on d
 | SPA page nav | Sidebar / tabs / palette → HTMX boost `#spa-view` |
 | List search + pagination | HTMX islands |
 | Create / edit | Right drawer (`.admin-modal`) |
-| Date / datetime | Flatpickr — Clear / Today / Done |
+| Date / datetime | Native browser and operating system picker |
 | Theme | Customizer — light/dark/system, layout, scale, sidebar default|inset|mode |
 
 ---
@@ -236,7 +236,7 @@ Dashboard **Needs attention** lists pending leave / overtime / corrections.
 - List / add / edit / delete flows across employees, attendance, leave, schedule
 - Departments, positions, roles, permissions under Employees
 - Reports with CSV / Excel / PDF export
-- Flatpickr date/time picker (Clear / Today / Done)
+- Native browser date/time controls
 - Employee invite link on successful add
 
 ### Not built / partial

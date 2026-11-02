@@ -1,11 +1,19 @@
+from datetime import date
+
 from django.db.models import Q, QuerySet
+from django.db.models.functions import Coalesce, TruncDate
+from django.utils import timezone
 
 from attendance.models import Attendance, AttendanceActivity, WorkSession
 from employees.models import Employee
 
 
 def attendance_activity_list(
-    *, search: str = "", employee: Employee | None = None
+    *,
+    search: str = "",
+    employee: Employee | None = None,
+    day_from: date | None = None,
+    day_to: date | None = None,
 ) -> QuerySet[AttendanceActivity]:
     queryset = AttendanceActivity.objects.select_related("employee").order_by(
         "-punch_time"
@@ -13,6 +21,18 @@ def attendance_activity_list(
 
     if employee is not None:
         queryset = queryset.filter(employee=employee)
+
+    if day_from or day_to:
+        queryset = queryset.annotate(
+            history_day=Coalesce(
+                "attendance__day",
+                TruncDate("punch_time", tzinfo=timezone.get_current_timezone()),
+            )
+        )
+        if day_from:
+            queryset = queryset.filter(history_day__gte=day_from)
+        if day_to:
+            queryset = queryset.filter(history_day__lte=day_to)
 
     if search:
         queryset = queryset.filter(

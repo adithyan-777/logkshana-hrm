@@ -2,7 +2,7 @@
 {% if page_obj.paginator.count %}
 <nav class="pagination" aria-label="Pagination">
     <p class="pagination-summary">
-        Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
+        Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}{% if pagination_unit %} {{ pagination_unit }}{% endif %}
     </p>
     {% if page_obj.paginator.num_pages > 1 %}
     <div class="pagination-links">

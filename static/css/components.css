@@ -14,7 +14,7 @@
   height: var(--control-h);
   padding: 0 var(--space-3);
   border-radius: var(--r-md);
-  border: 1px solid var(--border);
+  border: 1px solid var(--input);
   background: var(--bg-elevated);
   color: var(--text);
   font-size: var(--control-font);
@@ -44,7 +44,7 @@
 a.btn--primary,
 button.btn--primary {
   background: var(--accent);
-  border-color: transparent;
+  border-color: var(--accent-outline);
   color: var(--text-inverse);
 }
 
@@ -52,7 +52,7 @@ button.btn--primary {
 a.btn--primary:hover,
 button.btn--primary:hover {
   background: var(--accent-hover);
-  border-color: transparent;
+  border-color: var(--accent-outline);
   color: var(--text-inverse);
   box-shadow: none;
 }
@@ -68,7 +68,7 @@ button.btn--primary:active {
 a.btn--warm,
 button.btn--warm {
   background: var(--accent-warm);
-  border-color: transparent;
+  border-color: var(--accent-outline);
   color: var(--text-inverse);
 }
 
@@ -76,13 +76,13 @@ button.btn--warm {
 a.btn--warm:hover,
 button.btn--warm:hover {
   background: var(--accent-warm-hover);
-  border-color: transparent;
+  border-color: var(--accent-outline);
   color: var(--text-inverse);
 }
 
 .btn--soft {
   background: var(--bg-prompt);
-  border-color: var(--border);
+  border-color: var(--input);
   color: var(--text);
 }
 
@@ -92,7 +92,7 @@ button.btn--warm:hover {
 
 .btn--muted {
   background: var(--surface-secondary);
-  border-color: transparent;
+  border-color: var(--input);
   color: var(--text);
   border-radius: var(--r-sm);
 }
@@ -103,7 +103,7 @@ button.btn--warm:hover {
 
 .btn--ghost {
   background: var(--accent-muted);
-  border-color: transparent;
+  border-color: var(--accent-outline);
   box-shadow: none;
 }
 
@@ -118,7 +118,7 @@ a.btn--danger,
 button.btn--danger {
   background: var(--danger);
   border-color: transparent;
-  color: var(--text-inverse);
+  color: var(--text-on-danger);
 }
 
 .btn--danger:hover,
@@ -126,7 +126,7 @@ a.btn--danger:hover,
 button.btn--danger:hover {
   background: color-mix(in srgb, var(--danger) 88%, #000);
   box-shadow: none;
-  color: var(--text-inverse);
+  color: var(--text-on-danger);
 }
 
 .btn-icon {
@@ -332,7 +332,7 @@ button.btn--danger:hover {
   justify-content: center;
   border-radius: var(--r-md);
   background: var(--accent-muted);
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: 20px;
   flex-shrink: 0;
   transition: none;
@@ -402,7 +402,7 @@ button.btn--danger:hover {
   line-height: var(--text-h1-lh);
 }
 
-.dash-hero__accent { color: var(--accent); }
+.dash-hero__accent { color: var(--accent-text); }
 
 .dash-hero__subtitle {
   margin: var(--space-2) 0 0;
@@ -464,7 +464,7 @@ button.btn--danger:hover {
   align-items: center;
   justify-content: center;
   background: var(--accent-muted);
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: 20px;
   flex-shrink: 0;
 }
@@ -526,7 +526,7 @@ button.btn--danger:hover {
   padding: 0 8px;
   border-radius: 999px;
   background: var(--accent-muted);
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: 12px;
   font-weight: 600;
 }
@@ -558,7 +558,7 @@ button.btn--danger:hover {
   align-items: center;
   justify-content: center;
   background: var(--bg-prompt);
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: 18px;
   flex-shrink: 0;
 }
@@ -599,7 +599,7 @@ button.btn--danger:hover {
   align-items: flex-start;
   gap: var(--space-2);
   padding: var(--space-3);
-  border: 1px solid var(--border);
+  border: 1px solid var(--input);
   border-radius: var(--r-md);
   background: var(--bg-prompt);
   text-decoration: none;
@@ -613,7 +613,7 @@ button.btn--danger:hover {
 
 .dash-action i {
   font-size: 18px;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .dash-secondary {
@@ -668,7 +668,7 @@ button.btn--danger:hover {
   height: 8px;
   margin-top: 6px;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--accent-text);
   flex-shrink: 0;
 }
 
@@ -793,7 +793,7 @@ button.btn--danger:hover {
 
 .emp-avatar--0 {
   background: var(--accent-muted);
-  color: var(--accent-pressed);
+  color: var(--accent-text);
   border-color: color-mix(in srgb, var(--accent) 32%, transparent);
 }
 .emp-avatar--1 {
@@ -808,7 +808,7 @@ button.btn--danger:hover {
 }
 .emp-avatar--3 {
   background: color-mix(in srgb, var(--warning) 16%, var(--bg-elevated));
-  color: light-dark(#9a6b00, var(--warning));
+  color: var(--warning);
   border-color: color-mix(in srgb, var(--warning) 32%, transparent);
 }
 .emp-avatar--4 {
@@ -818,7 +818,7 @@ button.btn--danger:hover {
 }
 .emp-avatar--5 {
   background: color-mix(in srgb, #0d9488 14%, var(--bg-elevated));
-  color: light-dark(#0f766e, #2dd4bf);
+  color: light-dark(#0b6a62, #2dd4bf);
   border-color: color-mix(in srgb, #0d9488 32%, transparent);
 }
 .emp-avatar--6 {
@@ -1139,7 +1139,7 @@ button.btn--danger:hover {
 
 .notify-menu__icon--accent {
   background: var(--accent-muted);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .notify-menu__icon--danger {
@@ -1200,7 +1200,7 @@ button.btn--danger:hover {
   border-radius: var(--r-md);
   font-size: 13px;
   font-weight: 500;
-  color: var(--accent);
+  color: var(--accent-text);
   text-decoration: none;
   transition: var(--motion-interactive);
 }
@@ -1242,7 +1242,7 @@ button.btn--danger:hover {
   background: var(--bg-elevated);
   color: var(--text);
   box-shadow: var(--shadow-card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--input);
 }
 
 .seg__btn.is-disabled,
@@ -1815,7 +1815,7 @@ div.dt-container div.dt-paging button.dt-paging-button.current:hover,
   background: var(--accent) !important;
   background-image: none !important;
   color: #fff !important;
-  border-color: transparent !important;
+  border-color: var(--accent-outline) !important;
   font-weight: 600 !important;
 }
 
@@ -1894,7 +1894,7 @@ div.dt-container button.dt-paging-button:focus-visible {
 
 .status-pill--pending {
   background: color-mix(in srgb, var(--warning) 14%, transparent);
-  color: #a16207;
+  color: var(--warning);
 }
 
 /* Attendance status pills (UI-only pill style) */
@@ -1910,7 +1910,7 @@ div.dt-container button.dt-paging-button:focus-visible {
 
 .status-pill--late {
   background: color-mix(in srgb, var(--warning) 18%, transparent);
-  color: #9a7b00;
+  color: var(--warning);
 }
 
 .status-pill--incomplete {
@@ -1935,12 +1935,12 @@ div.dt-container button.dt-paging-button:focus-visible {
 
 .status-pill--early_out {
   background: color-mix(in srgb, var(--warning) 12%, transparent);
-  color: #7c6a00;
+  color: var(--warning);
 }
 
 .status-pill--day_off {
   background: color-mix(in srgb, var(--accent) 10%, transparent);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .status-pill--holiday {
@@ -1955,7 +1955,7 @@ div.dt-container button.dt-paging-button:focus-visible {
 
 .status-pill--overtime {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 /* Correction workflow pills */
@@ -2175,11 +2175,13 @@ div.dt-container button.dt-paging-button:focus-visible {
 .x-select__item.is-selected {
   background: var(--accent);
   color: var(--text-inverse);
+  box-shadow: inset 0 0 0 1px var(--accent-outline);
 }
 
 .x-select__item.is-selected:hover {
   background: var(--accent-hover);
   color: var(--text-inverse);
+  box-shadow: inset 0 0 0 1px var(--accent-outline);
 }
 
 .x-select__empty {
@@ -2659,6 +2661,7 @@ div.dt-container button.dt-paging-button:focus-visible {
 .pagination__item.is-active {
   background: var(--accent);
   color: #fff;
+  border-color: var(--accent-outline);
   font-weight: 500;
   transform: none;
   box-shadow: none;
@@ -2704,7 +2707,7 @@ div.dt-container button.dt-paging-button:focus-visible {
 .tab.is-active {
   background: var(--nav-active);
   color: var(--text);
-  border-color: transparent;
+  border-color: var(--input);
   box-shadow: none;
 }
 
@@ -2902,9 +2905,9 @@ fieldset.form-section > .help-text {
 }
 
 .tt-segment__btn.is-active {
-  border-color: var(--accent, #e11d48);
-  color: var(--accent, #e11d48);
-  box-shadow: inset 0 0 0 1px var(--accent, #e11d48);
+  border-color: var(--ring);
+  color: var(--accent-text);
+  box-shadow: inset 0 0 0 1px var(--ring);
 }
 
 .tt-color,
@@ -2916,7 +2919,7 @@ input.tt-color[type="color"] {
   height: var(--control-h);
   min-height: var(--control-h);
   padding: 2px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--input);
   border-radius: var(--r-md);
   background: var(--bg-prompt);
   cursor: pointer;
@@ -2999,7 +3002,7 @@ input.tt-color[type="color"] {
   width: 40px;
   height: 22px;
   border-radius: 999px;
-  background: var(--border);
+  background: var(--input);
   transition: background var(--t-fast, 150ms) ease;
   flex-shrink: 0;
   flex-grow: 0;
@@ -3031,7 +3034,7 @@ input.tt-color[type="color"] {
 
 .form-switch input:focus-visible + .form-switch__ui,
 .tt-switch input:focus-visible + .tt-switch__ui {
-  outline: 2px solid var(--accent, #e11d48);
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 
@@ -3078,7 +3081,7 @@ input.tt-color[type="color"] {
   flex-shrink: 0;
   border: 0;
   border-radius: 999px;
-  background: var(--border);
+  background: var(--input);
   box-shadow: none;
   cursor: pointer;
   transition: background var(--t-fast, 150ms) ease;
@@ -3106,7 +3109,7 @@ input.tt-color[type="color"] {
 }
 
 .field.checkbox input[type="checkbox"]:focus-visible {
-  outline: 2px solid var(--accent, #e11d48);
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 
@@ -3211,7 +3214,7 @@ fieldset.form-section > legend {
   border: 0;
   background: none;
   padding: 0;
-  color: var(--accent, #2563eb);
+  color: var(--accent-text);
   font: inherit;
   font-weight: 500;
   cursor: pointer;
@@ -3254,7 +3257,7 @@ fieldset.form-section > legend {
   height: 22px;
   border-radius: var(--r-pill);
   background: var(--accent-muted);
-  color: var(--accent-pressed);
+  color: var(--accent-text);
   font-size: 12px;
   font-weight: 700;
   flex-shrink: 0;
@@ -3339,13 +3342,13 @@ fieldset.form-section > legend {
 
 .tt-chip:hover {
   color: var(--text);
-  border-color: var(--accent);
+  border-color: var(--ring);
 }
 
 .tt-chip.is-on {
   background: var(--accent-muted);
-  border-color: var(--accent);
-  color: var(--accent-pressed);
+  border-color: var(--ring);
+  color: var(--accent-text);
 }
 
 .tt-chip input {
@@ -3505,7 +3508,7 @@ fieldset.form-section > legend {
   }
 
   .page-head__title {
-    font-size: clamp(1.25rem, 5vw, var(--text-h1));
+    font-size: clamp(1.125rem, 4.8vw, 1.25rem);
   }
 
   /* Inset shell: tighten gap so content isn't squeezed */

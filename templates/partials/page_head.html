@@ -1,5 +1,5 @@
 {% partialdef page_head inline %}
-{# Shared page heading. Uses page_heading, page_subtitle, topbar_action from context. #}
+{# Shared page heading. Page actions render at the end of each list toolbar. #}
 <div class="page-head">
   <div class="page-head__copy">
     <h1 class="page-head__title">{{ page_heading|default:"Dashboard" }}</h1>
@@ -7,22 +7,5 @@
     <p class="page-head__subtitle">{{ page_subtitle }}</p>
     {% endif %}
   </div>
-  {% if topbar_action %}
-    <div class="page-head__actions">
-      <a
-        class="btn btn--primary"
-        href="{{ topbar_action.url }}"
-        hx-get="{{ topbar_action.url }}"
-        hx-target="#modal-body"
-        hx-swap="innerHTML"
-        hx-boost="false"
-        hx-push-url="false"
-        @click="$store.ui.openModal('{{ topbar_action.label|escapejs }}', '{{ topbar_action.drawer_size|default:'default'|escapejs }}')"
-      >
-        <i class="bx bx-plus admin-icon admin-icon--18"></i>
-        {{ topbar_action.label }}
-      </a>
-    </div>
-  {% endif %}
 </div>
 {% endpartialdef page_head %}

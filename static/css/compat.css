@@ -10,11 +10,10 @@
 
 .field > label:not(.form-switch):not(.tt-switch),
 .field label:not(.form-switch):not(.tt-switch) {
-  display: block;
+  display: flex;
   font-size: 14px;
   font-weight: 500;
   color: var(--text);
-  margin-bottom: var(--space-2);
 }
 
 .field input:not([type="checkbox"]):not([type="radio"]),
@@ -103,7 +102,7 @@
   flex-shrink: 0;
   border: 0;
   border-radius: 999px;
-  background: var(--border);
+  background: var(--input);
   box-shadow: none;
   cursor: pointer;
   transition: background var(--t-fast, 150ms) ease;
@@ -131,7 +130,7 @@
 }
 
 .field.checkbox input[type="checkbox"]:focus-visible {
-  outline: 2px solid var(--accent, #e11d48);
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 
@@ -151,33 +150,38 @@
 }
 
 .permission-multiselect {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  align-items: start;
+  gap: var(--space-2);
   list-style: none;
   margin: 0;
   padding: var(--space-2);
-  max-height: 360px;
+  max-height: 520px;
   overflow: auto;
   border: 1px solid var(--input);
   border-radius: var(--r-md);
-  background: var(--bg-prompt);
+  background: var(--bg-muted);
 }
 
 .permission-multiselect > div {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-elevated);
 }
 
 .permission-multiselect > div > label {
   display: block;
-  margin: 0;
-  padding: var(--space-1) var(--space-2);
-  font-size: 11px;
+  margin: 0 0 var(--space-1);
+  padding: var(--space-1) var(--space-2) var(--space-2);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text);
 }
 
 .permission-multiselect > div > label:hover {
@@ -188,9 +192,11 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-bottom: 0;
-  padding: var(--space-1) var(--space-2);
+  margin: 0;
+  padding: 7px var(--space-2);
   font-weight: 400;
+  line-height: 1.35;
+  color: var(--text);
   border-radius: var(--r-sm);
 }
 
@@ -199,9 +205,20 @@
 }
 
 .permission-multiselect input[type="checkbox"] {
-  width: auto;
-  min-height: auto;
+  appearance: auto;
+  -webkit-appearance: checkbox;
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  margin: 0;
   flex-shrink: 0;
+  accent-color: var(--accent-text);
+}
+
+@media (max-width: 600px) {
+  .permission-multiselect {
+    max-height: 440px;
+  }
 }
 
 .field-row {
@@ -303,7 +320,7 @@ fieldset.form-section > legend {
 
 .employee-table th,
 .employee-table td {
-  padding: 12px 16px;
+  padding: 8px 16px;
   text-align: left;
   vertical-align: middle;
   border-bottom: 1px solid var(--border-header);
@@ -315,6 +332,39 @@ fieldset.form-section > legend {
   color: var(--text-muted);
   white-space: nowrap;
   height: 40px;
+}
+
+.employee-table__role,
+.employee-table__contact {
+  min-width: 150px;
+}
+
+.employee-table__role-primary {
+  display: block;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.employee-table__role-secondary {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.employee-table__contact-items {
+  display: grid;
+  gap: 3px;
+  max-width: 240px;
+}
+
+.employee-table__contact-items a {
+  overflow-wrap: anywhere;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.employee-table__contact-items a:hover {
+  color: var(--accent-text);
 }
 
 .badge {
@@ -348,7 +398,7 @@ fieldset.form-section > legend {
 
 .badge.status-pending {
   background: color-mix(in srgb, var(--warning) 14%, transparent);
-  color: #a16207;
+  color: var(--warning);
 }
 
 .badge.status-rejected,
@@ -361,7 +411,7 @@ fieldset.form-section > legend {
 .badge.status-late,
 .badge.status-early_out {
   background: color-mix(in srgb, var(--warning) 18%, transparent);
-  color: #9a7b00;
+  color: var(--warning);
 }
 
 .badge.status-incomplete {
@@ -377,7 +427,7 @@ fieldset.form-section > legend {
 .badge.status-overtime,
 .badge.status-worked_holiday {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 /* Live punch-status badges (employees list): one family per punch
@@ -386,7 +436,7 @@ fieldset.form-section > legend {
    keep their own hues. */
 .badge.punch-in {
   background: color-mix(in srgb, var(--accent) 14%, transparent);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .badge.punch-out {
@@ -397,13 +447,13 @@ fieldset.form-section > legend {
 .badge.punch-break_in,
 .badge.punch-break_out {
   background: color-mix(in srgb, var(--warning) 18%, transparent);
-  color: #9a7b00;
+  color: var(--warning);
 }
 
 .badge.punch-overtime_in,
 .badge.punch-overtime_out {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 /* One-click web-punch toggle on the employees list: the badge keeps
@@ -464,7 +514,7 @@ fieldset.form-section > legend {
 }
 
 .message a {
-  color: var(--accent);
+  color: var(--accent-text);
   margin-left: var(--space-2);
 }
 
@@ -475,7 +525,7 @@ fieldset.form-section > legend {
 }
 
 .empty-state a {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .card--table .pagination {
@@ -556,7 +606,7 @@ fieldset.form-section > legend {
   height: var(--control-h);
   padding: 0 var(--space-3);
   border-radius: var(--r-md);
-  border: 1px solid transparent;
+  border: 1px solid var(--accent-outline);
   background: var(--accent);
   color: #fff;
   font-size: var(--control-font);
@@ -566,7 +616,7 @@ fieldset.form-section > legend {
 }
 
 .invite-box a {
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .export-buttons {

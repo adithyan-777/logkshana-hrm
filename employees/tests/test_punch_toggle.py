@@ -133,13 +133,15 @@ class EmployeePunchToggleTests(BaseTenantTestCase):
 
         self.assertEqual(response.status_code, 405)
 
-    def test_list_shows_button_for_permission_holder(self):
+    def test_list_shows_read_only_status_for_permission_holder(self):
         employee = employee_factory(first_name="Admin", emp_code="PT106")
+        activity_factory(employee=employee, direction=AttendanceActivity.Direction.IN)
 
         response = self.client.get(reverse("employee_list"))
 
-        self.assertContains(response, "badge hover-swap")
-        self.assertContains(
+        self.assertContains(response, "badge punch-in")
+        self.assertNotContains(response, "badge hover-swap")
+        self.assertNotContains(
             response,
             reverse("employee_punch_toggle", args=[employee.pk]),
         )

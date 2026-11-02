@@ -16,7 +16,7 @@ Root [README.md](../README.md) covers setup, stack, and common commands.
 
 - Django templates + HTMX (`hx-boost` → `#spa-view`) + Alpine.js
 - Design tokens: `static/css/tokens.css` (accent `#8A1538`)
-- CSS modules: `base`, `layout`, `sidebar`, `components`, `compat`, `date-picker`, `flatpickr-theme`
+- CSS modules: `base`, `layout`, `sidebar`, `components`, `compat`, `native-date-inputs`
 - Brand: `static/brand/hrms-wordmark.svg`, `static/brand/icon.svg`
-- Date/time: Flatpickr via `static/js/date-picker.js` (Clear / Today / Done)
+- Date/time: Native browser and operating system controls
 - Charts: Chart.js · Tables: DataTables · Icons: Boxicons · Font: Geist Variable

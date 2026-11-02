@@ -12,11 +12,12 @@
     type="search"
     name="q"
     value="{{ search }}"
-    placeholder="Name, code, or email..."
+    placeholder="Name, code, email, or phone..."
     hx-get="{% url 'employee_list' %}"
     hx-target="#employee-list"
     hx-trigger="keyup changed delay:300ms, search"
   >
+  {% include "partials/page_toolbar_action.html#page_toolbar_action" %}
 </div>
 
 <div class="card card--table">
@@ -34,25 +35,32 @@
 <table class="data-table employee-table">
     <thead>
         <tr>
-            <th>Code</th>
-            <th>Name</th>
-            <th>Punch</th>
-            <th>Department</th>
-            <th>Position</th>
-            <th>Username</th>
-            <th>Status</th>
-            <th></th>
+            <th scope="col">Employee code</th>
+            <th scope="col">Employee</th>
+            <th scope="col">Punch status</th>
+            <th scope="col">Role / department</th>
+            <th scope="col">Contact</th>
+            <th scope="col">Employment status</th>
+            <th scope="col"><span class="sr-only">Actions</span></th>
         </tr>
     </thead>
     <tbody>
         {% for employee in page_obj %}
         <tr>
             <td>{{ employee.emp_code|default:"—" }}</td>
-            <td>{% include "partials/emp_cell.html" with employee=employee %}</td>
-            <td>{% include "partials/punch_status_badge.html" with employee=employee can_punch=can_punch %}</td>
-            <td>{{ employee.department|default:"—" }}</td>
-            <td>{{ employee.position|default:"—" }}</td>
-            <td>{{ employee.user.username|default:"—" }}</td>
+            <td><a class="employee-detail-link" href="{% url 'employee_detail' employee.pk %}">{% include "partials/emp_cell.html" with employee=employee %}</a></td>
+            <td>{% include "partials/punch_status_badge.html" with employee=employee can_punch=False %}</td>
+            <td class="employee-table__role">
+                {% if employee.position %}<span class="employee-table__role-primary">{{ employee.position }}</span>{% elif employee.department %}<span class="employee-table__role-primary">{{ employee.department }}</span>{% else %}<span>—</span>{% endif %}
+                {% if employee.position and employee.department %}<span class="employee-table__role-secondary">{{ employee.department }}</span>{% endif %}
+            </td>
+            <td class="employee-table__contact">
+                <div class="employee-table__contact-items">
+                    {% if employee.mobile %}<a href="tel:{{ employee.mobile|urlencode }}">{{ employee.mobile }}</a>{% endif %}
+                    {% if employee.email %}<a href="mailto:{{ employee.email }}">{{ employee.email }}</a>{% endif %}
+                    {% if not employee.mobile and not employee.email %}<span>—</span>{% endif %}
+                </div>
+            </td>
             <td>
                 {% if employee.is_active %}
                 <span class="badge active">Active</span>
@@ -61,6 +69,9 @@
                 {% endif %}
             </td>
             <td class="table-actions">
+                <a href="{% url 'employee_detail' employee.pk %}" class="btn-icon" title="View details" aria-label="View details for {{ employee.full_name }}">
+                    <i class="bx bx-eye admin-icon admin-icon--18" aria-hidden="true"></i>
+                </a>
                 {% if can_edit %}
                 {% url 'employee_edit' employee.pk as employee_edit_url %}
                 {% include "partials/drawer_link.html" with url=employee_edit_url title="Edit employee" icon="bx-edit" class="btn-icon" size="wide" %}

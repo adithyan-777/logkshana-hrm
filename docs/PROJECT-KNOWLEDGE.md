@@ -20,7 +20,7 @@
 - Auth: `django-tenant-users` (`TenantUser`), `django-allauth` (email+username login, optional verification)
 - Async: dramatiq + dramatiq-crontab on Redis broker (device-user push/delete; cron actors in `<app>/tasks.py`)
 - API surface: HTML fragments via HTMX (DRF installed but **unused** — zero serializers; `REST_FRAMEWORK` config in `config/settings.py:242` is JSON-only dead config)
-- Frontend: HTMX (boosted SPA shell), Alpine.js (3 stores), Chart.js, flatpickr, BoxIcons, Geist Variable font
+- Frontend: HTMX (boosted SPA shell), Alpine.js (3 stores), Chart.js, native browser date/time controls, BoxIcons, Geist Variable font
 - Infra: Gunicorn, WhiteNoise (`CompressedStaticFilesStorage`), nginx, Docker Compose, Sentry
 - Deps managed with `uv` (`pyproject.toml`, `uv.lock`); lint with `ruff`
 
@@ -90,16 +90,16 @@ Hub + attendance summary, punch log, overtime, leave, exceptions, department, in
 - **Alpine stores** (`static/js/alpine-app.js`): `spa` (path/loading/commands/nav), `ui` (menu/command/toasts/modal), `theme` (delegates to theme engine + `toggle()`), `commandPalette` (⌘K)
 - **Theme engine** (`static/js/theme.js`, `IttisalTheme` + `LogkshanaTheme` alias): mode `light/dark/system` (default **system**), layout compact/full, scale sm/md/lg, sidebar variant default/inset, mode default/icon/full. Persisted to `ittisal-ui-prefs` (+ legacy `logkshana-*` migration), pre-paint inline script sets `data-theme` (no flash), OS-change listener, `themechange` event → charts re-init. UI: theme customizer (5 segmented radiogroups) + topbar sun/moon quick-toggle
 - **Tokens** (`static/css/tokens.css`): `color-scheme: light dark`, `light-dark()` surfaces (`#FAF9F1/#F3F0E7` light; `#262626/#1B1B1B/#383838` dark), peach accent `#e6987e`, semantic colors dark-aware
-- **CSS load order** (`partials/stylesheets.html`): tokens → base → motion → layout → sidebar → components (2299 lines, largest) → flatpickr vendor+theme → utilities → compat (Django-widget bridge) → date-picker. `static/css/app.css` is dead legacy (hardcoded `#111827`, unloaded)
-- **Date selector** (`static/css/date-picker.css`, native-only per user choice): themed `date/time/datetime-local/month/week` inputs, peach calendar/clock SVG indicators (`#f0b49a` in dark), WebKit segment focus, per-theme `color-scheme` so native popup follows mode
+- **CSS load order** (`partials/stylesheets.html`): tokens → base → motion → layout → sidebar → components (2299 lines, largest) → utilities → compat (Django-widget bridge) → native-date-inputs. `static/css/app.css` is dead legacy (hardcoded `#111827`, unloaded)
+- **Date selector** (`static/css/native-date-inputs.css`): native `date/time/datetime-local/month/week` controls; the browser/OS owns the picker UI and follows the active color scheme
 - **Avatar CSS** (`components.css`, `.emp-avatar--0..7` + `.emp-cell` name stack)
 - **Charts**: `charts.js` (CSS-var-resolved, `themechange`-aware) + `dashboard-charts.js` (hardcoded palette — ignores dark mode, known issue)
 - **Forms pattern**: `non_field_errors → .message.error` + per-field `.error` spans (auth/filter templates use `.form-error`/`.alert` dialect instead — inconsistent, no `aria-invalid` wiring anywhere)
 
 ## 8. Static assets
 
-`static/css/`: tokens, base, motion, layout, sidebar, components, utilities, compat, date-picker, flatpickr-theme, main (doc-only `@import` index), vendor/flatpickr.
-`static/js/`: theme, alpine-app, app (legacy sidebar toggle), charts, dashboard-charts, date-picker + vendor (htmx, alpine, chart.umd, flatpickr).
+`static/css/`: tokens, base, motion, layout, sidebar, components, utilities, compat, native-date-inputs, main (doc-only `@import` index).
+`static/js/`: theme, alpine-app, app (legacy sidebar toggle), charts, dashboard-charts + vendor (htmx, alpine, chart.umd).
 `static/brand/`: `icon.svg`, `hrms-wordmark.svg`.
 
 ## 9. DevOps & env

@@ -1,0 +1,99 @@
+{% extends "layouts/app_shell.html" %}
+{% load avatar %}
+
+{% block title %}{{ employee.full_name }} · Employee{% endblock %}
+{% block page_head %}{% endblock %}
+
+{% block page_content %}
+{% partialdef employee_detail_page inline %}
+<div id="employee-detail-page" class="employee-detail" {% if preview_mode %}x-data="{ tab: 'overview', checkedIn: true, notice: '' }"{% else %}hx-get="{{ detail_url }}?tab={{ active_tab }}&amp;fragment=detail{% if active_tab == 'attendance' %}{% if history_all %}&amp;range=all{% else %}&amp;from={{ history_from|date:'Y-m-d' }}&amp;to={{ history_to|date:'Y-m-d' }}{% endif %}{% endif %}{% if page_obj %}&amp;page={{ page_obj.number }}{% endif %}" hx-trigger="employeeUpdated from:body" hx-swap="outerHTML"{% endif %}>
+  {% if preview_mode %}
+  <div class="employee-detail__preview" role="note">
+    <i class="bx bx-info-circle admin-icon admin-icon--18" aria-hidden="true"></i>
+    <span><strong>Design preview.</strong> This employee and punch history are examples. Punch actions do not save changes.</span>
+  </div>
+  {% endif %}
+
+  <header class="card employee-detail__hero">
+    <div class="employee-detail__identity">
+      {% avatar employee size="xl" %}
+      <div class="employee-detail__identity-copy">
+        <div class="employee-detail__name-row">
+          <h1 class="employee-detail__name">{{ employee.full_name }}</h1>
+          {% if employee.is_active %}<span class="badge active">Active</span>{% else %}<span class="badge inactive">Inactive</span>{% endif %}
+        </div>
+        <p class="employee-detail__identity-meta">
+          <span>{{ employee.emp_code|default:"No employee code" }}</span>
+          {% if employee.position %}<span aria-hidden="true">·</span><span>{{ employee.position }}</span>{% endif %}
+          {% if employee.department %}<span aria-hidden="true">·</span><span>{{ employee.department }}</span>{% endif %}
+        </p>
+      </div>
+    </div>
+    {% if preview_mode or can_punch or can_edit %}
+    <div class="employee-detail__hero-actions">
+      {% if preview_mode %}
+      <button type="button" class="btn btn--primary employee-detail__preview-action" @click="checkedIn = !checkedIn; notice = 'Preview only. No punch was saved.'"><span x-text="checkedIn ? 'Punch out' : 'Punch in'">Punch out</span></button>
+      <button type="button" class="btn btn--soft" disabled title="Available when the page is connected">Edit employee</button>
+      <p class="employee-detail__preview-feedback" role="status" x-show="notice" x-text="notice" x-cloak></p>
+      {% else %}
+      {% if can_punch %}<div class="employee-detail__action">{% include "partials/punch_status_badge.html" with employee=employee can_punch=can_punch %}</div>{% endif %}
+      {% if can_edit %}
+      {% url 'employee_edit' employee.pk as employee_edit_url %}
+      {% include "partials/drawer_link.html" with url=employee_edit_url title="Edit employee" label="Edit employee" class="btn btn--soft" size="wide" %}
+      {% endif %}
+      {% endif %}
+    </div>
+    {% endif %}
+  </header>
+
+  <div class="tabs employee-detail__tabs" role="tablist" aria-label="Employee sections">
+    {% if preview_mode %}
+    <a href="#employee-overview" class="tab" id="employee-overview-tab" role="tab" aria-controls="employee-overview" hx-boost="false" x-ref="overviewTab" :class="{ 'is-active': tab === 'overview' }" :aria-selected="tab === 'overview'" :tabindex="tab === 'overview' ? 0 : -1" @click.prevent="tab = 'overview'" @keydown.arrow-right.prevent="tab = 'attendance'; $nextTick(() => $refs.attendanceTab.focus())" @keydown.arrow-left.prevent="tab = 'attendance'; $nextTick(() => $refs.attendanceTab.focus())">Overview</a>
+    <a href="#employee-attendance" class="tab" id="employee-attendance-tab" role="tab" aria-controls="employee-attendance" hx-boost="false" x-ref="attendanceTab" :class="{ 'is-active': tab === 'attendance' }" :aria-selected="tab === 'attendance'" :tabindex="tab === 'attendance' ? 0 : -1" @click.prevent="tab = 'attendance'" @keydown.arrow-left.prevent="tab = 'overview'; $nextTick(() => $refs.overviewTab.focus())" @keydown.arrow-right.prevent="tab = 'overview'; $nextTick(() => $refs.overviewTab.focus())">Attendance</a>
+    {% else %}
+    <a href="{{ detail_url }}" class="tab {% if active_tab == 'overview' %}is-active{% endif %}" id="employee-overview-tab" role="tab" aria-selected="{% if active_tab == 'overview' %}true{% else %}false{% endif %}">Overview</a>
+    <a href="{{ detail_url }}?tab=attendance" class="tab {% if active_tab == 'attendance' %}is-active{% endif %}" id="employee-attendance-tab" role="tab" aria-selected="{% if active_tab == 'attendance' %}true{% else %}false{% endif %}">Attendance</a>
+    {% endif %}
+  </div>
+
+  {% if preview_mode or active_tab == 'overview' %}
+  <section id="employee-overview" role="tabpanel" aria-labelledby="employee-overview-tab" {% if preview_mode %}x-show="tab === 'overview'"{% endif %} tabindex="0">
+    <div class="employee-detail__grid">
+      <article class="card employee-detail__panel">
+        <div class="employee-detail__panel-heading">
+          <div class="employee-detail__panel-icon"><i class="bx bx-briefcase-alt-2 admin-icon admin-icon--20" aria-hidden="true"></i></div>
+          <div><h2>Employment</h2><p>Work and organization details</p></div>
+        </div>
+        <dl class="employee-detail__fields">
+          <div><dt>Employee code</dt><dd>{{ employee.emp_code|default:"—" }}</dd></div>
+          <div><dt>Employee type</dt><dd>{{ employee.get_employee_type_display|default:"—" }}</dd></div>
+          <div><dt>Branch</dt><dd>{{ employee.branch|default:"—" }}</dd></div>
+          <div><dt>Department</dt><dd>{{ employee.department|default:"—" }}</dd></div>
+          <div><dt>Position</dt><dd>{{ employee.position|default:"—" }}</dd></div>
+          <div><dt>Role</dt><dd>{{ employee.role|default:"—" }}</dd></div>
+          <div><dt>Hire date</dt><dd>{{ employee.hire_date|date:"d M Y"|default:"—" }}</dd></div>
+          <div><dt>Status</dt><dd>{% if employee.is_active %}Active{% else %}Inactive{% endif %}</dd></div>
+        </dl>
+      </article>
+
+      <article class="card employee-detail__panel">
+        <div class="employee-detail__panel-heading">
+          <div class="employee-detail__panel-icon"><i class="bx bx-user admin-icon admin-icon--20" aria-hidden="true"></i></div>
+          <div><h2>Contact &amp; account</h2><p>Contact information and linked login</p></div>
+        </div>
+        <dl class="employee-detail__fields employee-detail__fields--single">
+          <div><dt>Email</dt><dd>{{ employee.email|default:"—" }}</dd></div>
+          <div><dt>Mobile</dt><dd>{{ employee.mobile|default:"—" }}</dd></div>
+          <div><dt>Username</dt><dd>{{ employee.user.username|default:"—" }}</dd></div>
+        </dl>
+      </article>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if preview_mode or active_tab == 'attendance' %}
+  {% include "employees/partials/detail_attendance.html#employee_attendance" %}
+  {% endif %}
+</div>
+{% endpartialdef employee_detail_page %}
+{% endblock %}

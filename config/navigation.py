@@ -474,7 +474,7 @@ COMMAND_PALETTE: list[dict[str, str]] = [
         "subtitle": "Check-in and check-out pairs",
         "url_name": "work_session_list",
         "group": "Attendance",
-        "icon": "bx-time-five",
+        "icon": "bx-clock-5",
     },
     {
         "title": "Record punch",
@@ -579,7 +579,7 @@ COMMAND_PALETTE: list[dict[str, str]] = [
         "subtitle": "Check-in to check-out pairs",
         "url_name": "report_work_sessions",
         "group": "Reports",
-        "icon": "bx-time-five",
+        "icon": "bx-clock-5",
     },
     {
         "title": "Punch log",
@@ -593,7 +593,7 @@ COMMAND_PALETTE: list[dict[str, str]] = [
         "subtitle": "Overtime minutes and status",
         "url_name": "report_overtime",
         "group": "Reports",
-        "icon": "bx-time-five",
+        "icon": "bx-clock-5",
     },
     {
         "title": "Leave reports",

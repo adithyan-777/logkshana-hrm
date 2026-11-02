@@ -6,9 +6,7 @@ from employees.models import Department, Employee, Permission, Position, Role
 
 
 def employee_list(*, search: str = "") -> QuerySet[Employee]:
-    queryset = Employee.objects.select_related(
-        "department", "position", "user"
-    ).order_by("-id")
+    queryset = Employee.objects.select_related("department", "position").order_by("-id")
 
     if search:
         queryset = queryset.filter(
@@ -16,6 +14,7 @@ def employee_list(*, search: str = "") -> QuerySet[Employee]:
             | Q(last_name__icontains=search)
             | Q(emp_code__icontains=search)
             | Q(email__icontains=search)
+            | Q(mobile__icontains=search)
         )
 
     return queryset
@@ -34,7 +33,9 @@ def employee_get_by_emp_code(*, emp_code: str) -> Employee | None:
 
 def employee_get(*, employee_id: int) -> Employee | None:
     return (
-        Employee.objects.select_related("department", "position", "user", "role")
+        Employee.objects.select_related(
+            "branch", "department", "position", "user", "role"
+        )
         .filter(pk=employee_id)
         .first()
     )

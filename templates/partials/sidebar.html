@@ -43,7 +43,7 @@
       {% endif %}
       {% if nav_can.employees %}
       <a href="{% url 'employee_list' %}"
-         class="quick-action {% if request.resolver_match.url_name == 'employee_list' or request.resolver_match.url_name == 'employee_add' or request.resolver_match.url_name == 'employee_edit' %}is-active{% endif %}"
+         class="quick-action {% if request.resolver_match.url_name == 'employee_list' or request.resolver_match.url_name == 'employee_add' or request.resolver_match.url_name == 'employee_edit' or request.resolver_match.url_name == 'employee_detail' %}is-active{% endif %}"
          data-nav-match="employees">
         <span class="quick-action__icon"><i class="bx bx-user admin-icon admin-icon--20"></i></span>
         <span class="quick-action__label">Employees</span>

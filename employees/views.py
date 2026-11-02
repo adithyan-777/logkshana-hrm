@@ -1,3 +1,6 @@
+from datetime import date, datetime, time, timedelta
+from urllib.parse import urlencode
+
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import ProtectedError, Q
@@ -8,7 +11,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from attendance.models import AttendanceActivity
+from attendance.models import Attendance, AttendanceActivity
+from attendance.selectors import attendance_activity_list
 from attendance.services import activity_create
 from common.http import (
     delete_blocked_response,
@@ -17,7 +21,7 @@ from common.http import (
     set_error_toast,
     set_hx_trigger,
 )
-from common.pagination import list_pagination_context
+from common.pagination import list_pagination_context, paginate_queryset
 from common.views import redirect_stale_fragment_visit
 from employees.decorators import require_permission
 from employees.forms import (
@@ -74,6 +78,240 @@ def _render_invite(request: HttpRequest, employee, invite_link: str) -> HttpResp
     )
 
 
+def _duration_label(value: timedelta) -> str:
+    total_minutes = max(0, int(value.total_seconds() // 60))
+    hours, minutes = divmod(total_minutes, 60)
+    return f"{hours}h {minutes:02d}m"
+
+
+def _timeline_segment(start, end, day: date, *, kind: str) -> dict | None:
+    """Return one clipped interval for a local 24-hour attendance timeline."""
+    local_start = timezone.localtime(start)
+    local_end = timezone.localtime(end)
+    if (
+        local_start.date() > day
+        or local_end.date() < day
+        or local_end <= local_start
+    ):
+        return None
+
+    start_seconds = (
+        0
+        if local_start.date() < day
+        else (
+            local_start.hour * 3600
+            + local_start.minute * 60
+            + local_start.second
+            + local_start.microsecond / 1_000_000
+        )
+    )
+    end_seconds = (
+        86_400
+        if local_end.date() > day
+        else (
+            local_end.hour * 3600
+            + local_end.minute * 60
+            + local_end.second
+            + local_end.microsecond / 1_000_000
+        )
+    )
+    end_seconds = min(86_400, end_seconds)
+    duration_seconds = end_seconds - start_seconds
+    if duration_seconds <= 0:
+        return None
+
+    start_label = (
+        f"{int(start_seconds // 3600):02d}:"
+        f"{int(start_seconds % 3600 // 60):02d}:"
+        f"{int(start_seconds % 60):02d}"
+    )
+    end_label = (
+        "24:00:00"
+        if end_seconds == 86_400
+        else (
+            f"{int(end_seconds // 3600):02d}:"
+            f"{int(end_seconds % 3600 // 60):02d}:"
+            f"{int(end_seconds % 60):02d}"
+        )
+    )
+    if duration_seconds >= 3600:
+        hours, remainder = divmod(int(duration_seconds), 3600)
+        minutes, seconds = divmod(remainder, 60)
+        duration_label = f"{hours}h {minutes:02d}m {seconds:02d}s"
+    elif duration_seconds >= 60:
+        minutes, seconds = divmod(int(duration_seconds), 60)
+        duration_label = f"{minutes}m {seconds:02d}s"
+    else:
+        duration_label = f"{int(duration_seconds)}s"
+    return {
+        "kind": kind,
+        "left": round(start_seconds / 86_400 * 100, 6),
+        "width": round(duration_seconds / 86_400 * 100, 6),
+        "lane": 0,
+        "top": 3,
+        "label": f"{start_label}–{end_label} · {duration_label}",
+        "start_seconds": start_seconds,
+        "duration_seconds": duration_seconds,
+        "continues_next_day": local_end.date() > day,
+    }
+
+
+def _attendance_timeline(attendance: Attendance | None, day: date) -> list[dict]:
+    if attendance is None:
+        return []
+
+    segments = []
+    now = timezone.now()
+    for session in attendance.work_sessions.all():
+        segment = _timeline_segment(
+            session.check_in,
+            session.check_out or now,
+            day,
+            kind="work",
+        )
+        if segment:
+            segments.append(segment)
+    for session in attendance.break_sessions.all():
+        segment = _timeline_segment(
+            session.break_in,
+            session.break_out or now,
+            day,
+            kind="break",
+        )
+        if segment:
+            segments.append(segment)
+    segments.sort(key=lambda segment: (segment["left"], segment["kind"]))
+    lane_ends = []
+    for segment in segments:
+        start_seconds = segment["start_seconds"]
+        visible_end = start_seconds + max(segment["duration_seconds"], 900)
+        lane = next(
+            (
+                index
+                for index, lane_end in enumerate(lane_ends)
+                if start_seconds >= lane_end
+            ),
+            len(lane_ends),
+        )
+        if lane == len(lane_ends):
+            lane_ends.append(visible_end)
+        else:
+            lane_ends[lane] = visible_end
+        segment["lane"] = lane
+        segment["top"] = 3 + lane * 5
+    return segments
+
+
+def _punches_for_history_days(employee: Employee, punches) -> list[AttendanceActivity]:
+    page_punches = list(punches)
+    history_days = {
+        punch.attendance.day
+        if punch.attendance_id and punch.attendance
+        else timezone.localtime(punch.punch_time).date()
+        for punch in page_punches
+    }
+    if not history_days:
+        return []
+
+    day_filter = Q(attendance__day__in=history_days)
+    local_timezone = timezone.get_current_timezone()
+    for day in history_days:
+        start = timezone.make_aware(datetime.combine(day, time.min), local_timezone)
+        end = timezone.make_aware(
+            datetime.combine(day + timedelta(days=1), time.min), local_timezone
+        )
+        day_filter |= Q(
+            attendance__isnull=True,
+            punch_time__gte=start,
+            punch_time__lt=end,
+        )
+
+    return list(
+        attendance_activity_list(employee=employee)
+        .filter(day_filter)
+        .select_related("attendance")
+        .order_by("-punch_time", "-pk")
+    )
+
+
+def _employee_punch_days(punches) -> list[dict]:
+    punch_rows = list(punches)
+    attendance_ids = {
+        punch.attendance_id for punch in punch_rows if punch.attendance_id
+    }
+    attendance_by_id = {
+        attendance.pk: attendance
+        for attendance in Attendance.objects.filter(
+            pk__in=attendance_ids
+        ).prefetch_related("work_sessions", "break_sessions")
+    }
+
+    days = {}
+    for punch in punch_rows:
+        attendance = attendance_by_id.get(punch.attendance_id)
+        day = (
+            attendance.day
+            if attendance
+            else timezone.localtime(punch.punch_time).date()
+        )
+        group = days.setdefault(
+            day,
+            {
+                "date": day,
+                "attendance": attendance,
+                "punches": [],
+            },
+        )
+        if group["attendance"] is None and attendance is not None:
+            group["attendance"] = attendance
+        group["punches"].append(punch)
+
+    result = []
+    for day in sorted(days, reverse=True):
+        group = days[day]
+        attendance = group["attendance"]
+        events = sorted(
+            group["punches"], key=lambda punch: (punch.punch_time, punch.pk)
+        )
+        group.update(
+            {
+                "punches": events,
+                "punch_count": len(events),
+                "first_punch": events[0].punch_time,
+                "last_punch": events[-1].punch_time,
+                "status": (
+                    attendance.get_status_display() if attendance else "Punches only"
+                ),
+                "worked_time": (
+                    _duration_label(attendance.total_work_time) if attendance else "—"
+                ),
+                "break_time": (
+                    _duration_label(attendance.total_break_time) if attendance else "—"
+                ),
+                "overtime": (
+                    _duration_label(attendance.over_time) if attendance else "—"
+                ),
+                "late_time": (
+                    _duration_label(attendance.late_time) if attendance else "—"
+                ),
+                "early_leave_time": (
+                    _duration_label(attendance.early_leave_time)
+                    if attendance
+                    else "—"
+                ),
+                "timeline": _attendance_timeline(attendance, day),
+            }
+        )
+        group["has_next_day_punches"] = any(
+            timezone.localtime(punch.punch_time).date() > day for punch in events
+        )
+        group["timeline_continues_next_day"] = any(
+            segment["continues_next_day"] for segment in group["timeline"]
+        )
+        result.append(group)
+    return result
+
+
 @login_required
 @require_permission(PermissionCodename.EMPLOYEES_VIEW)
 @require_http_methods(["GET"])
@@ -92,12 +330,6 @@ def employee_list_view(request: HttpRequest) -> HttpResponse:
     context["can_delete"] = user_has_permission(
         user=request.user, codename=PermissionCodename.EMPLOYEES_DELETE
     )
-    # Web-punch toggle availability (attendance.add holders may punch
-    # for anyone from the list; the badge renders inert for others).
-    context["can_punch"] = user_has_permission(
-        user=request.user, codename=PermissionCodename.ATTENDANCE_ADD
-    )
-
     if is_htmx_partial(request):
         return render(request, "employees/list.html#employee_table", context)
 
@@ -105,10 +337,135 @@ def employee_list_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@require_permission(PermissionCodename.EMPLOYEES_VIEW)
+@require_http_methods(["GET"])
+def employee_detail_view(request: HttpRequest, employee_id: int) -> HttpResponse:
+    employee = employee_get(employee_id=employee_id)
+    if employee is None:
+        raise Http404
+
+    active_tab = "attendance" if request.GET.get("tab") == "attendance" else "overview"
+    detail_url = reverse("employee_detail", args=[employee.pk])
+    can_view_attendance = user_has_permission(
+        user=request.user, codename=PermissionCodename.ATTENDANCE_VIEW
+    )
+    context = {
+        "employee": employee,
+        "active_tab": active_tab,
+        "detail_url": detail_url,
+        "can_edit": user_has_permission(
+            user=request.user, codename=PermissionCodename.EMPLOYEES_EDIT
+        ),
+        "can_punch": user_has_permission(
+            user=request.user, codename=PermissionCodename.ATTENDANCE_ADD
+        ),
+        "can_view_attendance": can_view_attendance,
+        "breadcrumbs": [
+            ("Dashboard", "dashboard"),
+            ("Employees", "employee_list"),
+            (employee.full_name, None),
+        ],
+    }
+    if active_tab == "attendance" and can_view_attendance:
+        history_all = request.GET.get("range") == "all"
+        history_from = history_to = None
+        history_date_error = ""
+        if not history_all:
+            today = timezone.localdate()
+            default_from = today - timedelta(days=6)
+            try:
+                history_from = (
+                    date.fromisoformat(request.GET["from"])
+                    if request.GET.get("from")
+                    else default_from
+                )
+                history_to = (
+                    date.fromisoformat(request.GET["to"])
+                    if request.GET.get("to")
+                    else today
+                )
+            except ValueError:
+                history_from, history_to = default_from, today
+                history_date_error = (
+                    "Enter valid start and end dates. Showing the last 7 days."
+                )
+            if history_from > history_to:
+                history_from, history_to = history_to, history_from
+                history_date_error = (
+                    "The date range was reversed, so it has been adjusted."
+                )
+
+        punches = attendance_activity_list(
+            employee=employee,
+            day_from=None if history_all else history_from,
+            day_to=None if history_all else history_to,
+        ).select_related("attendance")
+        punches = punches.order_by("-punch_time", "-pk")
+        page_obj = paginate_queryset(request, punches)
+        punch_rows = list(page_obj.object_list)
+        page_obj.object_list = punch_rows
+        history_punches = _punches_for_history_days(employee, punch_rows)
+        context.update(
+            {
+                "punches": punch_rows,
+                "punch_days": _employee_punch_days(history_punches),
+                "page_obj": page_obj,
+                "pagination_mode": "links",
+                "history_all": history_all,
+                "history_from": history_from,
+                "history_to": history_to,
+                "history_date_error": history_date_error,
+            }
+        )
+        if page_obj.has_previous():
+            page_query = {
+                "tab": "attendance",
+                "page": page_obj.previous_page_number(),
+            }
+            if history_all:
+                page_query["range"] = "all"
+            else:
+                page_query["from"] = history_from.isoformat()
+                page_query["to"] = history_to.isoformat()
+            query = urlencode(page_query)
+            context["prev_page_url"] = f"{detail_url}?{query}"
+        if page_obj.has_next():
+            page_query = {
+                "tab": "attendance",
+                "page": page_obj.next_page_number(),
+            }
+            if history_all:
+                page_query["range"] = "all"
+            else:
+                page_query["from"] = history_from.isoformat()
+                page_query["to"] = history_to.isoformat()
+            query = urlencode(page_query)
+            context["next_page_url"] = f"{detail_url}?{query}"
+
+    if is_htmx_partial(request):
+        fragment = request.GET.get("fragment")
+        if fragment == "detail":
+            response = render(
+                request, "employees/detail.html#employee_detail_page", context
+            )
+            response["HX-Push-Url"] = "false"
+            return response
+        if fragment == "attendance" and active_tab == "attendance":
+            response = render(
+                request,
+                "employees/partials/detail_attendance.html#employee_attendance",
+                context,
+            )
+            response["HX-Push-Url"] = "false"
+            return response
+    return render(request, "employees/detail.html", context)
+
+
+@login_required
 @require_permission(PermissionCodename.ATTENDANCE_ADD)
 @require_http_methods(["POST"])
 def employee_punch_toggle(request: HttpRequest, employee_id: int) -> HttpResponse:
-    """One-click web punch from the employees list (attendance.add only).
+    """Record the next web punch for an employee (attendance.add only).
 
     The next punch direction is the inverse of the employee's mirrored
     state (punched out ⇒ IN, punched in ⇒ OUT; suspended states close
@@ -117,8 +474,7 @@ def employee_punch_toggle(request: HttpRequest, employee_id: int) -> HttpRespons
     the Record-punch form — so pairing, day rows, and the status
     mirror all update through the regular pipeline.
 
-    Returns just the re-rendered badge, so htmx swaps the button in
-    place without refreshing the whole table.
+    Return the refreshed button and notify the employee detail page.
     """
     employee = get_object_or_404(Employee, pk=employee_id)
     activity_create(
@@ -128,11 +484,18 @@ def employee_punch_toggle(request: HttpRequest, employee_id: int) -> HttpRespons
         method=AttendanceActivity.AttendanceActivityMethodType.WEB,
     )
     employee.refresh_from_db()
-    return render(
+    response = render(
         request,
         "partials/punch_status_badge.html",
         {"employee": employee, "can_punch": True},
     )
+    set_hx_trigger(
+        response,
+        event="employeePunchUpdated",
+        toast="Punch recorded.",
+        close_modal=False,
+    )
+    return response
 
 
 @login_required

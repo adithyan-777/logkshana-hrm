@@ -1,8 +1,7 @@
 {% comment %}
-Live punch-status badge for one employee (employees list "Punch" column).
+Punch status for one employee. The directory passes can_punch=False.
 
-Renders nothing until the employee has a known punch state. With
-``can_punch`` (attendance.add), the badge is a one-click web-punch
+With ``can_punch`` (attendance.add), the badge is a one-click web-punch
 toggle: it shows the current state normally, and the *next* action on
 mouseover ("Punch in" when out, "Punch out" when in — see
 ``Employee.punch_action_label``). Clicking posts the punch and swaps
@@ -14,12 +13,14 @@ and .hover-swap in compat.css.
 <button
   type="button"
   class="badge hover-swap {% if employee.punch_status %}punch-{{ employee.punch_status }}{% else %}punch-none{% endif %}"
-  title="{% if employee.punch_status %}Currently {{ employee.get_punch_status_display|lower }}{% if employee.punch_display_time %} since {{ employee.punch_display_time }}{% endif %}. Click to {{ employee.punch_action_label|lower }}.{% else %}No punch yet. Click to punch in.{% endif %}"
+  title="{% if employee.punch_status %}Currently {{ employee.get_punch_status_display|lower }}{% if employee.punch_display_time %} since {{ employee.punch_display_time }}{% endif %}. Click to {{ employee.punch_action_label|lower }}.{% else %}Status unavailable. Click to punch in.{% endif %}"
   hx-post="{% url 'employee_punch_toggle' employee.pk %}"
   hx-swap="outerHTML"
+  hx-disabled-elt="this"
+  hx-on::response-error="window.Alpine &amp;&amp; window.Alpine.store('ui').toast('Could not record punch.', 'error')"
   aria-label="{{ employee.punch_action_label }} for {{ employee.full_name }}"
 >
-  <span class="badge__state">{{ employee.get_punch_status_display|lower|default:"no punch" }}{% if employee.punch_display_time %} {{ employee.punch_display_time }}{% endif %}</span>
+  <span class="badge__state">{{ employee.get_punch_status_display|lower|default:"status unavailable" }}{% if employee.punch_display_time %} {{ employee.punch_display_time }}{% endif %}</span>
   <span class="badge__action">{{ employee.punch_action_label }}</span>
 </button>
 {% elif employee.punch_status %}
@@ -27,4 +28,6 @@ and .hover-swap in compat.css.
   class="badge punch-{{ employee.punch_status }}"
   {% if employee.punch_time %}title="Since {{ employee.punch_display_time }}"{% endif %}
 >{{ employee.get_punch_status_display }}{% if employee.punch_display_time %} {{ employee.punch_display_time }}{% endif %}</span>
+{% else %}
+<span class="badge punch-none">Status unavailable</span>
 {% endif %}

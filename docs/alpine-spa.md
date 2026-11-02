@@ -35,7 +35,7 @@ The shell keeps chrome alive and swaps only the page view, using the same Django
 │  command palette     │  topbar (breadcrumbs, menus)  │  │
 │  toasts / modal      │  page content                 │  │
 │  Chart.js / theme    │  page scripts                 │  │
-│  Flatpickr init      └───────────────────────────────┘  │
+│  Native date/time inputs                               │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -44,7 +44,7 @@ The shell keeps chrome alive and swaps only the page view, using the same Django
 3. The URL is pushed (`hx-push-url`).
 4. Alpine re-inits the new `#spa-view`, updates the title, and highlights the active sidebar item.
 5. `.spa-progress` shows while the swap is in flight.
-6. `initDatePickers()` runs on `htmx:afterSettle` so drawer forms get Flatpickr.
+6. Native date/time inputs keep the browser and operating system picker after HTMX swaps.
 
 Boost target/select is applied in `static/js/alpine-app.js` **only for boosted navigations**. Islands keep their own `hx-target`.
 
@@ -124,8 +124,8 @@ Use `common.http.is_htmx_partial(request)`:
 | `templates/base.html` | Shell, boost, `#spa-view`, scripts |
 | `static/js/alpine-app.js` | Stores, palette, HTMX hooks |
 | `static/js/theme.js` | `IttisalTheme` |
-| `static/js/date-picker.js` | Flatpickr init + HTMX re-init |
-| `static/js/vendor/{htmx,alpine,flatpickr,chart}*` | Vendored libs |
+| `static/css/native-date-inputs.css` | Preserve native browser date/time controls with app input sizing |
+| `static/js/vendor/{htmx,alpine,chart}*` | Vendored libraries |
 | `static/brand/*` | Logo + favicon |
 | `templates/partials/{sidebar,topbar,modal,command_palette,theme_customizer}.html` | Chrome |
 | `config/navigation.py` | Breadcrumbs + `COMMAND_PALETTE` |
@@ -143,7 +143,7 @@ Login (`standalone.html`) loads theme + brand only (no Alpine shell).
 4. Gate fragments with `is_htmx_partial(request)`.
 5. Give fragment roots an explicit `hx-target`.
 6. Put `hx-boost="false"` on downloads / logout.
-7. Date fields are auto-enhanced if they are `input[type=date|datetime-local|time]`.
+7. Date and time fields use native `input[type=date|datetime-local|time]` controls.
 
 ---
 
@@ -152,7 +152,7 @@ Login (`standalone.html`) loads theme + brand only (no Alpine shell).
 - Sidebar clicks: chrome stays, content + breadcrumbs change, back works
 - ⌘K filters and jumps
 - List search / pagination still island-scoped
-- Drawer forms: Flatpickr opens with Done; submit refreshes list
+- Drawer forms: native date/time pickers work after HTMX swaps; submit refreshes list
 - Theme prefs persist across SPA navigations
 - Log out is a full navigation
 

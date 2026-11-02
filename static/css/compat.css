@@ -320,7 +320,7 @@ fieldset.form-section > legend {
 
 .employee-table th,
 .employee-table td {
-  padding: 8px 16px;
+  padding: 12px 16px;
   text-align: left;
   vertical-align: middle;
   border-bottom: 1px solid var(--border-header);

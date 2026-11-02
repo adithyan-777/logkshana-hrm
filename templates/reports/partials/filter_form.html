@@ -48,7 +48,8 @@
     </div>
     <div class="report-filters__actions form-actions">
         {% if available_columns %}
-        <button type="button" class="btn btn--ghost" aria-label="Save as my default" data-tooltip="Save as my default" hx-post="{% url 'report_save_columns' %}" hx-include="closest form"><i class="bx bx-save admin-icon admin-icon--18" aria-hidden="true"></i></button>
+        {# History-inert: this POST sits inside the filter form, whose hx-replace-url="true" (auto-apply URL sync) would otherwise be inherited and replace the address bar with /reports/columns/save/. #}
+        <button type="button" class="btn btn--ghost" aria-label="Save as my default" data-tooltip="Save as my default" hx-post="{% url 'report_save_columns' %}" hx-include="closest form" hx-push-url="false" hx-replace-url="false"><i class="bx bx-save admin-icon admin-icon--18" aria-hidden="true"></i></button>
         {% endif %}
         <a class="btn btn--ghost" href="{{ export_csv_url }}" hx-boost="false" aria-label="Export CSV" data-tooltip="Export CSV"><i class="bx bx-file admin-icon admin-icon--18" aria-hidden="true"></i></a>
         <a class="btn btn--ghost" href="{{ export_xlsx_url }}" hx-boost="false" aria-label="Export Excel" data-tooltip="Export Excel"><i class="bx bx-table admin-icon admin-icon--18" aria-hidden="true"></i></a>

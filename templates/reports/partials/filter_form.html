@@ -11,24 +11,26 @@
       hx-trigger="submit, change from:find input[type='date']"
       hx-push-url="false"
 >
+    {% if available_columns %}<input type="hidden" name="report_key" value="{{ report_key }}">{% endif %}
+    <div class="report-filters__main">
     <div class="report-filters__grid">
         {% for field in form %}
-        <div class="form-field">
+        <div class="form-field" title="{{ field.label }}">
             {% if field.is_hidden %}
             {{ field }}
             {% else %}
-            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            <label class="sr-only" for="{{ field.id_for_label }}">{{ field.label }}</label>
             {% endif %}
             {% if field.name == "employee" and field.field.widget.allow_multiple_selected %}
             {# Multi employee picker (individual/run reports): HTMX candidates; chips render into the full-width row below the grid #}
             {# Distinct uid per variant — a duplicate uid would make htmx hx-include selectors match both widgets if a page ever rendered both #}
-            {% include "partials/select.html#select_multi" with name=field.html_name input_id=field.auto_id errors=field.errors placeholder="All employees" options_url=select_options_url|add:"?source=employees" searchable=True uid="xfilt-employees" chips_target="#xfilt-employees-chips" %}
+            {% include "partials/select.html#select_multi" with name=field.html_name input_id=field.auto_id errors=field.errors placeholder="All employees" options_url=select_options_url|add:"?source=employees" searchable=True uid="xfilt-employees" chips_target="#xfilt-employees-chips" aria_label=field.label %}
             {% elif field.name == "employee" %}
             {# Big list: HTMX mode — lazily fetched, searchable #}
-            {% include "partials/select.html#select_body" with name=field.html_name input_id=field.auto_id value=field.value|default_if_none:"" errors=field.errors placeholder=field.field.empty_label options_url=select_options_url|add:"?source=employees" searchable=True auto_submit=True uid="xfilt-employee" %}
+            {% include "partials/select.html#select_body" with name=field.html_name input_id=field.auto_id value=field.value|default_if_none:"" errors=field.errors placeholder=field.field.empty_label options_url=select_options_url|add:"?source=employees" searchable=True auto_submit=True uid="xfilt-employee" aria_label=field.label %}
             {% elif field.name == "department" or field.name == "exception_type" or field.name == "status" or field.name == "report_type" or field.name == "direction" %}
-            {# Short lists: inline options, no HTMX round-trip needed; no auto-submit — all filters apply together via the Apply button, same as the multi employee picker #}
-            {% include "partials/select.html#select_body" with name=field.html_name input_id=field.auto_id value=field.value|default_if_none:"" errors=field.errors placeholder=field.field.empty_label options=field.field.choices uid="xfilt-"|add:field.name %}
+            {# Short lists: inline options, no HTMX round-trip needed; filters apply together via Search. #}
+            {% include "partials/select.html#select_body" with name=field.html_name input_id=field.auto_id value=field.value|default_if_none:"" errors=field.errors placeholder=field.field.empty_label options=field.field.choices uid="xfilt-"|add:field.name aria_label=field.label %}
             {% else %}
             {{ field }}
             {% endif %}
@@ -37,56 +39,26 @@
             {% endif %}
         </div>
         {% endfor %}
+        {% if available_columns %}
+        <div class="form-field" title="Columns">
+            {% include "partials/select.html#select_multi" with name="fields" input_id="id_report_columns" options=column_options values=selected_column_keys placeholder="Columns" summary_label="Columns" aria_label="Columns" uid="xfilt-columns" hide_chips=True %}
+        </div>
+        {% endif %}
+        <button type="submit" class="btn btn--primary report-filters__search" aria-label="Search" data-tooltip="Search"><i class="bx bx-search admin-icon admin-icon--18" aria-hidden="true"></i></button>
+    </div>
+    <div class="report-filters__actions form-actions">
+        {% if available_columns %}
+        <button type="button" class="btn btn--ghost" aria-label="Save as my default" data-tooltip="Save as my default" hx-post="{% url 'report_save_columns' %}" hx-include="closest form"><i class="bx bx-save admin-icon admin-icon--18" aria-hidden="true"></i></button>
+        {% endif %}
+        <a class="btn btn--ghost" href="{{ export_csv_url }}" hx-boost="false" aria-label="Export CSV" data-tooltip="Export CSV"><i class="bx bx-file admin-icon admin-icon--18" aria-hidden="true"></i></a>
+        <a class="btn btn--ghost" href="{{ export_xlsx_url }}" hx-boost="false" aria-label="Export Excel" data-tooltip="Export Excel"><i class="bx bx-table admin-icon admin-icon--18" aria-hidden="true"></i></a>
+        <a class="btn btn--ghost" href="{{ export_pdf_url }}" hx-boost="false" aria-label="Export PDF" data-tooltip="Export PDF"><i class="bx bx-file admin-icon admin-icon--18" aria-hidden="true"></i></a>
+    </div>
     </div>
     {% if form.employee.field.widget.allow_multiple_selected %}
     <div id="xfilt-employees-chips" class="x-select__chips x-select__chips--row"></div>
     {% else %}
     <div id="xfilt-employee-chips" class="x-select__chips x-select__chips--row"></div>
     {% endif %}
-    {% if available_columns %}
-    <input type="hidden" name="report_key" value="{{ report_key }}">
-    <details class="report-columns">
-        <summary class="form-label">Columns</summary>
-        <div class="report-columns__grid">
-            {% for column in available_columns %}
-            <label class="report-columns__option">
-                <input
-                    type="checkbox"
-                    name="fields"
-                    value="{{ column.key }}"
-                    {% if column in columns %}checked{% endif %}
-                >
-                {{ column.label }}
-            </label>
-            {% endfor %}
-        </div>
-        <button
-            type="button"
-            class="btn btn--ghost"
-            hx-post="{% url 'report_save_columns' %}"
-            hx-include="closest form"
-        >
-            Save as my default
-        </button>
-    </details>
-    {% endif %}
-    <div class="report-filters__actions form-actions">
-        <button type="submit" class="btn btn--primary">
-            <i class="bx bx-filter admin-icon admin-icon--18"></i>
-            Apply filters
-        </button>
-        <a class="btn btn--ghost" href="{{ export_csv_url }}" hx-boost="false">
-            <i class="bx bx-file admin-icon admin-icon--18"></i>
-            CSV
-        </a>
-        <a class="btn btn--ghost" href="{{ export_xlsx_url }}" hx-boost="false">
-            <i class="bx bx-table admin-icon admin-icon--18"></i>
-            Excel
-        </a>
-        <a class="btn btn--ghost" href="{{ export_pdf_url }}" hx-boost="false">
-            <i class="bx bx-file admin-icon admin-icon--18"></i>
-            PDF
-        </a>
-    </div>
 </form>
 {% endpartialdef filter_form %}

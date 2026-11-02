@@ -236,8 +236,8 @@ button.btn--danger:hover {
 }
 
 .report-toolbar {
-  margin-bottom: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-2);
+  padding: var(--space-2);
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--r-card);
@@ -247,53 +247,105 @@ button.btn--danger:hover {
   margin: 0;
 }
 
-.report-filters__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+.report-filters__main {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
   gap: var(--space-3);
 }
 
-.report-filters__actions {
+.report-filters__grid {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
+  flex: 1 1 700px;
+  min-width: 0;
   gap: var(--space-2);
-  margin-top: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--border);
+}
+
+.report-filters__search {
+  flex: none;
+  width: var(--control-h);
+  min-width: var(--control-h);
+  padding-inline: 0;
+  justify-content: center;
+}
+
+.report-filters .report-filters__actions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin: 0 0 0 auto;
+  padding: 0;
+  border: 0;
+}
+
+.report-filters .report-filters__actions .btn {
+  width: var(--control-h);
+  min-width: var(--control-h);
+  padding-inline: 0;
+  justify-content: center;
 }
 
 .report-filters .form-field {
+  flex: 1 1 170px;
+  min-width: min(100%, 170px);
   margin-bottom: 0;
 }
 
-.report-columns {
-  margin-top: var(--space-3);
-}
-
-.report-columns summary {
-  cursor: pointer;
-  user-select: none;
-}
-
-.report-columns__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: var(--space-2);
-  margin: var(--space-2) 0;
-  padding: var(--space-3);
-  background: var(--bg-subtle, var(--bg-elevated));
+.report-filters [data-tooltip] { position: relative; }
+.report-filters [data-tooltip]::after {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 9px);
+  z-index: 80;
+  width: max-content;
+  max-width: min(220px, 60vw);
+  padding: 6px 10px;
   border: 1px solid var(--border);
-  border-radius: var(--r-card);
+  border-radius: var(--r-md);
+  background: var(--bg-popover);
+  box-shadow: var(--shadow-popover);
+  color: var(--text);
+  content: attr(data-tooltip);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition: opacity 140ms var(--ease), transform 140ms var(--ease), visibility 140ms var(--ease);
 }
-
-.report-columns__option {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: 0.875rem;
-  cursor: pointer;
+.report-filters [data-tooltip]::before {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 4px);
+  z-index: 80;
+  width: 8px;
+  height: 8px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-popover);
+  content: "";
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(-50%) rotate(45deg);
+  transition: opacity 140ms var(--ease), visibility 140ms var(--ease);
 }
+.report-filters [data-tooltip]:hover,
+.report-filters [data-tooltip]:focus-visible { z-index: 80; }
+.report-filters [data-tooltip]:hover::before,
+.report-filters [data-tooltip]:hover::after,
+.report-filters [data-tooltip]:focus-visible::before,
+.report-filters [data-tooltip]:focus-visible::after { opacity: 1; visibility: visible; }
+.report-filters [data-tooltip]:hover::after,
+.report-filters [data-tooltip]:focus-visible::after { transform: translate(-50%, 0); }
 
 .card--table .report-empty {
   padding: var(--space-4);

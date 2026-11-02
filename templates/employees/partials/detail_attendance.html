@@ -1,0 +1,86 @@
+{% partialdef employee_attendance inline %}
+<div id="employee-attendance-region" {% if not preview_mode %}hx-get="{{ detail_url }}?tab=attendance&amp;fragment=attendance{% if history_all %}&amp;range=all{% else %}&amp;from={{ history_from|date:'Y-m-d' }}&amp;to={{ history_to|date:'Y-m-d' }}{% endif %}{% if page_obj %}&amp;page={{ page_obj.number }}{% endif %}" hx-trigger="employeePunchUpdated from:body" hx-swap="outerHTML"{% endif %}>
+  <section id="employee-attendance" role="tabpanel" aria-labelledby="employee-attendance-tab" {% if preview_mode %}x-show="tab === 'attendance'" x-cloak{% endif %} tabindex="0">
+    {% if can_view_attendance or can_punch %}
+    <div class="employee-detail__attendance">
+      <article class="card employee-detail__punch">
+        <div class="employee-detail__punch-copy">
+          <div class="employee-detail__panel-heading">
+            <div class="employee-detail__panel-icon"><i class="bx bx-clock-5 admin-icon admin-icon--20" aria-hidden="true"></i></div>
+            <div><h2>Current punch</h2><p>Latest known punch status</p></div>
+          </div>
+          <div class="employee-detail__punch-state">
+            {% if preview_mode %}
+            <span class="badge" :class="checkedIn ? 'punch-in' : 'punch-out'" x-text="checkedIn ? 'Checked in' : 'Checked out'">Checked in</span>
+            {% elif employee.punch_status %}
+            <span class="badge punch-{{ employee.punch_status }}">{{ employee.get_punch_status_display }}</span>
+            {% else %}
+            <span class="badge inactive">Status unavailable</span>
+            {% endif %}
+            {% if employee.punch_time %}<span class="employee-detail__punch-time">Last punch · {{ employee.punch_time|date:"d M Y, h:i A" }}</span>{% endif %}
+          </div>
+        </div>
+      </article>
+
+      {% if can_view_attendance %}
+      <article class="card card--table employee-detail__history">
+        <div class="employee-detail__panel-wrapper">
+          <div class="employee-detail__history-heading">
+            <div><h2>Punch history</h2><p>Grouped by day · work sessions and breaks shown on a 24-hour timeline</p></div>
+          </div>
+          <div class="employee-detail__history-toolbar">
+            <form class="employee-detail__history-filter" method="get" action="{{ detail_url }}" hx-get="{{ detail_url }}?fragment=attendance" hx-target="#employee-attendance-region" hx-swap="outerHTML" hx-push-url="true">
+              <input type="hidden" name="tab" value="attendance">
+              <label>From<input class="form-input" type="date" name="from" value="{{ history_from|date:'Y-m-d' }}"></label>
+              <label>To<input class="form-input" type="date" name="to" value="{{ history_to|date:'Y-m-d' }}"></label>
+              <button type="submit" class="btn btn--soft">Apply</button>
+            </form>
+          </div>
+        </div>
+        {% if history_date_error %}<p class="employee-detail__history-error" role="status">{{ history_date_error }}</p>{% endif %}
+        {% if punch_days %}
+        <div class="employee-detail__history-days">
+          {% for day in punch_days %}
+          <div class="employee-detail__history-day">
+            <div class="employee-detail__history-summary">
+              <span class="employee-detail__history-summary-row">
+              <span class="employee-detail__history-day-title">{{ day.date|date:"D, d M Y" }}</span>
+              <span class="employee-detail__history-status">{{ day.status }}</span>
+              <span class="employee-detail__history-count">{{ day.punch_count }} {% if day.punch_count == 1 %}punch{% else %}punches{% endif %}</span>
+              <span class="employee-detail__history-times">{{ day.first_punch|date:"H:i" }}–{{ day.last_punch|date:"H:i" }}</span>
+              {% if day.has_next_day_punches %}<span class="employee-detail__history-next-day">Includes next-day punches</span>{% endif %}
+              {% if day.attendance %}
+              <span class="employee-detail__history-metric"><span>Worked</span><strong>{{ day.worked_time }}</strong></span>
+              <span class="employee-detail__history-metric"><span>Break</span><strong>{{ day.break_time }}</strong></span>
+              {% if day.attendance.over_time %}<span class="employee-detail__history-metric"><span>Overtime</span><strong>{{ day.overtime }}</strong></span>{% endif %}
+              {% if day.attendance.late_time %}<span class="employee-detail__history-metric"><span>Late</span><strong>{{ day.late_time }}</strong></span>{% endif %}
+              {% if day.attendance.early_leave_time %}<span class="employee-detail__history-metric"><span>Early out</span><strong>{{ day.early_leave_time }}</strong></span>{% endif %}
+              {% endif %}
+              </span>
+              {% if day.timeline %}
+              <span class="employee-detail__timeline-wrap">
+                <span class="employee-detail__timeline-labels" aria-hidden="true"><span>00:00</span><span>04:00</span><span>08:00</span><span>12:00</span><span>16:00</span><span>20:00</span><span>24:00</span></span>
+                <span class="employee-detail__timeline" role="group" aria-label="Daily timeline for {{ day.date|date:'D, d M Y' }}. Green segments are work sessions; yellow segments are breaks.">
+                  {% for segment in day.timeline %}<span class="employee-detail__timeline-segment employee-detail__timeline-segment--{{ segment.kind }}" style="left: {{ segment.left }}%; width: {{ segment.width }}%; top: {{ segment.top }}px;" data-tooltip="{{ segment.kind|capfirst }} session · {{ segment.label }}" role="img" aria-label="{{ segment.kind|capfirst }} session, {{ segment.label }}" tabindex="0"></span>{% endfor %}
+                </span>
+              </span>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% if page_obj %}{% include "partials/pagination.html#pagination" with pagination_unit="punches" %}{% endif %}
+        {% else %}
+        <p class="empty-state">No punches recorded for this employee.</p>
+        {% endif %}
+      </article>
+      {% else %}
+      <div class="card employee-detail__empty"><p>You don’t have access to this employee’s punch history.</p></div>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="card employee-detail__empty"><p>You don’t have access to this employee’s attendance.</p></div>
+    {% endif %}
+  </section>
+</div>
+{% endpartialdef employee_attendance %}

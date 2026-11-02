@@ -20,8 +20,9 @@ RUN pip install --no-cache-dir uv \
 
 COPY . .
 
-# Entrypoint must stay executable (COPY can lose the bit via some contexts).
-RUN chmod +x /app/entrypoint.sh \
+# Normalize Windows checkout line endings and keep the script executable.
+RUN sed -i 's/\r$//' /app/entrypoint.sh \
+    && chmod +x /app/entrypoint.sh \
     && uv sync --frozen --no-dev
 
 # Run as non-root; entrypoint needs write access for collectstatic output.

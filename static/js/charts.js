@@ -12,7 +12,7 @@
 
   function chartColors() {
     return {
-      accent: resolveColor("--accent", "#8A1538"),
+      accent: resolveColor("--accent-text", "#8A1538"),
       text: resolveColor("--text-muted", "#85837D"),
       textStrong: resolveColor("--text", "#3E3E38"),
       grid: resolveColor("--border", "#ebebeb"),

@@ -1,0 +1,40 @@
+/* Keep the browser/OS date and time controls native across app themes. */
+.field input[type="date"]:not([type="checkbox"]):not([type="radio"]),
+.field input[type="datetime-local"]:not([type="checkbox"]):not([type="radio"]),
+.field input[type="time"]:not([type="checkbox"]):not([type="radio"]),
+.field input[type="month"]:not([type="checkbox"]):not([type="radio"]),
+.field input[type="week"]:not([type="checkbox"]):not([type="radio"]),
+.form-field input[type="date"]:not([type="checkbox"]):not([type="radio"]),
+.form-field input[type="datetime-local"]:not([type="checkbox"]):not([type="radio"]),
+.form-field input[type="time"]:not([type="checkbox"]):not([type="radio"]),
+.form-field input[type="month"]:not([type="checkbox"]):not([type="radio"]),
+.form-field input[type="week"]:not([type="checkbox"]):not([type="radio"]),
+.report-filters input[type="date"]:not([type="checkbox"]):not([type="radio"]),
+.report-filters input[type="datetime-local"]:not([type="checkbox"]):not([type="radio"]),
+.report-filters input[type="time"]:not([type="checkbox"]):not([type="radio"]),
+input.form-input[type="date"],
+input.form-input[type="datetime-local"],
+input.form-input[type="time"],
+input.search-input[type="date"],
+input.search-input[type="datetime-local"],
+input.search-input[type="time"] {
+  appearance: auto;
+  -webkit-appearance: auto;
+  min-height: var(--control-h);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-normal);
+  cursor: pointer;
+}
+
+.field input[type="date"]:disabled,
+.field input[type="datetime-local"]:disabled,
+.field input[type="time"]:disabled,
+.form-field input[type="date"]:disabled,
+.form-field input[type="datetime-local"]:disabled,
+.form-field input[type="time"]:disabled,
+.report-filters input[type="date"]:disabled,
+.report-filters input[type="datetime-local"]:disabled,
+.report-filters input[type="time"]:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

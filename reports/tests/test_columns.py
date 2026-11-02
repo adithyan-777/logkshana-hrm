@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from urllib.parse import parse_qs, urlsplit
 
 from django.test import RequestFactory
 from django.urls import reverse
@@ -135,6 +136,21 @@ class ReportProjectionTests(BaseTenantTestCase):
 
 
 class ReportColumnViewTests(BaseTenantTestCase):
+    def test_column_multiselect_and_export_preserve_multiple_values(self):
+        response = self.client.get(
+            reverse("report_individual_attendance"),
+            {**FEB_RANGE, "fields": ["employee", "date"]},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-x-select-id="xfilt-columns"')
+        self.assertContains(response, '<option value="employee" selected>')
+        self.assertContains(response, '<option value="date" selected>')
+        self.assertEqual(
+            parse_qs(urlsplit(response.context["export_csv_url"]).query)["fields"],
+            ["employee", "date"],
+        )
+
     def test_summary_view_renders_only_selected_columns(self):
         _attendance_for(employee_factory())
         url = reverse("report_attendance_summary")

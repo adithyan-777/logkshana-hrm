@@ -113,7 +113,7 @@
   align-items: center;
   justify-content: flex-start;
   border-radius: var(--r-md);
-  color: var(--accent);
+  color: var(--accent-text);
   background: transparent;
   border: 0;
   cursor: pointer;
@@ -155,6 +155,7 @@
   display: block;
   width: 22px;
   height: 26px;
+  margin-left: 5px;
   object-fit: contain;
 }
 
@@ -300,11 +301,12 @@
   background: var(--nav-active);
   color: var(--text);
   transform: none;
+  box-shadow: inset 3px 0 0 var(--accent-text);
 }
 
 /* Group sub-items sit one level below top nav items */
 .nav-group__item {
-  padding-left: 36px;
+  padding-left: 28px;
   height: 32px;
   font-size: 13px;
   color: var(--text-dim);
@@ -543,6 +545,10 @@
     inset: 0;
     justify-content: center;
     max-width: none;
+  }
+
+  .app:has(#sidebar-collapsed:checked) .brand-mark__glyph {
+    margin-left: 0;
   }
 
   .app:has(#sidebar-collapsed:checked) .brand-mark__expand-hit {

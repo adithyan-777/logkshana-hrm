@@ -8,8 +8,6 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django_tenants.utils import get_public_schema_name, schema_context
 
-from common.localtime import local_date, local_dt
-
 from attendance.calculation import direction_from_gateway_status_label
 from attendance.integrations.gateway import device_gateway_attendance_fetch
 from attendance.models import (
@@ -17,10 +15,11 @@ from attendance.models import (
     AttendanceActivity,
     WorkSession,
 )
+from common.localtime import local_date, local_dt
 from companies.selectors import device_get_by_serial_number
 from employees.models import Employee
 from employees.selectors import employee_get_by_emp_code
-from employees.services import employee_create
+from employees.services import employee_create, employee_punch_status_recompute
 from policies.selectors import (
     attendance_policy_is_unscheduled,
     unscheduled_opening_time_get,
@@ -86,6 +85,9 @@ def activity_create(
             direction=activity.direction,
             activity=activity,
         )
+    # Refresh the denormalized live punch-status mirror on Employee
+    # (mirrors this new punch; re-derived from the log, not patched).
+    employee_punch_status_recompute(employee=activity.employee)
     return activity
 
 
@@ -137,6 +139,7 @@ def activity_update(
     external_id: str | None = None,
     raw_data=None,
 ) -> AttendanceActivity:
+    old_employee = activity.employee
     unscheduled = attendance_policy_is_unscheduled()
     if unscheduled:
         # Snapshot the pre-edit pairing state: the punch's own sessions
@@ -144,7 +147,6 @@ def activity_update(
         # session owned by another day's IN) are stale after the edit,
         # and the old/new punch days both need re-derivation.
         old_day = _punch_local_date(activity.punch_time)
-        old_employee = activity.employee
         stale = WorkSession.objects.filter(
             Q(in_punch=activity) | Q(out_punch=activity)
         )
@@ -181,6 +183,9 @@ def activity_update(
             worksession_repair_for_employee_days(
                 employee=activity.employee, days={new_day}
             )
+    employee_punch_status_recompute(employee=activity.employee)
+    if old_employee.pk != activity.employee_id:
+        employee_punch_status_recompute(employee=old_employee)
     return activity
 
 
@@ -192,10 +197,10 @@ def activity_delete(*, activity: AttendanceActivity) -> AttendanceActivity:
     behind (in_punch/out_punch go NULL via SET_NULL) with stale
     check-in/out times nothing would ever revisit.
     """
+    employee = activity.employee
     unscheduled = attendance_policy_is_unscheduled()
     if unscheduled:
         day = _punch_local_date(activity.punch_time)
-        employee = activity.employee
         stale = WorkSession.objects.filter(
             Q(in_punch=activity) | Q(out_punch=activity)
         )
@@ -205,8 +210,9 @@ def activity_delete(*, activity: AttendanceActivity) -> AttendanceActivity:
         worksession_repair_for_employee_days(
             employee=employee, days={day} | stale_days
         )
-        return activity
-    activity.delete()
+    else:
+        activity.delete()
+    employee_punch_status_recompute(employee=employee)
     return activity
 
 

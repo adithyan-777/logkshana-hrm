@@ -87,6 +87,7 @@ Dark mode: panel/highlights are token-driven (see components.css .x-select).
     type="button"
     class="x-select__trigger"
     data-x-select-trigger
+    {% if aria_label %}aria-label="{{ aria_label }}" title="{{ aria_label }}"{% endif %}
     {% if disabled %}disabled{% endif %}
     aria-haspopup="listbox"
     :aria-expanded="String(open)"
@@ -308,7 +309,10 @@ Dark mode: panel/highlights are token-driven (see components.css .x-select).
     });
 
     if (label) {
-      if (picked.length === 1) {
+      var summaryLabel = root.getAttribute("data-x-select-summary-label");
+      if (summaryLabel) {
+        label.textContent = summaryLabel + " (" + picked.length + ")";
+      } else if (picked.length === 1) {
         label.textContent = picked[0].textContent || picked[0].value;
       } else if (picked.length > 1) {
         label.textContent = picked.length + " selected";
@@ -451,9 +455,11 @@ Dark mode: panel/highlights are token-driven (see components.css .x-select).
 <div
   class="x-select x-select--multi {{ extra_class|default:'' }}"
   x-data="{open:false, hi:-1}"
+  x-init="$nextTick(() => window.xSelectMultiRender && xSelectMultiRender($root))"
   data-x-select
   data-x-select-multiple
   data-x-select-id="{{ wid }}"
+  {% if summary_label %}data-x-select-summary-label="{{ summary_label }}"{% endif %}
   {% if chips_target %}data-x-select-chips-target="{{ chips_target }}"{% endif %}
   {% if auto_submit %}data-x-select-auto-submit{% endif %}
   hx-boost="false"
@@ -479,6 +485,7 @@ Dark mode: panel/highlights are token-driven (see components.css .x-select).
     type="button"
     class="x-select__trigger"
     data-x-select-trigger
+    {% if aria_label %}aria-label="{{ aria_label }}" title="{{ aria_label }}"{% endif %}
     {% if disabled %}disabled{% endif %}
     aria-haspopup="listbox"
     aria-multiselectable="true"
@@ -489,7 +496,7 @@ Dark mode: panel/highlights are token-driven (see components.css .x-select).
     <i class="bx bx-chevron-down x-select__chev" aria-hidden="true"></i>
   </button>
 
-  {% if not chips_target %}
+  {% if not chips_target and not hide_chips %}
   <button
     type="button"
     class="x-select__clear"

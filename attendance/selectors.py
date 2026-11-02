@@ -1,4 +1,7 @@
+from datetime import date
+
 from django.db.models import Q, QuerySet
+from django.db.models.functions import Coalesce, TruncDate
 
 from attendance.models import Attendance, AttendanceActivity, WorkSession
 from common.localtime import local_date
@@ -6,7 +9,11 @@ from employees.models import Employee
 
 
 def attendance_activity_list(
-    *, search: str = "", employee: Employee | None = None
+    *,
+    search: str = "",
+    employee: Employee | None = None,
+    day_from: date | None = None,
+    day_to: date | None = None,
 ) -> QuerySet[AttendanceActivity]:
     queryset = AttendanceActivity.objects.select_related("employee").order_by(
         "-punch_time"
@@ -14,6 +21,24 @@ def attendance_activity_list(
 
     if employee is not None:
         queryset = queryset.filter(employee=employee)
+
+    if day_from or day_to:
+        # Orphan punches (attendance__isnull) carry naive Asia/Qatar
+        # wall-clock timestamps (USE_TZ = False), so a plain TruncDate
+        # truncation already yields the local day. Do NOT pass tzinfo:
+        # that would add a DB-side timezone conversion on naive values
+        # (session-timezone-dependent date shifts — e.g. an 01:00 punch
+        # landing on the previous day under a UTC Postgres session).
+        queryset = queryset.annotate(
+            history_day=Coalesce(
+                "attendance__day",
+                TruncDate("punch_time"),
+            )
+        )
+        if day_from:
+            queryset = queryset.filter(history_day__gte=day_from)
+        if day_to:
+            queryset = queryset.filter(history_day__lte=day_to)
 
     if search:
         queryset = queryset.filter(

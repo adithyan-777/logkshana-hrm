@@ -1,0 +1,748 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Amina Rahman · Employee · ITTISAL HRMS</title>
+  <script>
+    (function () {
+      const modeKey = "logkshana-theme-mode";
+      const prefsKey = "ittisal-ui-prefs";
+      const defaults = {
+        mode: "system",
+        layout: "compact",
+        scale: "md",
+        sidebarVariant: "inset",
+        sidebarMode: "default",
+      };
+      const prefs = { ...defaults };
+      try {
+        const mode = window.localStorage.getItem(modeKey);
+        if (mode === "system" || mode === "light" || mode === "dark") prefs.mode = mode;
+        const raw = window.localStorage.getItem(prefsKey) || window.localStorage.getItem("logkshana-ui-prefs");
+        if (raw) Object.assign(prefs, JSON.parse(raw));
+      } catch (_) {}
+      if (!["light", "dark", "system"].includes(prefs.mode)) prefs.mode = "system";
+
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const theme = prefs.mode === "dark" ? "dark" : prefs.mode === "light" ? "light" : prefersDark ? "dark" : "light";
+      const root = document.documentElement;
+      root.setAttribute("data-theme", theme);
+      root.setAttribute("data-layout", prefs.layout || defaults.layout);
+      root.setAttribute("data-scale", prefs.scale || defaults.scale);
+      root.setAttribute("data-sidebar-variant", prefs.sidebarVariant || defaults.sidebarVariant);
+      root.setAttribute("data-sidebar-mode", prefs.sidebarMode || defaults.sidebarMode);
+    })();
+  </script>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/geist@5.2.5/index.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@boxicons/core@1.0.6/fonts/basic/boxicons.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@boxicons/core@1.0.6/fonts/filled/boxicons-filled.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@boxicons/core@1.0.6/fonts/brands/boxicons-brands.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@boxicons/core@1.0.6/fonts/animations.min.css" rel="stylesheet">
+  <link rel="icon" href="/static/brand/icon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#8A1538">
+  
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/base.css">
+<link rel="stylesheet" href="/static/css/motion.css">
+<link rel="stylesheet" href="/static/css/layout.css">
+<link rel="stylesheet" href="/static/css/sidebar.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/utilities.css">
+<link rel="stylesheet" href="/static/css/compat.css">
+<link rel="stylesheet" href="/static/css/native-date-inputs.css">
+<link rel="stylesheet" href="/static/css/employee-detail.css">
+
+  <script src="/static/js/vendor/htmx.min.js" defer></script>
+  <script src="/static/js/alpine-app.js" defer></script>
+  <script src="/static/js/vendor/alpine.min.js" defer></script>
+  
+</head>
+<body
+  class="app"
+  hx-boost="true"
+  hx-push-url="true"
+  hx-headers='{"x-csrftoken": "preview"}'
+  x-data
+>
+  <div class="spa-progress" :class="{ 'is-active': $store.spa.loading }" aria-hidden="true"></div>
+  <input type="checkbox" id="sidebar-collapsed" class="sidebar-state" aria-hidden="true">
+  <input type="checkbox" id="sidebar-mobile" class="sidebar-state" aria-hidden="true">
+  <script>
+    (function () {
+      try {
+        const raw = window.localStorage.getItem("ittisal-ui-prefs");
+        const mode = raw ? (JSON.parse(raw).sidebarMode || "default") : "default";
+        if (mode === "icon") document.getElementById("sidebar-collapsed").checked = true;
+      } catch (_) {}
+    })();
+  </script>
+
+  
+
+<aside class="sidebar" id="sidebar" aria-label="Primary">
+  <div class="sidebar__top">
+    <a href="/" class="brand-mark" title="ITTISAL HRMS" aria-label="ITTISAL HRMS">
+      <span class="brand-mark__logo">
+        <img class="brand-mark__glyph" src="/static/brand/icon.svg" alt="" width="22" height="26">
+        <img class="brand-mark__wordmark" src="/static/brand/hrms-wordmark.svg" alt="ITTISAL HRMS" width="148" height="28">
+      </span>
+      <span class="brand-mark__icon brand-mark__toggle">
+        <i class="bx bx-sidebar admin-icon admin-icon--18"></i>
+      </span>
+    </a>
+    <label for="sidebar-collapsed" class="brand-mark__expand-hit" aria-label="Expand sidebar"></label>
+    <label for="sidebar-collapsed" class="sidebar__collapse-btn" aria-label="Collapse sidebar">
+      <i class="bx bx-sidebar admin-icon admin-icon--18"></i>
+    </label>
+    <label for="sidebar-mobile" class="sidebar__mobile-close" aria-label="Close menu">
+      <i class="bx bx-x admin-icon admin-icon--18"></i>
+    </label>
+  </div>
+
+  <div class="sidebar__body">
+    <button
+      type="button"
+      class="sidebar-search"
+      aria-label="Search pages"
+      @click="$dispatch('open-command-palette')"
+    >
+      <i class="bx bx-search admin-icon admin-icon--18"></i>
+      <span class="sidebar-search__text">Search…</span>
+      <kbd class="sidebar-search__kbd">⌘ K</kbd>
+    </button>
+
+    <nav class="quick-actions" aria-label="Quick actions">
+      
+      <a href="/"
+         class="quick-action "
+         data-nav-match="dashboard">
+        <span class="quick-action__icon"><i class="bx bx-grid admin-icon admin-icon--20"></i></span>
+        <span class="quick-action__label">Dashboard</span>
+      </a>
+      
+      
+      <a href="/employees/"
+         class="quick-action is-active"
+         data-nav-match="employees">
+        <span class="quick-action__icon"><i class="bx bx-user admin-icon admin-icon--20"></i></span>
+        <span class="quick-action__label">Employees</span>
+      </a>
+      
+      
+      <a href="/attendance/transactions/"
+         class="quick-action "
+         data-nav-match="attendance">
+        <span class="quick-action__icon"><i class="bx bx-calendar-check admin-icon admin-icon--20"></i></span>
+        <span class="quick-action__label">Attendance</span>
+      </a>
+      
+      
+      <a href="/leave/requests/"
+         class="quick-action "
+         data-nav-match="leave">
+        <span class="quick-action__icon"><i class="bx bx-calendar-minus admin-icon admin-icon--20"></i></span>
+        <span class="quick-action__label">Leave</span>
+      </a>
+      
+      
+      <a href="/schedule/timetables/"
+         class="quick-action "
+         data-nav-match="schedule">
+        <span class="quick-action__icon"><i class="bx bx-clock-5 admin-icon admin-icon--20"></i></span>
+        <span class="quick-action__label">Schedule</span>
+      </a>
+      
+      
+      <a href="/reports/"
+         class="quick-action "
+         data-nav-match="reports">
+        <span class="quick-action__icon"><i class="bx bx-chart-bar-big-columns admin-icon admin-icon--20"></i></span>
+        <span class="quick-action__label">Reports</span>
+      </a>
+      
+      
+      <div class="nav-group"
+           >
+        <button type="button" class="nav-group__toggle quick-action" aria-expanded="false" data-nav-group-toggle>
+          <span class="quick-action__icon"><i class="bx bx-sitemap admin-icon admin-icon--20"></i></span>
+          <span class="quick-action__label">Organization</span>
+          <span class="nav-group__chevron"><i class="bx bx-chevron-down admin-icon admin-icon--18"></i></span>
+        </button>
+        <div class="nav-group__items">
+          
+          <a href="/employees/departments/"
+             class="nav-group__item "
+             data-nav-match="departments">
+            <span class="quick-action__icon"><i class="bx bx-buildings admin-icon admin-icon--20"></i></span>
+            <span class="quick-action__label">Departments</span>
+          </a>
+          
+          
+          <a href="/employees/positions/"
+             class="nav-group__item "
+             data-nav-match="positions">
+            <span class="quick-action__icon"><i class="bx bx-briefcase-alt-2 admin-icon admin-icon--20"></i></span>
+            <span class="quick-action__label">Positions</span>
+          </a>
+          
+          
+          <a href="/employees/roles/"
+             class="nav-group__item "
+             data-nav-match="roles">
+            <span class="quick-action__icon"><i class="bx bx-shield-quarter admin-icon admin-icon--20"></i></span>
+            <span class="quick-action__label">Roles</span>
+          </a>
+          
+          
+          <a href="/employees/permissions/"
+             class="nav-group__item "
+             data-nav-match="permissions">
+            <span class="quick-action__icon"><i class="bx bx-lock-open admin-icon admin-icon--20"></i></span>
+            <span class="quick-action__label">Permissions</span>
+          </a>
+          
+          
+          <a href="/devices/"
+             class="nav-group__item "
+             data-nav-match="devices">
+            <span class="quick-action__icon"><i class="bx bx-chip admin-icon admin-icon--20"></i></span>
+            <span class="quick-action__label">Devices</span>
+          </a>
+          
+        </div>
+      </div>
+      
+      
+      <a href="/settings/"
+         class="quick-action "
+         data-nav-match="settings">
+        <span class="quick-action__icon"><i class="bx bx-cog admin-icon admin-icon--20"></i></span>
+        <span class="quick-action__label">Settings</span>
+      </a>
+      
+    </nav>
+  </div>
+</aside>
+
+  <div class="main" id="spa-view" x-data>
+    
+<header class="topbar">
+  <div class="topbar__left">
+    <label for="sidebar-mobile" class="btn-icon topbar__open-sidebar" aria-label="Open menu">
+      <i class="bx bx-menu admin-icon admin-icon--20"></i>
+    </label>
+    
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  
+    
+      <a href="/" class="breadcrumbs__link">Dashboard</a>
+    
+    
+      <span class="breadcrumbs__sep"><i class="bx bx-chevron-right"></i></span>
+    
+  
+    
+      <a href="/employees/" class="breadcrumbs__link">Employees</a>
+    
+    
+      <span class="breadcrumbs__sep"><i class="bx bx-chevron-right"></i></span>
+    
+  
+    
+      <span class="breadcrumbs__current">Employee details</span>
+    
+    
+  
+</nav>
+
+
+  </div>
+  <div class="topbar__right">
+    <div class="topbar__tools" role="toolbar" aria-label="Quick actions">
+      <button type="button" class="btn-icon" aria-label="Activity" title="Activity" @click="$store.ui.toast('Activity feed coming soon', 'info')">
+        <i class="bx bx-pulse admin-icon admin-icon--20"></i>
+      </button>
+      
+<div
+  class="notify-menu"
+  :class="{ 'is-open': $store.ui.menu === 'notify' }"
+  @click.outside="$store.ui.menu === 'notify' && $store.ui.closeMenus()"
+>
+  <button
+    type="button"
+    class="btn-icon topbar__notify"
+    aria-label="Notifications"
+    title="Notifications"
+    aria-haspopup="dialog"
+    :aria-expanded="$store.ui.menu === 'notify'"
+    @click="$store.ui.toggleMenu('notify')"
+  >
+    <i class="bx bx-bell admin-icon admin-icon--20"></i>
+    
+  </button>
+  <div class="notify-menu__panel" role="dialog" aria-label="Notifications" x-cloak>
+    <div class="notify-menu__head">
+      <div>
+        <div class="notify-menu__title">Notifications</div>
+        <p class="notify-menu__subtitle">Items that need a quick look</p>
+      </div>
+    </div>
+
+    <div class="notify-menu__list">
+      <a class="notify-menu__item" href="/leave/requests/" @click="$store.ui.closeMenus()">
+        <span class="notify-menu__icon notify-menu__icon--warn">
+          <i class="bx bx-calendar-minus admin-icon admin-icon--18"></i>
+        </span>
+        <span class="notify-menu__copy">
+          <span class="notify-menu__label">Pending leave requests</span>
+          <span class="notify-menu__meta">Awaiting approval</span>
+        </span>
+        <span class="notify-menu__count">0</span>
+      </a>
+      <a class="notify-menu__item" href="/reports/overtime/" @click="$store.ui.closeMenus()">
+        <span class="notify-menu__icon notify-menu__icon--accent">
+          <i class="bx bx-timer admin-icon admin-icon--18"></i>
+        </span>
+        <span class="notify-menu__copy">
+          <span class="notify-menu__label">Overtime pending</span>
+          <span class="notify-menu__meta">Claims that need a decision</span>
+        </span>
+        <span class="notify-menu__count">0</span>
+      </a>
+      <a class="notify-menu__item" href="/reports/exceptions/" @click="$store.ui.closeMenus()">
+        <span class="notify-menu__icon notify-menu__icon--danger">
+          <i class="bx bx-alert-circle admin-icon admin-icon--18"></i>
+        </span>
+        <span class="notify-menu__copy">
+          <span class="notify-menu__label">Missing punches</span>
+          <span class="notify-menu__meta">Incomplete days flagged</span>
+        </span>
+        <span class="notify-menu__count">0</span>
+      </a>
+    </div>
+
+    <div class="notify-menu__footer">
+      <a class="notify-menu__link" href="/attendance/daily/" @click="$store.ui.closeMenus()">
+        View attendance
+        <i class="bx bx-arrow-right admin-icon admin-icon--18"></i>
+      </a>
+    </div>
+  </div>
+</div>
+
+      
+<div
+  class="theme-customizer"
+  :class="{ 'is-open': $store.ui.menu === 'theme' }"
+  @click.outside="$store.ui.menu === 'theme' && $store.ui.closeMenus()"
+>
+  <button
+    type="button"
+    class="btn-icon theme-customizer__trigger"
+    aria-label="Theme customizer"
+    title="Theme customizer"
+    aria-haspopup="dialog"
+    :aria-expanded="$store.ui.menu === 'theme'"
+    @click="$store.ui.toggleMenu('theme')"
+  >
+    <i class="bx bx-palette admin-icon admin-icon--20"></i>
+  </button>
+  <div class="theme-customizer__panel" role="dialog" aria-label="Theme Customizer" x-cloak>
+    <div class="theme-customizer__head">
+      <div class="theme-customizer__titles">
+        <div class="theme-customizer__title">Theme Customizer</div>
+        <p class="theme-customizer__subtitle">Customize your theme to your liking.</p>
+      </div>
+      <div class="theme-customizer__actions">
+        <button type="button"
+                class="btn-icon"
+                title="Reset to defaults"
+                aria-label="Reset theme settings"
+                @click="$store.theme.reset()">
+          <i class="bx bx-refresh-cw admin-icon admin-icon--18"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="theme-customizer__section">
+      <div class="theme-customizer__label">Color Mode</div>
+      <div class="seg" role="radiogroup" aria-label="Color mode">
+        <button type="button" class="seg__btn" role="radio" @click="$store.theme.set('mode', 'light')" :class="{ 'is-active': $store.theme.prefs.mode === 'light' }" :aria-checked="$store.theme.prefs.mode === 'light'">Light</button>
+        <button type="button" class="seg__btn" role="radio" @click="$store.theme.set('mode', 'dark')" :class="{ 'is-active': $store.theme.prefs.mode === 'dark' }" :aria-checked="$store.theme.prefs.mode === 'dark'">Dark</button>
+        <button type="button" class="seg__btn" role="radio" @click="$store.theme.set('mode', 'system')" :class="{ 'is-active': $store.theme.prefs.mode === 'system' }" :aria-checked="$store.theme.prefs.mode === 'system'">System</button>
+      </div>
+    </div>
+
+    <div class="theme-customizer__section">
+      <div class="theme-customizer__label">Content Layout</div>
+      <div class="seg" role="radiogroup" aria-label="Content layout">
+        <button type="button" class="seg__btn" role="radio" @click="$store.theme.set('layout', 'compact')" :class="{ 'is-active': $store.theme.prefs.layout === 'compact' }" :aria-checked="$store.theme.prefs.layout === 'compact'">Compact</button>
+        <button type="button" class="seg__btn" role="radio" @click="$store.theme.set('layout', 'full')" :class="{ 'is-active': $store.theme.prefs.layout === 'full' }" :aria-checked="$store.theme.prefs.layout === 'full'">Full</button>
+      </div>
+    </div>
+
+    <div class="theme-customizer__section">
+      <div class="theme-customizer__label">Scale</div>
+      <div class="seg" role="radiogroup" aria-label="UI scale">
+        <button type="button" class="seg__btn" role="radio" @click="$store.theme.set('scale', 'sm')" :class="{ 'is-active': $store.theme.prefs.scale === 'sm' }" :aria-checked="$store.theme.prefs.scale === 'sm'">SM</button>
+        <button type="button" class="seg__btn" role="radio" @click="$store.theme.set('scale', 'md')" :class="{ 'is-active': $store.theme.prefs.scale === 'md' }" :aria-checked="$store.theme.prefs.scale === 'md'">MD</button>
+        <button type="button" class="seg__btn" role="radio" @click="$store.theme.set('scale', 'lg')" :class="{ 'is-active': $store.theme.prefs.scale === 'lg' }" :aria-checked="$store.theme.prefs.scale === 'lg'">LG</button>
+      </div>
+    </div>
+
+    <div class="theme-customizer__section">
+      <div class="theme-customizer__label">Sidebar Variant</div>
+      <div class="seg" role="radiogroup" aria-label="Sidebar variant">
+        <button type="button" class="seg__btn" role="radio" @click="$store.theme.set('sidebarVariant', 'default')" :class="{ 'is-active': $store.theme.prefs.sidebarVariant === 'default' }" :aria-checked="$store.theme.prefs.sidebarVariant === 'default'">Default</button>
+        <button type="button" class="seg__btn" role="radio" @click="$store.theme.set('sidebarVariant', 'inset')" :class="{ 'is-active': $store.theme.prefs.sidebarVariant === 'inset' }" :aria-checked="$store.theme.prefs.sidebarVariant === 'inset'">Inset</button>
+      </div>
+      <p class="theme-customizer__subtitle" style="margin-top: var(--space-2);">Also applies to the right drawer.</p>
+    </div>
+
+    <div class="theme-customizer__section">
+      <div class="theme-customizer__label">Sidebar Mode</div>
+      <div class="seg" role="radiogroup" aria-label="Sidebar mode">
+        <button type="button" class="seg__btn" role="radio" @click="$store.theme.set('sidebarMode', 'default')" :class="{ 'is-active': $store.theme.prefs.sidebarMode === 'default' }" :aria-checked="$store.theme.prefs.sidebarMode === 'default'">Default</button>
+        <button type="button" class="seg__btn" role="radio" @click="$store.theme.set('sidebarMode', 'icon')" :class="{ 'is-active': $store.theme.prefs.sidebarMode === 'icon' }" :aria-checked="$store.theme.prefs.sidebarMode === 'icon'">Icon</button>
+        <button type="button" class="seg__btn" role="radio" @click="$store.theme.set('sidebarMode', 'full')" :class="{ 'is-active': $store.theme.prefs.sidebarMode === 'full' }" :aria-checked="$store.theme.prefs.sidebarMode === 'full'">Full</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+    </div>
+
+    
+<div
+  class="profile-menu profile-menu--topbar"
+  :class="{ 'is-open': $store.ui.menu === 'profile' }"
+  @click.outside="$store.ui.menu === 'profile' && $store.ui.closeMenus()"
+>
+  <button
+    type="button"
+    class="profile profile--compact"
+    aria-label="Account menu"
+    aria-haspopup="menu"
+    :aria-expanded="$store.ui.menu === 'profile'"
+    @click="$store.ui.toggleMenu('profile')"
+  >
+    <span class="profile__avatar-wrap">
+      
+<span class="emp-avatar emp-avatar--md emp-avatar--6" title="Preview Admin" aria-hidden="true">PA</span>
+
+      <span class="profile__status" aria-hidden="true"></span>
+    </span>
+  </button>
+  <div class="profile-menu__panel" role="menu" x-cloak>
+    <div class="profile-menu__head">
+      <span class="profile__name">preview.admin</span>
+      <span class="profile-menu__email">preview@example.com</span>
+    </div>
+    <hr class="profile-menu__divider">
+    <a href="/accounts/profile/" class="profile-menu__item" role="menuitem" @click="$store.ui.closeMenus()">
+      <i class="bx bx-user admin-icon admin-icon--18"></i>
+      Profile
+    </a>
+    <hr class="profile-menu__divider">
+    <a href="/accounts/logout/" class="profile-menu__item profile-menu__item--danger" role="menuitem" hx-boost="false">
+      <i class="bx bx-arrow-from-right admin-icon admin-icon--18"></i>
+      Log out
+    </a>
+  </div>
+</div>
+
+  </div>
+</header>
+
+    <div class="main-scroll">
+      <div class="page-content ">
+        
+
+
+
+
+
+
+<div id="employee-detail-page" class="employee-detail" x-data="{ tab: 'overview', checkedIn: true, notice: '' }">
+  
+  <div class="employee-detail__preview" role="note">
+    <i class="bx bx-info-circle admin-icon admin-icon--18" aria-hidden="true"></i>
+    <span><strong>Design preview.</strong> This employee and punch history are examples. Punch actions do not save changes.</span>
+  </div>
+  
+
+  <a class="employee-detail__back" href="/employees/">
+    <i class="bx bx-arrow-back admin-icon admin-icon--18" aria-hidden="true"></i>
+    <span>Employees</span>
+  </a>
+
+  <header class="card employee-detail__hero">
+    <div class="employee-detail__identity">
+      
+<span class="emp-avatar emp-avatar--xl emp-avatar--4" title="Amina Rahman" aria-hidden="true">AR</span>
+
+      <div class="employee-detail__identity-copy">
+        <div class="employee-detail__name-row">
+          <h1 class="employee-detail__name">Amina Rahman</h1>
+          <span class="badge active">Active</span>
+        </div>
+        <p class="employee-detail__identity-meta">
+          <span>EMP-021</span>
+          <span aria-hidden="true">·</span><span>HR Coordinator</span>
+          <span aria-hidden="true">·</span><span>People Operations</span>
+        </p>
+      </div>
+    </div>
+    
+    <div class="employee-detail__hero-actions">
+      
+      <button type="button" class="btn btn--primary employee-detail__preview-action" @click="checkedIn = !checkedIn; notice = 'Preview only. No punch was saved.'"><span x-text="checkedIn ? 'Punch out' : 'Punch in'">Punch out</span></button>
+      <button type="button" class="btn btn--soft" disabled title="Available when the page is connected">Edit employee</button>
+      <p class="employee-detail__preview-feedback" role="status" x-show="notice" x-text="notice" x-cloak></p>
+      
+    </div>
+    
+  </header>
+
+  <div class="tabs employee-detail__tabs" role="tablist" aria-label="Employee sections">
+    
+    <a href="#employee-overview" class="tab" id="employee-overview-tab" role="tab" aria-controls="employee-overview" hx-boost="false" x-ref="overviewTab" :class="{ 'is-active': tab === 'overview' }" :aria-selected="tab === 'overview'" :tabindex="tab === 'overview' ? 0 : -1" @click.prevent="tab = 'overview'" @keydown.arrow-right.prevent="tab = 'attendance'; $nextTick(() => $refs.attendanceTab.focus())" @keydown.arrow-left.prevent="tab = 'attendance'; $nextTick(() => $refs.attendanceTab.focus())">Overview</a>
+    <a href="#employee-attendance" class="tab" id="employee-attendance-tab" role="tab" aria-controls="employee-attendance" hx-boost="false" x-ref="attendanceTab" :class="{ 'is-active': tab === 'attendance' }" :aria-selected="tab === 'attendance'" :tabindex="tab === 'attendance' ? 0 : -1" @click.prevent="tab = 'attendance'" @keydown.arrow-left.prevent="tab = 'overview'; $nextTick(() => $refs.overviewTab.focus())" @keydown.arrow-right.prevent="tab = 'overview'; $nextTick(() => $refs.overviewTab.focus())">Attendance</a>
+    
+  </div>
+
+  
+  <section id="employee-overview" role="tabpanel" aria-labelledby="employee-overview-tab" x-show="tab === 'overview'" tabindex="0">
+    <div class="employee-detail__grid">
+      <article class="card employee-detail__panel">
+        <div class="employee-detail__panel-heading">
+          <div class="employee-detail__panel-icon"><i class="bx bx-briefcase-alt-2 admin-icon admin-icon--20" aria-hidden="true"></i></div>
+          <div><h2>Employment</h2><p>Work and organization details</p></div>
+        </div>
+        <dl class="employee-detail__fields">
+          <div><dt>Employee code</dt><dd>EMP-021</dd></div>
+          <div><dt>Employee type</dt><dd>Full time</dd></div>
+          <div><dt>Branch</dt><dd>Main Branch</dd></div>
+          <div><dt>Department</dt><dd>People Operations</dd></div>
+          <div><dt>Position</dt><dd>HR Coordinator</dd></div>
+          <div><dt>Role</dt><dd>Employee</dd></div>
+          <div><dt>Hire date</dt><dd>12 Apr 2022</dd></div>
+          <div><dt>Status</dt><dd>Active</dd></div>
+        </dl>
+      </article>
+
+      <article class="card employee-detail__panel">
+        <div class="employee-detail__panel-heading">
+          <div class="employee-detail__panel-icon"><i class="bx bx-user admin-icon admin-icon--20" aria-hidden="true"></i></div>
+          <div><h2>Contact &amp; account</h2><p>Contact information and linked login</p></div>
+        </div>
+        <dl class="employee-detail__fields employee-detail__fields--single">
+          <div><dt>Email</dt><dd>amina.rahman@example.com</dd></div>
+          <div><dt>Mobile</dt><dd>+974 5550 0000</dd></div>
+          <div><dt>Username</dt><dd>amina.rahman</dd></div>
+        </dl>
+      </article>
+    </div>
+  </section>
+  
+
+  
+  
+<div id="employee-attendance-region" >
+  <section id="employee-attendance" role="tabpanel" aria-labelledby="employee-attendance-tab" x-show="tab === 'attendance'" x-cloak tabindex="0">
+    
+    <div class="employee-detail__attendance">
+      <article class="card employee-detail__punch">
+        <div class="employee-detail__punch-copy">
+          <div class="employee-detail__panel-heading">
+            <div class="employee-detail__panel-icon"><i class="bx bx-clock-5 admin-icon admin-icon--20" aria-hidden="true"></i></div>
+            <div><h2>Current punch</h2><p>Latest known punch status</p></div>
+          </div>
+          <div class="employee-detail__punch-state">
+            
+            <span class="badge" :class="checkedIn ? 'punch-in' : 'punch-out'" x-text="checkedIn ? 'Checked in' : 'Checked out'">Checked in</span>
+            
+            <span class="employee-detail__punch-time">Last punch · 01 Nov 2026, 09:04 AM</span>
+          </div>
+        </div>
+      </article>
+
+      
+      <article class="card card--table employee-detail__history">
+        <div class="employee-detail__history-heading">
+          <div><h2>Punch history</h2><p>Individual punch events, newest first</p></div>
+        </div>
+        <div class="data-table-wrap">
+          
+          <table class="data-table employee-detail__history-table">
+            <thead><tr><th scope="col">Date &amp; time</th><th scope="col">Direction</th><th scope="col">Source</th></tr></thead>
+            <tbody>
+              
+              <tr><td>01 Nov 2026, 09:04 AM</td><td>Check In</td><td>Biometric</td></tr>
+              
+              <tr><td>31 Oct 2026, 05:12 PM</td><td>Check Out</td><td>Biometric</td></tr>
+              
+              <tr><td>31 Oct 2026, 09:02 AM</td><td>Check In</td><td>Biometric</td></tr>
+              
+              <tr><td>30 Oct 2026, 05:08 PM</td><td>Check Out</td><td>Web</td></tr>
+              
+              <tr><td>30 Oct 2026, 09:01 AM</td><td>Check In</td><td>Biometric</td></tr>
+              
+            </tbody>
+          </table>
+          
+          
+        </div>
+      </article>
+      
+    </div>
+    
+  </section>
+</div>
+
+  
+</div>
+
+
+
+      </div>
+    </div>
+    
+  </div>
+  <label for="sidebar-mobile" class="backdrop" aria-hidden="true"></label>
+
+  <nav class="mobile-bottombar" aria-label="Mobile navigation">
+    
+    <a class="mobile-bottombar__link" href="/" data-nav-match="dashboard" aria-label="Dashboard">
+      <i class="bx bx-grid admin-icon admin-icon--20"></i>
+      <span>Home</span>
+    </a>
+    
+    
+    <a class="mobile-bottombar__link" href="/employees/" data-nav-match="employees" aria-label="Employees">
+      <i class="bx bx-user admin-icon admin-icon--20"></i>
+      <span>People</span>
+    </a>
+    
+    
+    <a class="mobile-bottombar__link" href="/attendance/transactions/" data-nav-match="attendance" aria-label="Attendance">
+      <i class="bx bx-calendar-check admin-icon admin-icon--20"></i>
+      <span>Attend</span>
+    </a>
+    
+    
+    <a class="mobile-bottombar__link" href="/reports/" data-nav-match="reports" aria-label="Reports">
+      <i class="bx bx-chart-bar-columns admin-icon admin-icon--20"></i>
+      <span>Reports</span>
+    </a>
+    
+    <label for="sidebar-mobile" class="mobile-bottombar__menu btn-icon" aria-label="Open menu">
+      <i class="bx bx-menu admin-icon admin-icon--20"></i>
+    </label>
+  </nav>
+
+  <div class="toasts" id="toast-container" aria-live="polite" aria-relevant="additions">
+    <template x-for="toast in $store.ui.toasts" :key="toast.id">
+      <div class="toast" :class="'toast--' + toast.type" x-text="toast.message"></div>
+    </template>
+  </div>
+  
+<div
+  class="admin-modal"
+  id="app-modal"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="modal-title"
+  :class="{
+    'is-open': $store.ui.modalOpen,
+    'admin-modal--wide': $store.ui.modalSize === 'wide',
+  }"
+  x-cloak
+>
+  <div class="admin-modal__backdrop" @click="$store.ui.closeModal()"></div>
+  <div class="admin-modal__dialog">
+    <div class="admin-modal__head">
+      <h2 class="admin-modal__title" id="modal-title" x-text="$store.ui.modalTitle">Dialog</h2>
+      <button type="button" class="btn-icon" aria-label="Close" @click="$store.ui.closeModal()">
+        <i class="bx bx-x"></i>
+      </button>
+    </div>
+    <div class="admin-modal__body" id="modal-body"></div>
+  </div>
+</div>
+
+  
+<script id="command-palette-data" type="application/json">""</script>
+<div
+  class="command-palette"
+  x-data="commandPalette"
+  @open-command-palette.window="open()"
+  x-show="$store.ui.commandOpen"
+  x-transition.opacity.duration.280ms
+  x-cloak
+  @keydown.escape.window="if ($store.ui.commandOpen) close()"
+>
+  <div class="command-palette__backdrop" @click="close()"></div>
+  <div
+    class="command-palette__dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Search"
+    @click.stop
+    @keydown.arrow-down.prevent="move(1)"
+    @keydown.arrow-up.prevent="move(-1)"
+    @keydown.enter.prevent="choose()"
+  >
+    <div class="command-palette__search">
+      <i class="bx bx-search admin-icon admin-icon--18"></i>
+      <input
+        type="search"
+        class="command-palette__input"
+        placeholder="Jump to a page…"
+        x-model="query"
+        x-ref="query"
+        @input="index = 0"
+        autocomplete="off"
+        spellcheck="false"
+      >
+      <kbd class="command-palette__esc">Esc</kbd>
+    </div>
+    <div class="command-palette__list" x-ref="list">
+      <template x-for="group in grouped" :key="group.name">
+        <section class="command-palette__group">
+          <h2 class="command-palette__group-title" x-text="group.name"></h2>
+          <template x-for="item in group.items" :key="item.url">
+            <button
+              type="button"
+              class="command-palette__item"
+              :data-active="items[index] && items[index].url === item.url"
+              :class="{ 'is-active': items[index] && items[index].url === item.url }"
+              @click="choose(item)"
+              @mouseenter="index = items.indexOf(item)"
+            >
+              <span class="command-palette__icon">
+                <i class="bx admin-icon admin-icon--18" :class="item.icon || 'bx-file'"></i>
+              </span>
+              <span class="command-palette__copy">
+                <span class="command-palette__title" x-text="item.title"></span>
+                <span class="command-palette__subtitle" x-text="item.subtitle"></span>
+              </span>
+            </button>
+          </template>
+        </section>
+      </template>
+      <p class="command-palette__empty" x-show="!items.length">No matching pages.</p>
+    </div>
+  </div>
+</div>
+
+
+  <script src="/static/js/theme.js"></script>
+  <script src="/static/js/vendor/chart.umd.min.js"></script>
+  <script src="/static/js/dashboard-charts.js"></script>
+</body>
+</html>

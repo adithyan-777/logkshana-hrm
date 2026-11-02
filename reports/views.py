@@ -70,7 +70,7 @@ def _export_format(request: HttpRequest) -> str:
 def _build_query_string(request: HttpRequest, *, export_format: str) -> str:
     params = request.GET.copy()
     params["format"] = export_format
-    return urlencode(params)
+    return urlencode(list(params.lists()), doseq=True)
 
 
 def _maybe_export(
@@ -110,6 +110,10 @@ def _column_context(columns: list, report_key: str) -> dict:
     return {
         "columns": columns,
         "available_columns": REPORT_COLUMNS[report_key],
+        "column_options": [
+            (column.key, column.label) for column in REPORT_COLUMNS[report_key]
+        ],
+        "selected_column_keys": [column.key for column in columns],
         "report_key": report_key,
     }
 

@@ -15,7 +15,7 @@ Multi-tenant HR and attendance system built with Django. Each company gets its o
 | Auth | django-allauth + `django-tenant-users` |
 | Jobs | dramatiq + dramatiq-crontab (Redis) |
 | Feature flags | django-waffle |
-| Frontend | Django templates, HTMX, Alpine.js, Chart.js, Flatpickr, DataTables |
+| Frontend | Django templates, HTMX, Alpine.js, Chart.js, native browser date/time controls, DataTables |
 | Deploy | Docker, Gunicorn, WhiteNoise, nginx |
 | Tooling | [uv](https://docs.astral.sh/uv/), Ruff, Sentry |
 
@@ -50,7 +50,7 @@ logkshana-hrm/
 - **Shell:** `templates/base.html` — sidebar + `#spa-view` (HTMX boost) + Alpine chrome
 - **Tokens:** `static/css/tokens.css` — primary accent `#8A1538`, light/dark
 - **Brand:** `static/brand/hrms-wordmark.svg`, `static/brand/icon.svg` (favicon)
-- **Date/time:** Flatpickr (themed) — Clear / Today / Done; see `static/js/date-picker.js`
+- **Date/time:** Native browser and operating system date/time controls
 - **Prefs:** Theme customizer — mode, layout, scale, sidebar **default | inset** (also styles the right drawer)
 
 More detail: [docs/README.md](docs/README.md).

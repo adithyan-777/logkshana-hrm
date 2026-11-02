@@ -30,19 +30,22 @@
   /* Borders / focus */
   --border:             light-dark(#E8E0E3, #3E3E38);
   --border-header:      light-dark(#E8E0E3, #3E3E38);
-  --input:              light-dark(#E8E0E3, #3E3E38);
-  --ring:               #8A1538;
+  --input:              light-dark(#81767B, #98938D);
+  --ring:               light-dark(#8A1538, #E8A0B4);
 
   /* Text */
   --text:               light-dark(#3A2F33, #C3C1BA);
-  --text-muted:         #8A7F84;
-  --text-dim:           #8A7F84;
-  --text-faint:         #8A7F84;
-  --text-warm:          #8A1538;
+  --text-muted:         light-dark(#665B60, #B6ADB1);
+  --text-dim:           var(--text-muted);
+  --text-faint:         var(--text-muted);
+  --text-warm:          var(--accent-text);
   --text-inverse:       #ffffff;
+  --scrollbar-thumb:    color-mix(in srgb, var(--text-muted) 72%, var(--bg-shell));
 
   /* Brand — ITTISAL maroon */
   --accent:             #8A1538;
+  --accent-text:        light-dark(#8A1538, #E8A0B4);
+  --accent-outline:     light-dark(transparent, #E8A0B4);
   --accent-hover:       light-dark(#731230, #A31C44);
   --accent-pressed:     light-dark(#5C0E28, #8A1538);
   --accent-muted:       light-dark(
@@ -53,10 +56,19 @@
   --accent-warm-hover:  light-dark(#731230, #A31C44);
 
   /* Semantic */
-  --success:            light-dark(#16a34a, #4ade80);
-  --warning:            light-dark(#ca8a04, #facc15);
-  --danger:             light-dark(#dc2626, #f87171);
-  --info:               light-dark(#2563eb, #60a5fa);
+  --success:            light-dark(#056B30, #4ade80);
+  --warning:            light-dark(#754800, #facc15);
+  --danger:             light-dark(#B01818, #FFAAAA);
+  --text-on-danger:     light-dark(#ffffff, #450909);
+  --info:               light-dark(#1E40AF, #9CCAFF);
+
+  /* Dashboard attendance segments: readable against both chart surfaces. */
+  --chart-present:      light-dark(#166534, #4ade80);
+  --chart-absent:       light-dark(#991b1b, #FFAAAA);
+  --chart-late:         light-dark(#92400e, #facc15);
+  --chart-leave:        light-dark(#1e40af, #9CCAFF);
+  --chart-incomplete:   light-dark(#9a3412, #fb923c);
+  --chart-missing:      light-dark(#6b7280, #C3C1BA);
 
   /* Layout */
   --sidebar-w:          268px;
@@ -83,6 +95,8 @@
   --text-hero-lh:       48px;
   --text-h1:            36px;
   --text-h1-lh:         40px;
+  --text-h1-sm:         24px;
+  --text-h1-sm-lh:      32px;
   --text-h2:            18px;
   --text-h2-lh:         28px;
   --text-body:          16px;
@@ -151,7 +165,7 @@
   --shadow-popover-lg:  0 10px 15px -3px rgb(0 0 0 / 0.1),
                         0 4px 6px -4px rgb(0 0 0 / 0.1);
   --shadow-ring-soft:   0 0 0 1.8px rgb(0 0 0 / 0.08);
-  --shadow-focus:       0 0 0 2px var(--bg), 0 0 0 4px color-mix(in srgb, var(--accent) 45%, transparent);
+  --shadow-focus:       0 0 0 2px var(--bg), 0 0 0 4px var(--ring);
 
   /* Modal / overlay backdrops — soft dim; blur does the heavy lifting */
   --modal-backdrop-bg:   rgb(0 0 0 / 0.32);

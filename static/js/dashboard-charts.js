@@ -1,14 +1,5 @@
 (function () {
     const CHART_PANEL_ID = "attendance-chart-panel";
-    const CHART_COLORS = [
-        "#166534",
-        "#991b1b",
-        "#92400e",
-        "#1e40af",
-        "#9a3412",
-        "#6b7280",
-    ];
-
     let attendanceChart = null;
 
     function getPanel() {
@@ -22,15 +13,26 @@
         }
     }
 
-    function themeColors() {
+    function resolveColor(variable, fallback) {
         try {
-            const cs = getComputedStyle(document.documentElement);
-            const text = cs.getPropertyValue("--text").trim() || (document.documentElement.getAttribute("data-theme") === "dark" ? "#C3C1BA" : "#3E3E38");
-            const grid = cs.getPropertyValue("--border").trim() || "#ebebeb";
-            return { text, grid };
+            const probe = document.createElement("span");
+            probe.style.cssText = "position:absolute;visibility:hidden;color:var(" + variable + ")";
+            document.documentElement.appendChild(probe);
+            const color = getComputedStyle(probe).color;
+            probe.remove();
+            return color && color !== "rgba(0, 0, 0, 0)" ? color : fallback;
         } catch (_) {
-            return { text: "#85837D", grid: "#ebebeb" };
+            return fallback;
         }
+    }
+
+    function themeColors() {
+        const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+        return {
+            text: resolveColor("--text", isDark ? "#C3C1BA" : "#3A2F33"),
+            grid: resolveColor("--border", isDark ? "#3E3E38" : "#E8E0E3"),
+            surface: resolveColor("--bg-elevated", isDark ? "#1B1B1B" : "#FFFBFC"),
+        };
     }
 
     function initAttendanceChart() {
@@ -39,6 +41,14 @@
             return;
         }
         const colors = themeColors();
+        const attendanceColors = [
+            resolveColor("--chart-present", "#166534"),
+            resolveColor("--chart-absent", "#991b1b"),
+            resolveColor("--chart-late", "#92400e"),
+            resolveColor("--chart-leave", "#1e40af"),
+            resolveColor("--chart-incomplete", "#9a3412"),
+            resolveColor("--chart-missing", "#6b7280"),
+        ];
         if (typeof Chart !== "undefined" && Chart.defaults) {
             Chart.defaults.color = colors.text;
             Chart.defaults.borderColor = colors.grid;
@@ -78,8 +88,9 @@
                 datasets: [
                     {
                         data: chartData.values,
-                        backgroundColor: CHART_COLORS,
-                        borderWidth: 0,
+                        backgroundColor: attendanceColors,
+                        borderColor: colors.surface,
+                        borderWidth: 2,
                     },
                 ],
             },
@@ -88,6 +99,9 @@
                 plugins: {
                     legend: {
                         position: "bottom",
+                        labels: {
+                            color: colors.text,
+                        },
                     },
                 },
             },

@@ -18,6 +18,7 @@
     hx-target="#daily-list"
     hx-trigger="keyup changed delay:300ms, search"
   >
+  {% include "partials/page_toolbar_action.html#page_toolbar_action" %}
 </div>
 
 <div class="card card--table">
@@ -53,7 +54,7 @@
             <td>
                 {% if record.worked_minutes == 0 and record.has_check_in and not record.has_check_out %}
                 <span class="badge status-pending" title="Worked time is calculated once the check-out punch is recorded">
-                    <i class="bx bx-time-five admin-icon admin-icon--18" aria-hidden="true"></i>
+                    <i class="bx bx-clock-5 admin-icon admin-icon--18" aria-hidden="true"></i>
                     Calculated after check-out
                 </span>
                 {% else %}

@@ -3,7 +3,7 @@
 Reference for styling and extending the Django server-rendered UI.
 
 **App name:** ITTISAL HRMS  
-**Stack:** Django templates · HTMX · Alpine.js · Flatpickr · Chart.js · DataTables · vanilla JS  
+**Stack:** Django templates · HTMX · Alpine.js · native browser date/time controls · Chart.js · DataTables · vanilla JS  
 **CSS:** modular files under `static/css/` (source of truth: `tokens.css`)  
 **Auth:** django-allauth + django-tenant-users  
 **Brand:** accent `#8A1538` · wordmark `static/brand/hrms-wordmark.svg` · favicon `static/brand/icon.svg`
@@ -30,7 +30,7 @@ What a frontend dev needs to get started. Detailed table column specs and DataTa
 | Form fields & labels | Input sizing, grids, required markers | [Forms reference](#forms-reference) |
 | Component variants | Badges, alerts, empty states | `.badge`, `.alert`, `.empty-state` |
 | DataTables UI | Length / search / paginate | `.dataTables_wrapper` / `.dt-container` |
-| Date/time fields | Flatpickr (Clear / Today / Done) | `static/js/date-picker.js`, `flatpickr-theme.css` |
+| Date/time fields | Native browser and operating system picker | `static/css/native-date-inputs.css` |
 
 ### Must have — behavior & constraints
 
@@ -38,7 +38,7 @@ What a frontend dev needs to get started. Detailed table column specs and DataTa
 |--------|-------|
 | **SPA shell** | HTMX `hx-boost` into `#spa-view`. See [alpine-spa.md](alpine-spa.md). |
 | **DataTables** | Read-only list/report tables — see [DataTables integration](#datatables-integration). |
-| **HTMX partials** | Destroy + re-init DataTables after list swaps. `initDatePickers()` runs on `htmx:afterSettle`. |
+| **HTMX partials** | Destroy + re-init DataTables after list swaps. Native date/time inputs need no reinitialization. |
 | **Page size** | Django paginates **25** rows (`common/pagination.py`). |
 | **Breakpoint** | Mobile sidebar drawer at **max-width 768px**. |
 | **Layouts** | `body.app` (authenticated) vs `body.standalone-page` (auth). |
@@ -58,7 +58,7 @@ What a frontend dev needs to get started. Detailed table column specs and DataTa
 | Radius | `--r-sm` 8 · `--r-md` 10 · `--r-card` 16 · `--r-shell` 20 |
 | Backdrop | `--modal-backdrop-blur: 10px` |
 
-**CSS load order:** `tokens` → `base` → `motion` → `layout` → `sidebar` → `components` → Flatpickr → `flatpickr-theme` → `utilities` → `compat` → `date-picker`
+**CSS load order:** `tokens` → `base` → `motion` → `layout` → `sidebar` → `components` → `utilities` → `compat` → `native-date-inputs`
 
 ### States & edge cases
 
@@ -80,7 +80,7 @@ What a frontend dev needs to get started. Detailed table column specs and DataTa
 
 ### Suggested build order
 
-1. Tokens → shell → typography → buttons/forms → Flatpickr → DataTables → badges/alerts → modal variants → dashboard → login
+1. Tokens → shell → typography → buttons/forms → native date/time controls → DataTables → badges/alerts → modal variants → dashboard → login
 
 ### What the dev does NOT need
 
@@ -118,7 +118,7 @@ body.app
 | `.btn`, `.btn--primary`, `.btn--soft` | Actions |
 | `.form-input`, `.form-select`, `.field` | Forms |
 | `.admin-modal` | Right drawer |
-| `.flatpickr-calendar` | Date/time popup |
+| `input[type="date"]`, `input[type="time"]` | Native browser date/time controls |
 | `.dataTables_wrapper`, `.dt-container` | Tables |
 | `.dashboard-kpis`, `.kpi-card` | Dashboard |
 
@@ -170,7 +170,7 @@ Every form in the app. **Label** is the exact text shown to the user in the temp
 
 Form CSS: fields use `.field` / `.form-field`, checkboxes use `.field.checkbox`, grouped sections use `.form-section` with `<legend>`, side-by-side fields use `.field-row`.
 
-**Date / time / datetime-local:** enhanced by Flatpickr (class `has-flatpickr`). Popup footer: **Clear**, **Today**, **Done**. Values stay Django-compatible (`Y-m-d`, `Y-m-dTH:i`, `H:i`).
+**Date / time / datetime-local:** use native browser and operating system controls. Values stay Django-compatible (`Y-m-d`, `Y-m-dTH:i`, `H:i`).
 
 ---
 
@@ -762,7 +762,7 @@ List pages show a primary action button in the header (e.g. "Add employee" → `
 |------|------|
 | Design tokens | `static/css/tokens.css` |
 | CSS modules | `static/css/{base,layout,sidebar,components,compat,utilities,motion}.css` |
-| Flatpickr | `static/css/vendor/flatpickr.min.css`, `flatpickr-theme.css`, `js/vendor/flatpickr.min.js`, `js/date-picker.js` |
+| Native date/time controls | `static/css/native-date-inputs.css` |
 | Brand | `static/brand/hrms-wordmark.svg`, `static/brand/icon.svg` |
 | Alpine / SPA | `static/js/alpine-app.js`, `static/js/theme.js` |
 | Charts | `static/js/vendor/chart.umd.min.js`, `dashboard-charts.js` |

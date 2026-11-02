@@ -134,7 +134,9 @@ Dark mode: panel/highlights are token-driven (see components.css .x-select).
       hx-include="#{{ wid }}-search"
       hx-target="this"
       hx-swap="innerHTML"
+      {# No-history for the internals: hx-replace-url is inherited, so without this a fetch inside a form that sets hx-replace-url="true" (reports filters) would replace the browser URL with the options URL — observed hijacking the reports page on load and breaking relative pagination links. #}
       hx-push-url="false"
+      hx-replace-url="false"
       hx-params="q"
       {% if searchable %}
         hx-trigger="load, input from:#{{ wid }}-search changed delay:250ms"
@@ -547,7 +549,9 @@ Dark mode: panel/highlights are token-driven (see components.css .x-select).
       hx-include="#{{ wid }}-search"
       hx-target="this"
       hx-swap="innerHTML"
+      {# No-history for the internals: hx-replace-url is inherited, so without this a fetch inside a form that sets hx-replace-url="true" (reports filters) would replace the browser URL with the options URL — observed hijacking the reports page on load and breaking relative pagination links. #}
       hx-push-url="false"
+      hx-replace-url="false"
       hx-params="q"
       {% if searchable %}
         hx-trigger="load, input from:#{{ wid }}-search changed delay:250ms"

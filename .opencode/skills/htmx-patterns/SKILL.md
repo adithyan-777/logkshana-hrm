@@ -13,7 +13,7 @@ description: HTMX patterns for Django — partial/fragment responses, hx-* attri
 
 - HTMX detection: **`is_htmx_partial(request)`** from `common/http.py` — returns True for plain `HX-Request` fragment calls, False for boosted navigation and history-restore requests (which must get the full page).
 - Fragments: `{% partialdef %}` blocks in the same template, swapped into wrapper targets sized exactly like the fragment (`hx-swap="outerHTML"`).
-- Body-level `hx-boost="true"`, `hx-push-url="true"`, `hx-headers` CSRF token flow from `templates/base.html` — CSRF always included for HTMX forms; **internal (non-navigation) fetches must set `hx-push-url="false"`** or they pollute the address bar/history.
+- Body-level `hx-boost="true"`, `hx-push-url="true"`, `hx-headers` CSRF token flow from `templates/base.html` — CSRF always included for HTMX forms; **internal (non-navigation) fetches must set BOTH `hx-push-url="false"` and `hx-replace-url="false"`** or they pollute the address bar/history (see Pitfalls).
 - Toasts/events: `common.http.set_hx_trigger(response, event=…, toast=…)` sets the `HX-Trigger` header (`showToast`, `closeModal` patterns).
 - Every fragment-only endpoint must guard non-HTMX visits — pattern `redirect_stale_fragment_visit` in `common/views.py`.
 - Alpine integrates nodes swapped by htmx automatically; keep `x-data` minimal and put command logic in global `window.x*` JS so fragments work both inline and swapped; `x-cloak` hides pre-Alpine state.
@@ -62,6 +62,7 @@ def create_view(request):
 
 - Full-page templates returned to HTMX calls (must return the fragment branch).
 - `hx-push-url` inherited from `<body>` onto widget fetches (rule: explicit false per element) — an aux URL like `/select-options/?…` silently replaces the report page in the address bar, and a later refresh replays the fragment URL.
+- Same hijack via `hx-replace-url` (observed 2026-11): it is inherited by descendants too, and a **form** can set it (`reports/partials/filter_form.html` sets `hx-replace-url="true"` for its auto-apply URL sync). The select widget's options fetch sat inside that form with only `hx-push-url="false"`, so widget internals inherited `"true"` and htmx replaced the browser URL with `/select-options/?…` on every load/swap — wiping the report's date params from the address bar and breaking the reports pagination's relative `?…&page=2` links (dates reset to the current-month default). Fix: `hx-replace-url="false"` alongside `hx-push-url="false"` on `partials/select.html` fetch divs; rule for any new internal fetch = set both.
 - Fragments rendered as bare pages for non-HTMX visits.
 - Swap-geometry mismatches (fragment ↔ target wrapper) multiplying sections.
 - Multi-line Django template tokens being silently emitted as raw text.

@@ -45,8 +45,10 @@ class EmployeeDetailTests(BaseTenantTestCase):
         response = self.client.get(reverse("employee_list"))
 
         self.assertContains(response, reverse("employee_detail", args=[employee.pk]))
-        self.assertContains(response, "badge punch-in")
-        self.assertContains(response, "Status unavailable")
+        # The directory table shows no punch badges: status lives on the
+        # detail page, and punch actions are the badge toggle there.
+        self.assertNotContains(response, "badge punch-in")
+        self.assertNotContains(response, "Status unavailable")
         self.assertNotContains(response, "badge hover-swap")
         self.assertNotContains(
             response, reverse("employee_punch_toggle", args=[employee.pk])

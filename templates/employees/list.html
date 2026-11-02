@@ -37,9 +37,7 @@
         <tr>
             <th scope="col">Employee code</th>
             <th scope="col">Employee</th>
-            <th scope="col">Punch status</th>
             <th scope="col">Role / department</th>
-            <th scope="col">Contact</th>
             <th scope="col">Employment status</th>
             <th scope="col"><span class="sr-only">Actions</span></th>
         </tr>
@@ -49,17 +47,9 @@
         <tr>
             <td>{{ employee.emp_code|default:"—" }}</td>
             <td><a class="employee-detail-link" href="{% url 'employee_detail' employee.pk %}">{% include "partials/emp_cell.html" with employee=employee %}</a></td>
-            <td>{% include "partials/punch_status_badge.html" with employee=employee can_punch=False %}</td>
             <td class="employee-table__role">
                 {% if employee.position %}<span class="employee-table__role-primary">{{ employee.position }}</span>{% elif employee.department %}<span class="employee-table__role-primary">{{ employee.department }}</span>{% else %}<span>—</span>{% endif %}
                 {% if employee.position and employee.department %}<span class="employee-table__role-secondary">{{ employee.department }}</span>{% endif %}
-            </td>
-            <td class="employee-table__contact">
-                <div class="employee-table__contact-items">
-                    {% if employee.mobile %}<a href="tel:{{ employee.mobile|urlencode }}">{{ employee.mobile }}</a>{% endif %}
-                    {% if employee.email %}<a href="mailto:{{ employee.email }}">{{ employee.email }}</a>{% endif %}
-                    {% if not employee.mobile and not employee.email %}<span>—</span>{% endif %}
-                </div>
             </td>
             <td>
                 {% if employee.is_active %}

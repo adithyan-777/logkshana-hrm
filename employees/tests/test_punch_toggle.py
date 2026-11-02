@@ -133,56 +133,17 @@ class EmployeePunchToggleTests(BaseTenantTestCase):
 
         self.assertEqual(response.status_code, 405)
 
-    def test_list_shows_read_only_status_for_permission_holder(self):
+    def test_list_shows_no_punch_related_ui_at_all(self):
+        """The directory table carries no punch UI — status and the
+        toggle live only on the employee detail page. This stays true
+        even for a punch-permission holder."""
         employee = employee_factory(first_name="Admin", emp_code="PT106")
         activity_factory(employee=employee, direction=AttendanceActivity.Direction.IN)
 
         response = self.client.get(reverse("employee_list"))
 
-        self.assertContains(response, "badge punch-in")
-        self.assertNotContains(response, "badge hover-swap")
-        self.assertNotContains(
-            response,
-            reverse("employee_punch_toggle", args=[employee.pk]),
-        )
-
-    def test_list_shows_plain_badge_without_permission(self):
-        user = _plain_user(username="plain_badge", tenant=self.tenant)
-        # Member who may view employees (sees the list) but lacks
-        # attendance.add: the badge must render without any toggle.
-        from employees.models import Permission as _Perm
-        from employees.models import Role
-
-        permission, _ = _Perm.objects.get_or_create(
-            codename="employees.view",
-            defaults={"name": "View employees"},
-        )
-        role = Role.objects.create(name="Site Viewer")
-        role.permissions.add(permission)
-        employee = employee_factory(
-            first_name="Plain", emp_code="PT107"
-        )
-        activity_factory(
-            employee=employee,
-            direction=AttendanceActivity.Direction.IN,
-        )
-        employee.user = user
-        # employee_create forces the base "Employee" role; override it
-        # afterwards so the user holds employees.view only.
-        employee.role = role
-        employee.save(update_fields=["user", "role"])
-
-        self.login_as(user=user, via="username")
-        response = self.client.get(reverse("employee_list"))
-
-        self.assertContains(response, "badge punch-in")
-        self.assertNotContains(response, "badge hover-swap")
-        self.assertNotContains(
-            response,
-            reverse("employee_punch_toggle", args=[employee.pk]),
-        )
-
-        self.assertContains(response, "badge punch-in")
+        self.assertNotContains(response, "badge punch-in")
+        self.assertNotContains(response, "Status unavailable")
         self.assertNotContains(response, "badge hover-swap")
         self.assertNotContains(
             response,

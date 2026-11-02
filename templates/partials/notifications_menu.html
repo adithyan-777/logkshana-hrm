@@ -27,6 +27,7 @@
     </div>
 
     <div class="notify-menu__list">
+      {% if nav_can.leave %}
       <a class="notify-menu__item" href="{% url 'leave_request_list' %}" @click="$store.ui.closeMenus()">
         <span class="notify-menu__icon notify-menu__icon--warn">
           <i class="bx bx-calendar-minus admin-icon admin-icon--18"></i>
@@ -37,6 +38,7 @@
         </span>
         <span class="notify-menu__count">{{ nav_alerts.pending_leave|default:0 }}</span>
       </a>
+      {% endif %}
       <a class="notify-menu__item" href="{% url 'report_overtime' %}" @click="$store.ui.closeMenus()">
         <span class="notify-menu__icon notify-menu__icon--accent">
           <i class="bx bx-timer admin-icon admin-icon--18"></i>

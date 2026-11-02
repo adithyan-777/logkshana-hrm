@@ -7,6 +7,7 @@ from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
 
 from attendance.models import AttendanceActivity, WorkSession
+from common.feature_flags import Feature, feature_required
 from common.http import is_htmx_partial
 from common.pagination import paginate_queryset
 from employees.decorators import require_permission
@@ -551,6 +552,7 @@ def overtime_report_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
+@feature_required(Feature.LEAVE)
 @require_permission(PermissionCodename.REPORTS_VIEW)
 @require_http_methods(["GET"])
 def leave_report_view(request: HttpRequest) -> HttpResponse:

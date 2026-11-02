@@ -58,12 +58,6 @@ SHARED_APPS = [
 TENANT_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
-    # Per-tenant waffle tables: each company owns its Switch/Flag rows
-    # (module toggles, e.g. `hide_leave` hides the Leave nav for that
-    # tenant). Do NOT use waffle's cached lookups (`switch_is_active`,
-    # {% switch %}): their cache keys are not schema-prefixed and leak
-    # across tenants — read `waffle.models` directly via the ORM.
-    "waffle",
     "employees",
     "schedule",
     "leave",
@@ -89,7 +83,6 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "companies.middleware.CompanyMembershipMiddleware",
-    "waffle.middleware.WaffleMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"

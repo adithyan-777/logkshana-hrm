@@ -1,11 +1,30 @@
 from django.http import HttpRequest
 from django.urls import NoReverseMatch, reverse
 
+from common.feature_flags import Feature, feature_hidden
+
 SECTIONS = {
     "leave": "/leave/",
     "schedule": "/schedule/",
     "reports": "/reports/",
     "settings": "/settings/",
+}
+
+# Command palette entries gated by a tenant feature flag: the entry is
+# dropped from the palette when the tenant hides the feature (the URL
+# itself 404s via feature_required in the urlconf).
+PALETTE_FEATURE_KEYS: dict[str, str] = {
+    "leave_request_list": Feature.LEAVE,
+    "leave_request_add": Feature.LEAVE,
+    "leave_type_list": Feature.LEAVE,
+    "leave_policy_list": Feature.LEAVE,
+    "holiday_list": Feature.LEAVE,
+    "report_leave": Feature.LEAVE,
+    "timetable_list": Feature.SCHEDULE,
+    "schedule_list": Feature.SCHEDULE,
+    "assignment_add": Feature.SCHEDULE,
+    "assignment_list": Feature.SCHEDULE,
+    "employee_schedule_list": Feature.SCHEDULE,
 }
 
 BREADCRUMBS: dict[str, list[tuple[str, str | None]]] = {
@@ -760,6 +779,11 @@ def command_palette_for(request: HttpRequest) -> list[dict[str, str]]:
 
     items: list[dict[str, str]] = []
     for entry in COMMAND_PALETTE:
+        feature_key = PALETTE_FEATURE_KEYS.get(entry["url_name"])
+        if feature_key is not None and feature_hidden(
+            getattr(request, "tenant", None), feature_key
+        ):
+            continue
         if allowed is not None:
             perm = palette_permissions.get(entry["url_name"])
             if perm is not None:

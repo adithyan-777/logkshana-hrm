@@ -14,7 +14,7 @@ Multi-tenant HR and attendance system built with Django. Each company gets its o
 | Database | PostgreSQL 14+ (`django-tenants` schemas) |
 | Auth | django-allauth + `django-tenant-users` |
 | Jobs | dramatiq + dramatiq-crontab (Redis) |
-| Feature flags | django-waffle |
+| Feature flags | `Company.hidden_features` JSON per tenant (`common/feature_flags.py`) |
 | Frontend | Django templates, HTMX, Alpine.js, Chart.js, native browser date/time controls, DataTables |
 | Deploy | Docker, Gunicorn, WhiteNoise, nginx |
 | Tooling | [uv](https://docs.astral.sh/uv/), Ruff, Sentry |
@@ -159,7 +159,7 @@ docker compose -f docker/local/docker-compose.yml up --build -d
 
 ## Multi-tenancy
 
-- **Public schema:** companies, domains, users, auth/admin, waffle
+- **Public schema:** companies, domains, users, auth/admin (+ `Company.hidden_features` per-tenant feature toggles)
 - **Tenant schemas:** created when a `Company` is saved (`auto_create_schema = True`)
 - **Routing:** `Domain` + `TenantMainMiddleware`
 - **Access:** `TenantAccessMiddleware` (django-tenant-users)

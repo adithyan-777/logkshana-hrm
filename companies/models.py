@@ -25,6 +25,11 @@ class Company(TenantMixin):
         blank=True,
     )
 
+    # Per-tenant feature toggles: keys of features hidden for this
+    # company, e.g. ["leave"]. Empty list = everything enabled.
+    # See common/feature_flags.py for keys and helpers.
+    hidden_features = models.JSONField(default=list, blank=True)
+
     # default true, schema will be automatically created and synced when it is saved
     auto_create_schema = True
 

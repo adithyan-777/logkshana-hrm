@@ -1,7 +1,7 @@
-from django.db import OperationalError, ProgrammingError
 from django.urls import NoReverseMatch
 from django_tenants.utils import get_public_schema_name
 
+from common.feature_flags import Feature, feature_hidden
 from config.navigation import (
     active_section,
     breadcrumbs_for,
@@ -11,23 +11,6 @@ from config.navigation import (
     page_subtitle_for,
     topbar_action_for,
 )
-
-
-def _leave_nav_hidden() -> bool:
-    """Current tenant turned its Leave nav off via a waffle Switch row.
-
-    Read waffle directly through the tenant connection instead of waffle's
-    cached lookups (`switch_is_active` / ``{% switch %}``) — those cache
-    keys are not schema-prefixed and leak values across tenants in one
-    process. Missing row, or unmigrated schema, means "shown" (fail open).
-    """
-    from waffle.models import Switch
-
-    try:
-        switch = Switch.objects.get(name="hide_leave")
-    except (Switch.DoesNotExist, OperationalError, ProgrammingError):
-        return False
-    return switch.active
 
 
 def navigation(request):
@@ -103,13 +86,15 @@ def navigation(request):
         def can(codename: str) -> bool:
             return allowed is None or codename in allowed
 
-        leave_nav_hidden = _leave_nav_hidden()
+        leave_nav_hidden = feature_hidden(tenant, Feature.LEAVE)
+        schedule_nav_hidden = feature_hidden(tenant, Feature.SCHEDULE)
 
         context["nav_can"] = {
             "dashboard": can(PermissionCodename.DASHBOARD_VIEW),
             "employees": can(PermissionCodename.EMPLOYEES_VIEW),
             "leave": can(PermissionCodename.LEAVE_VIEW) and not leave_nav_hidden,
-            "schedule": can(PermissionCodename.SCHEDULE_VIEW),
+            "schedule": can(PermissionCodename.SCHEDULE_VIEW)
+            and not schedule_nav_hidden,
             "reports": can(PermissionCodename.REPORTS_VIEW),
             "reports_self": can(PermissionCodename.REPORTS_VIEW)
             or can(PermissionCodename.ATTENDANCE_OWN_VIEW),
@@ -133,8 +118,8 @@ def navigation(request):
 
             summary = dashboard_summary_get()
             context["nav_alerts"] = {
-                # Leave hidden for this tenant (waffle switch): also drop
-                # the "pending leave" notifications-menu entry.
+                # Leave hidden for this tenant (hidden_features): also
+                # drop the "pending leave" notifications-menu entry.
                 "pending_leave": 0 if leave_nav_hidden else summary.pending_leave_count,
                 "pending_overtime": summary.pending_overtime_count,
                 "pending_corrections": summary.pending_correction_count,

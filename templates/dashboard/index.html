@@ -41,6 +41,7 @@
       <span class="dash-metric__value">{{ summary.today_late_count }}</span>
     </span>
   </a>
+  {% if nav_can.leave %}
   <a class="dash-metric" href="{% url 'leave_request_list' %}">
     <span class="dash-metric__icon dash-metric__icon--info"><i class="bx bx-calendar-minus"></i></span>
     <span class="dash-metric__meta">
@@ -48,6 +49,7 @@
       <span class="dash-metric__value">{{ summary.today_leave_count }}</span>
     </span>
   </a>
+  {% endif %}
 </section>
 
 <section class="dash-grid">
@@ -116,9 +118,10 @@
     <div class="card">
       <div class="card__header">
         <span class="card__title">Needs attention</span>
-        <span class="dash-badge">{{ summary.pending_leave_count|add:summary.pending_overtime_count|add:summary.pending_correction_count }}</span>
+        <span class="dash-badge">{% if nav_can.leave %}{{ summary.pending_leave_count|add:summary.pending_overtime_count|add:summary.pending_correction_count }}{% else %}{{ summary.pending_overtime_count|add:summary.pending_correction_count }}{% endif %}</span>
       </div>
       <div class="card__body dash-attention">
+        {% if nav_can.leave %}
         <a class="dash-attention__row" href="{% url 'leave_request_list' %}">
           <span class="dash-attention__icon"><i class="bx bx-file"></i></span>
           <span class="dash-attention__copy">
@@ -127,6 +130,7 @@
           </span>
           <span class="dash-attention__count">{{ summary.pending_leave_count }}</span>
         </a>
+        {% endif %}
         <a class="dash-attention__row" href="{% url 'report_overtime' %}">
           <span class="dash-attention__icon"><i class="bx bx-clock-5"></i></span>
           <span class="dash-attention__copy">
@@ -165,10 +169,12 @@
             <i class="bx bx-walking"></i>
             <span>Record punch</span>
           </a>
+          {% if nav_can.leave %}
           <a class="dash-action" href="{% url 'leave_request_list' %}">
             <i class="bx bx-calendar-minus"></i>
             <span>Leave requests</span>
           </a>
+          {% endif %}
           <a class="dash-action" href="{% url 'report_exceptions' %}">
             <i class="bx bx-alert-circle"></i>
             <span>Exceptions</span>

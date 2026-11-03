@@ -55,7 +55,7 @@ class EmployeeCreateTests(BaseTenantTestCase):
         self.assertTrue(employee.user.has_usable_password())
         self.assertTrue(employee.user.check_password("SecurePass123!"))
         self.assertFalse(employee.user.check_password("+97433555001"))
-        self.assertEqual(employee.user.username, "janedoe")
+        self.assertEqual(employee.user.username, "janee001.fast_test")
         self.assertEqual(employee.user.email, "jane@example.com")
         self.assertEqual(employee.role.name, "Employee")
         self.assertEqual(
@@ -78,7 +78,8 @@ class EmployeeCreateTests(BaseTenantTestCase):
         )
 
         self.assertNotEqual(first.user.username, second.user.username)
-        self.assertTrue(first.user.username.startswith("johnsmith"))
+        self.assertEqual(first.user.username, "johne010.fast_test")
+        self.assertEqual(second.user.username, "johne011.fast_test")
 
     def test_same_name_with_emails_still_unique_usernames(self):
         first = employee_create(
@@ -97,9 +98,29 @@ class EmployeeCreateTests(BaseTenantTestCase):
         )
 
         self.assertNotEqual(first.user.username, second.user.username)
-        self.assertTrue(first.user.username.startswith("johnsmith"))
+        self.assertEqual(first.user.username, "johne012.fast_test")
+        self.assertEqual(second.user.username, "johne013.fast_test")
         self.assertEqual(first.user.email, "js1@example.com")
         self.assertEqual(second.user.email, "js2@example.com")
+
+    def test_username_is_tenant_safe_across_tenants(self):
+        """Identical firstname/emp_code in different tenants can't collide.
+
+        The schema-name postfix is what keeps usernames unique in the
+        shared public User table; check both computed forms differ.
+        """
+        from employees.services import employee_username
+
+        schema_a = employee_username(
+            first_name="Jane", emp_code="E001", schema_name="tenant_a"
+        )
+        schema_b = employee_username(
+            first_name="Jane", emp_code="E001", schema_name="tenant_b"
+        )
+
+        self.assertEqual(schema_a, "janee001.tenant_a")
+        self.assertEqual(schema_b, "janee001.tenant_b")
+        self.assertNotEqual(schema_a, schema_b)
 
     def test_update_changes_employee_fields(self):
         employee = employee_create(

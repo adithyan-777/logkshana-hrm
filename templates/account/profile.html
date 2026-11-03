@@ -16,18 +16,39 @@
         <span class="emp-cell__sub">{{ user.email|default:"—" }}</span>
       </div>
     </div>
+    {% if user.email %}
     <dl class="profile-details">
-      <div class="profile-details__row">
-        <dt>Username</dt>
-        <dd>{{ user.username }}</dd>
-      </div>
-      {% if user.email %}
       <div class="profile-details__row">
         <dt>Email</dt>
         <dd>{{ user.email }}</dd>
       </div>
-      {% endif %}
     </dl>
+    {% endif %}
+    <form
+      method="post"
+      action="{% url 'account_profile' %}"
+      class="tt-form-shell"
+      hx-boost="false"
+      style="margin-top: var(--space-4);"
+    >
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+      <div class="message error">{{ form.non_field_errors }}</div>
+      {% endif %}
+      <div class="field">
+        <label for="{{ form.username.id_for_label }}">Username</label>
+        {{ form.username }}
+        {% if form.username.errors %}<span class="error">{{ form.username.errors }}</span>{% endif %}
+      </div>
+      <div class="field">
+        <label for="{{ form.current_password.id_for_label }}">Current password</label>
+        {{ form.current_password }}
+        {% if form.current_password.errors %}<span class="error">{{ form.current_password.errors }}</span>{% endif %}
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Update username</button>
+      </div>
+    </form>
   </div>
 </div>
 {% endblock %}

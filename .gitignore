@@ -41,6 +41,7 @@ carry_data/
 # Gradle
 .idea/**/gradle.xml
 .idea/**/libraries
+.kilo
 
 # File-based project format
 *.iws

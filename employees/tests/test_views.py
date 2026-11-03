@@ -160,6 +160,15 @@ class EmployeeViewTests(BaseTenantTestCase):
         self.assertTrue(Employee.objects.filter(emp_code=emp_code).exists())
         self.assertTrue(Employee.objects.get(emp_code=emp_code).is_active)
 
+    def test_add_form_renders_mobile_field(self):
+        response = self.client.get(
+            reverse("employee_add"),
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="id_mobile"')
+
     def test_add_form_renders_active_switch_checked_by_default(self):
         response = self.client.get(
             reverse("employee_add"),
@@ -245,6 +254,7 @@ class EmployeeViewTests(BaseTenantTestCase):
                 "department": department.pk,
                 "email": "after@example.com",
                 "mobile": "+97433555333",
+                "username": employee.user.username,
                 "is_active": "on",
             },
         )
@@ -268,6 +278,7 @@ class EmployeeViewTests(BaseTenantTestCase):
                 "emp_code": "E-CLS",
                 "email": "after@example.com",
                 "mobile": "+97433555334",
+                "username": employee.user.username,
                 "is_active": "on",
             },
         )
@@ -290,6 +301,7 @@ class EmployeeViewTests(BaseTenantTestCase):
                 "emp_code": "E-BAD",
                 "email": "after@example.com",
                 "mobile": "+97433555335",
+                "username": employee.user.username,
                 "is_active": "on",
             },
         )

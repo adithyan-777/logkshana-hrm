@@ -44,8 +44,35 @@ def _password_check_user(*, username: str = "", email: str = ""):
     return User(username=username or "", email=email or "")
 
 
-def _generate_username(*, first_name: str, last_name: str) -> str:
-    base = slugify(f"{first_name}.{last_name}") or "employee"
+def employee_username(
+    *, first_name: str, emp_code: str | None, schema_name: str
+) -> str:
+    """Tenant-safe username: ``{firstname}{emp_code}.{schema}``.
+
+    The User table lives in the public schema with one global unique
+    username index, so identical firstname/emp_code pairs in different
+    tenants would collide — the schema name is postfixed to encode the
+    tenant into the username itself (e.g. ``janee001.freshline``).
+    ``slugify`` strips dots, so the tenant separator is added by hand.
+    Only letters/digits survive from emp_code: anything else would
+    fail ``UnicodeUsernameValidator`` when the user is saved.
+    """
+    name_part = slugify(first_name) or "employee"
+    # Keep only letters/digits (anything else would fail
+    # UnicodeUsernameValidator when the user is saved); lowercase so the
+    # username is uniformly styled — the E in "E001" doesn't survive.
+    code_part = "".join(
+        ch for ch in (emp_code or "").strip().lower() if ch.isalnum()
+    )
+    return f"{name_part}{code_part}.{schema_name}"
+
+
+def _generate_username(*, first_name: str, emp_code: str | None = None) -> str:
+    base = employee_username(
+        first_name=first_name,
+        emp_code=emp_code,
+        schema_name=connection.schema_name,
+    )
     username = base
     suffix = 1
     while User.objects.filter(username=username).exists():
@@ -112,7 +139,7 @@ def employee_create(
         tenant = Company.objects.get(schema_name=connection.schema_name)
     mobile = (mobile or "").strip()
     email = normalize_email(email=email)
-    username = _generate_username(first_name=first_name, last_name=last_name)
+    username = _generate_username(first_name=first_name, emp_code=emp_code)
     user_email = email or f"{username}@{tenant.schema_name}.com"
     _ensure_user_email_available(email=user_email)
     _ensure_employee_email_available(email=email)
@@ -188,6 +215,7 @@ def employee_update(
     is_active: bool = True,
     sync_to_device: bool = True,
     password: str | None = None,
+    username: str | None = None,
 ) -> Employee:
     old_emp_code = employee.emp_code
     employee.first_name = first_name
@@ -215,13 +243,17 @@ def employee_update(
             user.is_active = is_active
             user_updates.append("is_active")
         if password:
+            # Validate against the current user (old username) before the
+            # username swap so the similarity check inputs stay stable.
             _validate_employee_password(password=password, user=user)
+        username = (username or "").strip()
+        if username and user.username != username:
+            user.username = username
+            user_updates.append("username")
+        if password:
             with schema_context(get_public_schema_name()):
                 user.set_password(password)
-                if user_updates:
-                    user.save(update_fields=[*user_updates, "password"])
-                else:
-                    user.save(update_fields=["password"])
+                user.save(update_fields=[*user_updates, "password"])
                 user_updates = []
         if user_updates:
             with schema_context(get_public_schema_name()):

@@ -186,13 +186,15 @@ Form CSS: fields use `.field` / `.form-field`, checkboxes use `.field.checkbox`,
 
 ---
 
-### Profile (read-only, not a form)
+### Profile (username editable)
 
 | | |
 |---|---|
 | **Page URL** | `/accounts/profile/` |
 | **Template** | `templates/account/profile.html` |
-| **Display fields** | Username, Email (if set) — rendered as `<dl class="profile-details">` |
+| **Display fields** | Email (if set) — rendered as `<dl class="profile-details">` |
+| **Form** | Username + current password (POST to the same URL, redirects back on success) |
+| **Submit button** | "Update username" |
 
 ---
 

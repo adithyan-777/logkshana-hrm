@@ -1,12 +1,13 @@
 from django import forms
 
 from common.forms import apply_form_field_ui
-
 from employees.models import Department, Employee, Permission, Position, Role
 from employees.permission_catalog import permissions_grouped_choices
+from users.forms import UsernameUniquenessMixin
+from users.models import User
 
 
-class EmployeeForm(forms.ModelForm):
+class EmployeeForm(UsernameUniquenessMixin, forms.ModelForm):
     password = forms.CharField(
         required=False,
         min_length=8,
@@ -15,6 +16,17 @@ class EmployeeForm(forms.ModelForm):
             "Min 8 characters; can't be too similar to the name/email, "
             "entirely numeric, or a commonly used password. "
             "On edit, leave blank to keep the current password."
+        ),
+    )
+    # Not an Employee field: the login username lives on the linked User.
+    # Removed for employees without an account (create form).
+    username = forms.CharField(
+        max_length=150,
+        required=False,
+        label="Login username",
+        help_text=(
+            "Letters, digits and @/./+/-/_ only. Email login still works "
+            "after a change."
         ),
     )
 
@@ -42,6 +54,15 @@ class EmployeeForm(forms.ModelForm):
         self.fields["first_name"].required = True
         self.fields["emp_code"].required = True
         self.fields["mobile"].required = False
+        # Username belongs to the linked User: editable only when one exists.
+        user_id = getattr(self.instance, "user_id", None)
+        employee_user = User.objects.filter(pk=user_id).first() if user_id else None
+        self._username_owner_pk = employee_user.pk if employee_user else None
+        if employee_user is None:
+            self.fields.pop("username")
+        else:
+            self.fields["username"].required = True
+            self.fields["username"].initial = employee_user.username
         # Password is required when creating, optional when editing.
         if self.instance is None or not self.instance.pk:
             self.fields["password"].required = True
@@ -66,6 +87,8 @@ class EmployeeForm(forms.ModelForm):
             }
         )
 
+    def username_owner_pk(self):
+        return self._username_owner_pk
 
     def _password_check_user(self):
         """User-like object so validators can check similarity."""

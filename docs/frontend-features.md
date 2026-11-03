@@ -190,7 +190,7 @@ Hub plus filtered reports with CSV / Excel / PDF export (`hx-boost="false"` on d
 |-------|------------------|
 | Login | django-allauth (`/accounts/login/`) |
 | After login | Dashboard (`/`) |
-| Profile | Read-only (`/accounts/profile/`) |
+| Profile | Editable username (`/accounts/profile/`) |
 | Protection | App pages require login + tenant membership |
 | Roles | Models/catalog exist; full UI gating still evolving |
 | Approvals | Statuses in data; limited UI |

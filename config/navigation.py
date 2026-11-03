@@ -338,7 +338,7 @@ PAGE_HEADINGS: dict[str, str] = {
 }
 
 PAGE_SUBTITLES: dict[str, str] = {
-    "account_profile": "Read-only account details.",
+    "account_profile": "Account details; edit your login username.",
     "employee_list": "Directory + active/inactive status.",
     "employee_add": "Create an employee and send a password-setup invite.",
     "employee_edit": "Update employee details.",

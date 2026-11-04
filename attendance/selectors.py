@@ -1,7 +1,7 @@
 from datetime import date
 
-from django.db.models import Q, QuerySet
-from django.db.models.functions import Coalesce, TruncDate
+from django.db.models import Q, QuerySet, Value
+from django.db.models.functions import Coalesce, Concat, TruncDate
 
 from attendance.models import Attendance, AttendanceActivity, WorkSession
 from common.localtime import local_date
@@ -41,9 +41,16 @@ def attendance_activity_list(
             queryset = queryset.filter(history_day__lte=day_to)
 
     if search:
-        queryset = queryset.filter(
+        queryset = queryset.annotate(
+            employee_full_name=Concat(
+                "employee__first_name",
+                Value(" "),
+                "employee__last_name",
+            )
+        ).filter(
             Q(employee__first_name__icontains=search)
             | Q(employee__last_name__icontains=search)
+            | Q(employee_full_name__icontains=search)
             | Q(employee__emp_code__icontains=search)
             | Q(external_id__icontains=search)
         )
@@ -62,9 +69,16 @@ def attendance_list(
         queryset = queryset.filter(employee=employee)
 
     if search:
-        queryset = queryset.filter(
+        queryset = queryset.annotate(
+            employee_full_name=Concat(
+                "employee__first_name",
+                Value(" "),
+                "employee__last_name",
+            )
+        ).filter(
             Q(employee__first_name__icontains=search)
             | Q(employee__last_name__icontains=search)
+            | Q(employee_full_name__icontains=search)
             | Q(employee__emp_code__icontains=search)
             | Q(status__icontains=search)
         )
@@ -78,9 +92,16 @@ def work_session_list(*, search: str = "") -> QuerySet[WorkSession]:
     ).order_by("-day", "-check_in")
 
     if search:
-        queryset = queryset.filter(
+        queryset = queryset.annotate(
+            employee_full_name=Concat(
+                "employee__first_name",
+                Value(" "),
+                "employee__last_name",
+            )
+        ).filter(
             Q(employee__first_name__icontains=search)
             | Q(employee__last_name__icontains=search)
+            | Q(employee_full_name__icontains=search)
             | Q(employee__emp_code__icontains=search)
         )
 
@@ -131,9 +152,16 @@ def attendance_exception_day_list(
 
     def _search(qs):
         if search:
-            return qs.filter(
+            return qs.annotate(
+                employee_full_name=Concat(
+                    "employee__first_name",
+                    Value(" "),
+                    "employee__last_name",
+                )
+            ).filter(
                 Q(employee__first_name__icontains=search)
                 | Q(employee__last_name__icontains=search)
+                | Q(employee_full_name__icontains=search)
                 | Q(employee__emp_code__icontains=search)
             )
         return qs

@@ -1,6 +1,7 @@
 """App-agnostic HTMX fragment endpoints for reusable UI partials."""
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q
+from django.db.models import Q, Value
+from django.db.models.functions import Concat
 from django.http import (
     Http404,
     HttpRequest,
@@ -22,9 +23,12 @@ def _employee_options(q: str) -> list[dict]:
         "first_name", "last_name"
     )
     if q:
-        queryset = queryset.filter(
+        queryset = queryset.annotate(
+            full_name_search=Concat("first_name", Value(" "), "last_name")
+        ).filter(
             Q(first_name__icontains=q)
             | Q(last_name__icontains=q)
+            | Q(full_name_search__icontains=q)
             | Q(emp_code__icontains=q)
             | Q(email__icontains=q)
         )

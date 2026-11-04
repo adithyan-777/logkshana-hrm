@@ -22,3 +22,17 @@ def local_dt(value):
     if timezone.is_naive(value):
         return value
     return timezone.localtime(value)
+
+
+def local_naive(value):
+    """Naive wall-clock datetime in the active timezone.
+
+    Naive values (the project mode, USE_TZ=False) stay as-is; aware
+    values (gateway payloads with offsets, test fixtures) convert to
+    the active timezone and drop the offset — unlike ``local_dt``,
+    which keeps tzinfo. Use wherever a value must be *stored or
+    compared* against the naive wall-clock DB values.
+    """
+    if timezone.is_naive(value):
+        return value
+    return timezone.make_naive(value)

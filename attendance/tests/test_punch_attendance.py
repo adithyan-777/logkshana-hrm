@@ -1,9 +1,10 @@
 """Tests for punch-driven Attendance row updates."""
 
-from datetime import date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 
 from attendance.models import Attendance, AttendanceActivity, WorkSession
 from attendance.services import activity_create, attendance_update_for_punch
+from common.localtime import local_naive
 from common.tests.base import BaseTenantTestCase
 from common.tests.factories import device_factory, employee_factory
 from companies.services import attendance_log_create
@@ -652,3 +653,42 @@ class GatewayEndToEndTests(BaseTenantTestCase):
         self.assertEqual(row.total_work_time, timedelta(hours=9))
         session = WorkSession.objects.get(attendance=row)
         self.assertEqual(session.total_time, timedelta(hours=9))
+
+    def test_gateway_push_aware_utc_out_punch_closes_session(self):
+        """Regression: an aware ("Z") OUT punch used to crash pairing.
+
+        The gateway pushes timestamps like ``2026-11-02T14:00:00Z``;
+        ``parse_datetime`` yields an aware datetime while the project
+        runs on naive local wall clock (USE_TZ=False), so the OUT
+        branch's ``punch_time <= session.check_in`` raised TypeError
+        (aware vs naive) and the gateway endpoint 500'd.
+        """
+        _unschedule_tenant()
+        device_factory(serial_number="PU-GW2", company=self.tenant)
+        employee = employee_factory(first_name="Aw", emp_code="1002")
+
+        attendance_log_create(
+            serial_number="PU-GW2",
+            employee_id="1002",
+            timestamp=_dt(DAY, 8),
+            extra_raw_data={"status_label": "Check In"},
+        )
+        # 14:00Z = 17:00 Asia/Qatar (UTC+03) — the same wall clock a
+        # naive ingest of the local time would have stored.
+        aware_out = datetime(2026, 11, 2, 14, 0, tzinfo=UTC)
+        attendance_log_create(
+            serial_number="PU-GW2",
+            employee_id="1002",
+            timestamp=aware_out,
+            extra_raw_data={"status_label": "Check Out"},
+        )
+
+        row = Attendance.objects.get(employee=employee, day=DAY)
+        expected_out = local_naive(aware_out)
+        self.assertEqual(row.check_out, expected_out)
+        self.assertEqual(row.total_work_time, expected_out - _dt(DAY, 8))
+        out_punch = AttendanceActivity.objects.filter(
+            employee=employee, direction=AttendanceActivity.Direction.OUT
+        ).get()
+        self.assertEqual(out_punch.punch_time, expected_out)
+        self.assertIsNone(out_punch.punch_time.tzinfo)

@@ -15,7 +15,7 @@ from attendance.models import (
     AttendanceActivity,
     WorkSession,
 )
-from common.localtime import local_date, local_dt
+from common.localtime import local_date, local_naive
 from companies.selectors import device_get_by_serial_number
 from employees.models import Employee
 from employees.selectors import employee_get_by_emp_code
@@ -36,6 +36,14 @@ def activity_create(
     external_id: str | None = None,
     raw_data=None,
 ) -> AttendanceActivity:
+    # Gateway payloads and API clients may send tz-aware timestamps
+    # (UTC "Z" or +03:00 offsets) while the project runs on naive
+    # local wall clock (USE_TZ=False). Normalize once at the ingest
+    # boundary: naive values pass through, aware ones convert to the
+    # active timezone and drop the offset (local_dt keeps tzinfo and
+    # would still crash the pairing comparison against the naive
+    # session ``check_in`` — the gateway 500).
+    punch_time = local_naive(punch_time)
     if not external_id:
         external_id = f"manual:{uuid4().hex}"
     else:
@@ -139,6 +147,8 @@ def activity_update(
     external_id: str | None = None,
     raw_data=None,
 ) -> AttendanceActivity:
+    # Same ingest normalization as activity_create (see there).
+    punch_time = local_naive(punch_time)
     old_employee = activity.employee
     unscheduled = attendance_policy_is_unscheduled()
     if unscheduled:
@@ -496,8 +506,12 @@ def attendance_update_for_punch(
     Punches with an unknown direction (devices sending no status
     label) leave rows untouched.
     """
-    # Punch times come in as local wall-clock — use them as-is, no
-    # localization pass on the way in.
+    # Punch times pair on the local wall clock. Naive values (the
+    # project mode, USE_TZ=False) are used as-is; aware values
+    # (gateway payloads with offsets, test fixtures) normalize to
+    # naive local wall clock so the comparison against the naive
+    # session ``check_in`` below never mixes aware and naive.
+    punch_time = local_naive(punch_time)
     punch_day = punch_time.date()
     punch_local_time = punch_time.time()
     if direction == AttendanceActivity.Direction.IN:
@@ -617,7 +631,7 @@ def _replay_punch_stream(*, employee, start: date, until: date) -> None:
     )
     unscheduled = attendance_policy_is_unscheduled()
     for activity in punches:
-        punch_time = local_dt(activity.punch_time)
+        punch_time = local_naive(activity.punch_time)
         ignored = False
         if unscheduled:
             ignored = punch_is_duplicate(

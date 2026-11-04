@@ -799,7 +799,12 @@ def _gateway_push_item(item: dict, attendance_log_create) -> dict:
             "id": punch.id,
             "external_id": punch.external_id,
             "timestamp": punch.punch_time.isoformat(),
-            "employee_id": punch.employee.emp_code,
+            # punch.employee is NOT fetched here: attendance_log_create()
+            # returns from inside schema_context(tenant_schema), so a lazy
+            # FK would query the request's (non-tenant) schema and raise
+            # Employee.DoesNotExist. employee_id is the payload value
+            # already resolved inside the tenant schema.
+            "employee_id": str(employee_id),
             "serial_number": serial_number,
         },
     }

@@ -1960,14 +1960,10 @@ div.dt-container button.dt-paging-button:focus-visible {
   color: var(--danger);
 }
 
-.status-pill--late {
+.status-pill--late,
+.status-pill--incomplete {
   background: color-mix(in srgb, var(--warning) 18%, transparent);
   color: var(--warning);
-}
-
-.status-pill--incomplete {
-  background: color-mix(in srgb, var(--text-dim) 12%, transparent);
-  color: var(--text-dim);
 }
 
 .status-pill--missing_punch {

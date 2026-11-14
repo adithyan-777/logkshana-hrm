@@ -409,14 +409,10 @@ fieldset.form-section > legend {
 }
 
 .badge.status-late,
-.badge.status-early_out {
+.badge.status-early_out,
+.badge.status-incomplete {
   background: color-mix(in srgb, var(--warning) 18%, transparent);
   color: var(--warning);
-}
-
-.badge.status-incomplete {
-  background: color-mix(in srgb, var(--text-dim) 12%, transparent);
-  color: var(--text-dim);
 }
 
 .badge.status-ignored {

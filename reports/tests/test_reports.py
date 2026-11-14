@@ -468,6 +468,35 @@ class ReportViewTests(BaseTenantTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Ind")
 
+    def test_individual_report_flags_present_without_last_out(self):
+        employee = employee_factory(first_name="IndOpen", emp_code="R012C")
+        attendance_record_factory(employee=employee, day=date(2026, 10, 1))
+        closed = attendance_record_factory(employee=employee, day=date(2026, 10, 2))
+        closed.check_in = timezone.make_aware(datetime(2026, 10, 2, 8, 0))
+        closed.check_out = timezone.make_aware(datetime(2026, 10, 2, 17, 0))
+        closed.save(update_fields=["check_in", "check_out"])
+
+        response = self.client.get(
+            reverse("report_individual_attendance"),
+            {
+                "date_from": "2026-10-01",
+                "date_to": "2026-10-31",
+                "employee": employee.pk,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        rows = {row["date"]: row for row in response.context["report_rows"]}
+        self.assertEqual(rows[date(2026, 10, 1)]["status"], "Present (incomplete)")
+        self.assertEqual(
+            rows[date(2026, 10, 1)]["status_code"], Attendance.Status.INCOMPLETE
+        )
+        self.assertEqual(rows[date(2026, 10, 2)]["status"], "Present")
+        self.assertEqual(
+            rows[date(2026, 10, 2)]["status_code"], Attendance.Status.PRESENT
+        )
+        self.assertContains(response, 'status-incomplete">Present (incomplete)')
+
     def test_individual_report_defaults_to_all_employees(self):
         department = department_factory(name="Ops", code="OPS3")
         employee = employee_factory(

@@ -1,3 +1,4 @@
+from attendance.models import Attendance
 from reports.columns import ReportColumn
 from reports.exports import ReportData
 from reports.utils import format_datetime, format_minutes
@@ -48,20 +49,34 @@ def attendance_summary_report_data(rows, columns: list[ReportColumn]) -> ReportD
     )
 
 
+def individual_status_display(record) -> tuple[str, str]:
+    """(status text, badge code) for the individual attendance report.
+
+    A PRESENT day whose last out is missing cannot be final, so it
+    reports as ``Present (incomplete)`` with the incomplete badge.
+    """
+    if record.status == Attendance.Status.PRESENT and record.last_out is None:
+        return "Present (incomplete)", Attendance.Status.INCOMPLETE
+    return record.get_status_display(), record.status
+
+
 def individual_attendance_row_dicts(records) -> list[dict]:
     dicts = []
     for record in records:
+        status_display, status_code = individual_status_display(record)
         dicts.append(
             {
-                "employee": f"{record.employee.first_name} {record.employee.last_name}".strip(),
+                "employee": (
+                    f"{record.employee.first_name} {record.employee.last_name}".strip()
+                ),
                 "department": (
                     record.employee.department.name
                     if record.employee.department is not None
                     else "Unassigned"
                 ),
                 "date": record.day,
-                "status": record.get_status_display(),
-                "status_code": record.status,
+                "status": status_display,
+                "status_code": status_code,
                 "first_in": format_datetime(record.first_in),
                 "last_out": format_datetime(record.last_out),
                 "worked": format_minutes(duration_minutes(record.total_work_time)),

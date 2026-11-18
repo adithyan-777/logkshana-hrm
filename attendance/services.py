@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import OuterRef, Q, Subquery, Sum
+from django.db.models import Q, Sum
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django_tenants.utils import get_public_schema_name, schema_context
@@ -343,20 +343,18 @@ def employees_absent_condition(*, day: date):
 
     Single pluggable rule for the midnight job. An employee is
     eligible when they are active, hold no Attendance row for the
-    day, have no punches already recorded that day, and were punched
-    OUT before the day started (their last punch is a check-out — or
-    they never punched at all).
+    day, and have no punches already recorded that day — regardless
+    of their last punch direction.
 
-    An employee whose last punch is a check-in might still be in the
-    building (overnight shift, missed check-out), so they are skipped.
-    Tweak the query here to change who gets marked absent (branch,
-    employee_type, schedule coverage, ...).
+    Overnight semantics: a next-day check-out credits the check-in
+    day's row only, so an overnight worker with no check-in on
+    ``day`` is absent that day by design; a check-in later that day
+    flips the pre-created row to PRESENT
+    (``attendance_update_for_punch``). Tweak the query here to change
+    who gets marked absent (branch, employee_type, schedule
+    coverage, ...).
     """
     day_start = timezone.make_aware(datetime.combine(day, time.min))
-    last_direction = AttendanceActivity.objects.filter(
-        employee=OuterRef("pk"),
-        punch_time__lt=day_start,
-    ).order_by("-punch_time", "-id").values("direction")[:1]
     return (
         Employee.objects.filter(is_active=True)
         .exclude(
@@ -365,11 +363,6 @@ def employees_absent_condition(*, day: date):
         .exclude(
             attendance_activities__punch_time__gte=day_start,
             attendance_activities__punch_time__lt=day_start + timedelta(days=1),
-        )
-        .annotate(last_direction=Subquery(last_direction))
-        .filter(
-            Q(last_direction=AttendanceActivity.Direction.OUT)
-            | Q(last_direction__isnull=True)
         )
     )
 

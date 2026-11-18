@@ -80,7 +80,7 @@ def individual_attendance_list(
         )
         .select_related("shift", "employee__department")
         .prefetch_related("activities")
-        .order_by("-id")
+        .order_by("-day", "id")
     )
 
 

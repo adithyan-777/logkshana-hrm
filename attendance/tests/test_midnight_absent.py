@@ -44,9 +44,10 @@ class EmployeesAbsentConditionTests(BaseTenantTestCase):
 
         self.assertIn(employee, employees_absent_condition(day=DAY))
 
-    def test_employee_last_punched_in_is_excluded(self):
+    def test_employee_last_punched_in_is_included(self):
         # Overnight shift: checked in yesterday evening, never checked
-        # out — might still be in the building at midnight.
+        # out — the new day's absence is by design; a check-in later
+        # that day flips the pre-created row to PRESENT.
         employee = employee_factory(first_name="Night", emp_code="ABS003")
         self._punch(
             employee,
@@ -54,11 +55,12 @@ class EmployeesAbsentConditionTests(BaseTenantTestCase):
             AttendanceActivity.Direction.IN,
         )
 
-        self.assertNotIn(employee, employees_absent_condition(day=DAY))
+        self.assertIn(employee, employees_absent_condition(day=DAY))
 
-    def test_employee_last_punched_in_days_ago_is_excluded(self):
-        # Last known state IN, whenever it was — cannot be sure they
-        # left the building.
+    def test_employee_last_punched_in_days_ago_is_included(self):
+        # Last known state IN, whenever it was — a next-day check-out
+        # credits the check-in day only, so the employee is absent on
+        # any day without a check-in of their own.
         employee = employee_factory(first_name="Stale", emp_code="ABS004")
         self._punch(
             employee,
@@ -66,9 +68,9 @@ class EmployeesAbsentConditionTests(BaseTenantTestCase):
             AttendanceActivity.Direction.IN,
         )
 
-        self.assertNotIn(employee, employees_absent_condition(day=DAY))
+        self.assertIn(employee, employees_absent_condition(day=DAY))
 
-    def test_employee_last_punch_unknown_direction_is_excluded(self):
+    def test_employee_last_punch_unknown_direction_is_included(self):
         employee = employee_factory(first_name="Unknown", emp_code="ABS005")
         self._punch(
             employee,
@@ -76,7 +78,7 @@ class EmployeesAbsentConditionTests(BaseTenantTestCase):
             AttendanceActivity.Direction.UNKNOWN,
         )
 
-        self.assertNotIn(employee, employees_absent_condition(day=DAY))
+        self.assertIn(employee, employees_absent_condition(day=DAY))
 
     def test_employee_with_punch_that_day_is_excluded(self):
         employee = employee_factory(first_name="In", emp_code="ABS006")

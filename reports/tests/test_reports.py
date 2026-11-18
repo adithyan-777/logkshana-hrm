@@ -144,6 +144,26 @@ class IndividualAttendanceSelectorTests(BaseTenantTestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].employee, employee)
 
+    def test_orders_by_day_not_insertion(self):
+        # Backfilled rows carry the highest ids but must appear at
+        # their chronological position, not at the top of the report.
+        employee = employee_factory(first_name="Order", emp_code="R002D")
+        attendance_record_factory(employee=employee, day=date(2026, 3, 2))
+        attendance_record_factory(employee=employee, day=date(2026, 3, 10))
+        attendance_record_factory(employee=employee, day=date(2026, 3, 1))
+
+        results = list(
+            individual_attendance_list(
+                date_from=date(2026, 3, 1),
+                date_to=date(2026, 3, 31),
+            )
+        )
+
+        self.assertEqual(
+            [r.day for r in results],
+            [date(2026, 3, 10), date(2026, 3, 2), date(2026, 3, 1)],
+        )
+
 
 class DepartmentAttendanceSelectorTests(BaseTenantTestCase):
     def test_groups_by_department(self):

@@ -80,6 +80,30 @@ class EmployeesAbsentConditionTests(BaseTenantTestCase):
 
         self.assertIn(employee, employees_absent_condition(day=DAY))
 
+    def test_employee_with_punches_around_a_skipped_day_is_included(self):
+        # Worked the day before and the day after, nothing on the day
+        # itself — the classic skipped-day shape. The two chained
+        # exclude conditions this used to compile into separate EXISTS
+        # clauses wrongly dropped exactly this employee.
+        employee = employee_factory(first_name="Gap", emp_code="ABS009")
+        self._punch(
+            employee,
+            _punch_time(date(2026, 11, 1), 4),
+            AttendanceActivity.Direction.IN,
+        )
+        self._punch(
+            employee,
+            _punch_time(date(2026, 11, 1), 17),
+            AttendanceActivity.Direction.OUT,
+        )
+        self._punch(
+            employee,
+            _punch_time(date(2026, 11, 3), 4),
+            AttendanceActivity.Direction.IN,
+        )
+
+        self.assertIn(employee, employees_absent_condition(day=DAY))
+
     def test_employee_with_punch_that_day_is_excluded(self):
         employee = employee_factory(first_name="In", emp_code="ABS006")
         self._punch(employee, _punch_time(DAY, 8, 55), AttendanceActivity.Direction.IN)

@@ -3,8 +3,7 @@ from uuid import uuid4
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Q, Sum
-from django.utils import timezone
+from django.db.models import Exists, OuterRef, Q, Sum
 from django.utils.dateparse import parse_datetime
 from django_tenants.utils import get_public_schema_name, schema_context
 
@@ -353,17 +352,28 @@ def employees_absent_condition(*, day: date):
     (``attendance_update_for_punch``). Tweak the query here to change
     who gets marked absent (branch, employee_type, schedule
     coverage, ...).
+
+    The "no punches that day" test is a single ``Exists`` subquery on
+    purpose: two chained ``.exclude()`` conditions over the same
+    reverse relation compile into two independent EXISTS clauses
+    ("has a punch >= start AND, separately, has a punch < end"),
+    which wrongly excludes anyone who worked the days around a
+    skipped one. Bounds are naive wall-clock values (``USE_TZ=False``
+    stores naive local timestamps) — an aware boundary would be
+    session-timezone-converted by Postgres and shift the window.
     """
-    day_start = timezone.make_aware(datetime.combine(day, time.min))
+    day_start = datetime.combine(day, time.min)
+    punch_that_day = AttendanceActivity.objects.filter(
+        employee=OuterRef("pk"),
+        punch_time__gte=day_start,
+        punch_time__lt=day_start + timedelta(days=1),
+    )
     return (
         Employee.objects.filter(is_active=True)
         .exclude(
             attendances__day=day,
         )
-        .exclude(
-            attendance_activities__punch_time__gte=day_start,
-            attendance_activities__punch_time__lt=day_start + timedelta(days=1),
-        )
+        .exclude(Exists(punch_that_day))
     )
 
 

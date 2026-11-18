@@ -75,10 +75,11 @@ class Command(BaseCommand):
                 with schema_context(schema):
                     created = attendance_absent_rows_ensure(day=day)
                 totals[schema] = totals.get(schema, 0) + len(created)
-                if created:
-                    self.stdout.write(
-                        f"{schema} day={day.isoformat()} created={len(created)}"
-                    )
+                # Every day, created or not: a silent 0 would read as
+                # "the day was skipped" when it means "nothing missing".
+                self.stdout.write(
+                    f"{schema} day={day.isoformat()} created={len(created)}"
+                )
             day += timedelta(days=1)
 
         for schema, total in totals.items():

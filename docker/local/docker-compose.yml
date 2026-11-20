@@ -141,7 +141,7 @@ services:
     restart: unless-stopped
 
   nginx:
-    image: nginx:1.29-alpine
+    image: nginx:1.31.9-alpine
     ports:
       - "${NGINX_PORT:-8080}:80"
       - "${NGINX_SSL_PORT:-8443}:443"

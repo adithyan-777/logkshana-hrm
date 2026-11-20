@@ -154,7 +154,7 @@ services:
     restart: unless-stopped
 
   nginx:
-    image: nginx:1.29-alpine
+    image: nginx:1.31.9-alpine
     ports:
       # Host apache2 already owns :80, so default to :8080 locally.
       # Prod (no host web server): NGINX_PORT=80 NGINX_SSL_PORT=443

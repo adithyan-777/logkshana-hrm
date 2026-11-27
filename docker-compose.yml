@@ -227,6 +227,27 @@ services:
     entrypoint: ["certbot"]
     profiles: ["tools"]
 
+  # One-shot Let's Encrypt client with the Cloudflare DNS plugin: wildcard
+  # certificates via DNS-01 (mshop shop subdomains — see ittisal-mshop
+  # README). Only run manually, never `up` it. Token file: docker/certbot/
+  # cloudflare.ini (git-ignored; cloudflare.ini.example shows the format).
+  #   docker compose run --rm certbot-dns certonly \
+  #     --dns-cloudflare --dns-cloudflare-credentials /secrets/cloudflare.ini \
+  #     --cert-name mshop-shops \
+  #     -d '*.mshop.ittisalhrm.com' -d '*.myg.mshop.ittisalhrm.com' \
+  #     -d '*.ittisal-group.mshop.ittisalhrm.com' \
+  #     --email you@example.com --agree-tos --no-eff-email
+  # Renewal (cron twice daily):
+  #   docker compose run --rm certbot-dns renew && \
+  #     docker compose exec nginx nginx -s reload
+  certbot-dns:
+    image: certbot/dns-cloudflare:v4.2.0
+    volumes:
+      - certs:/etc/letsencrypt
+      - ./docker/certbot:/secrets:ro
+    entrypoint: ["certbot"]
+    profiles: ["tools"]
+
 volumes:
   redisdata:
   staticfiles:

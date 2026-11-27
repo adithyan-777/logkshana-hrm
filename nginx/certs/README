@@ -1,2 +1,4 @@
 # Paste Cloudflare Origin Certificate here as origin.pem
 # and the Private Key as origin.key (both git-ignored).
+# Per-app origin certs live next to it: mshop uses mshop.pem + mshop.key
+# (routed by conf.d/mshop.conf).

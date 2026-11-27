@@ -1,0 +1,5 @@
+# Copy to cloudflare.ini next to this file and fill in a token created at
+# https://dash.cloudflare.com/profile/api-tokens — permissions: Zone /
+# DNS / Edit, scoped to the ittisalhrm.com zone only.
+# Then: chmod 600 cloudflare.ini  (certbot refuses world-readable credentials.)
+dns_cloudflare_api_token = YOUR_TOKEN
